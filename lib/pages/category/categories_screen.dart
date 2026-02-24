@@ -1,4 +1,6 @@
+import 'package:dovui/models/category_model.dart';
 import 'package:dovui/pages/home/widgets/categories_item.dart';
+import 'package:dovui/services/quiz_service.dart';
 import 'package:flutter/material.dart';
 
 class Categoriesscreen extends StatelessWidget {
@@ -9,79 +11,65 @@ class Categoriesscreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: const Color(0xffF5F6FA),
       body: SafeArea(
-        child: Column(
-          children: [
-            const SizedBox(height: 20),
+        child: FutureBuilder<List<CategoryModel>>(
+          future: QuizService.getCategories(),
+          builder: (context, snapshot) {
+            if (!snapshot.hasData) {
+              return const Center(child: CircularProgressIndicator());
+            }
 
-            Center(
-              child: Text(
-                "Thể loại",
-                style: TextStyle(
-                  color: Color(0xff2E2B72),
-                  fontSize: 36,
-                  fontWeight: FontWeight.bold,
+            final categories = snapshot.data!;
+
+            if (categories.isEmpty) {
+              return const Center(
+                child: Text("Chưa có thể loại"),
+              );
+            }
+
+            return Column(
+              children: [
+                const SizedBox(height: 20),
+
+                const Center(
+                  child: Text(
+                    "Thể loại",
+                    style: TextStyle(
+                      color: Color(0xff2E2B72),
+                      fontSize: 36,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
-              ),
-            ),
 
-            const SizedBox(height: 30),
+                const SizedBox(height: 30),
 
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: GridView.count(
-                  crossAxisCount: 2,
-                  mainAxisSpacing: 20,
-                  crossAxisSpacing: 20,
-                  childAspectRatio: 0.95,
-                  children: const [
-                    CategoriesItem(
-                      title: "Âm nhạc",
-                      image: "assets/images/nhac.png",
-                      categoryId: "amnhac",
-                    ),
-                    CategoriesItem(
-                      title: "Đố mẹo",
-                      image: "assets/images/dovui.png",
-                      categoryId: "domeo",
-                    ),
-                    CategoriesItem(
-                      title: "Đố vui",
-                      image: "assets/images/nao.png",
-                      categoryId: "dovui",
-                    ),
-                    CategoriesItem(
-                      title: "IT", 
-                      image: "assets/images/it.png",
-                      categoryId: "it"
-                    ),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: GridView.builder(
+                      itemCount: categories.length,
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 2,
+                        mainAxisSpacing: 20,
+                        crossAxisSpacing: 20,
+                        childAspectRatio: 0.95,
+                      ),
+                      itemBuilder: (context, index) {
+                        final category = categories[index];
 
-
-                    CategoriesItem(
-                      title: "Âm nhạc",
-                      image: "assets/images/nhac.png",
-                      categoryId: "amnhac",
+                        return CategoriesItem(
+                          title: category.name,
+                          image: category.image,
+                          categoryId: category.id,
+                        );
+                      },
                     ),
-                    CategoriesItem(
-                      title: "Đố mẹo",
-                      image: "assets/images/dovui.png",
-                      categoryId: "domeo",
-                    ),
-                    CategoriesItem(
-                      title: "Đố vui",
-                      image: "assets/images/nao.png",
-                      categoryId: "dovui",
-                    ),
-                    CategoriesItem(
-                      title: "IT", 
-                      image: "assets/images/it.png",
-                      categoryId: "it"
-                    ),
-                  ],
+                  ),
                 ),
-              ),
-            ),
-          ],
+              ],
+            );
+          },
         ),
       ),
     );
