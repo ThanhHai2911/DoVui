@@ -76,6 +76,21 @@ class LeaderboardScreen extends StatelessWidget {
                       name: "Garfielda C.",
                       points: "390 points",
                     ),
+                    LeaderboardTile(
+                      rank: "#8",
+                      name: "Garfielda C.",
+                      points: "390 points",
+                    ),
+                    LeaderboardTile(
+                      rank: "#9",
+                      name: "Garfielda C.",
+                      points: "390 points",
+                    ),
+                    LeaderboardTile(
+                      rank: "#10",
+                      name: "Garfielda C.",
+                      points: "390 points",
+                    ),
                   ],
                 ),
               ),

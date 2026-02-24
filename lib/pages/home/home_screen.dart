@@ -30,6 +30,7 @@ class HomeScreen extends StatelessWidget {
               CategoriesSection(),
               SizedBox(height: 30),
             ],
+            
           ),
         ),
       ),

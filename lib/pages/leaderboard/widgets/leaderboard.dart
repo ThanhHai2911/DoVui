@@ -20,12 +20,9 @@ class LeaderboardTile extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 15),
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
       decoration: BoxDecoration(
-        color: isHighlight ? const Color(0xffE8ECFF) : Colors.white,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border:
-            isHighlight
-                ? Border.all(color: const Color(0xff6C7DFF), width: 2)
-                : null,
+        
       ),
       child: Row(
         children: [

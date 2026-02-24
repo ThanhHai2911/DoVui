@@ -38,16 +38,45 @@ class Categoriesscreen extends StatelessWidget {
                     CategoriesItem(
                       title: "Âm nhạc",
                       image: "assets/images/nhac.png",
+                      categoryId: "amnhac",
                     ),
                     CategoriesItem(
                       title: "Đố mẹo",
                       image: "assets/images/dovui.png",
+                      categoryId: "domeo",
                     ),
                     CategoriesItem(
                       title: "Đố vui",
                       image: "assets/images/nao.png",
+                      categoryId: "dovui",
                     ),
-                    CategoriesItem(title: "IT", image: "assets/images/it.png"),
+                    CategoriesItem(
+                      title: "IT", 
+                      image: "assets/images/it.png",
+                      categoryId: "it"
+                    ),
+
+
+                    CategoriesItem(
+                      title: "Âm nhạc",
+                      image: "assets/images/nhac.png",
+                      categoryId: "amnhac",
+                    ),
+                    CategoriesItem(
+                      title: "Đố mẹo",
+                      image: "assets/images/dovui.png",
+                      categoryId: "domeo",
+                    ),
+                    CategoriesItem(
+                      title: "Đố vui",
+                      image: "assets/images/nao.png",
+                      categoryId: "dovui",
+                    ),
+                    CategoriesItem(
+                      title: "IT", 
+                      image: "assets/images/it.png",
+                      categoryId: "it"
+                    ),
                   ],
                 ),
               ),

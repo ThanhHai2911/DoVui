@@ -1,3 +1,4 @@
+import 'package:dovui/pages/question/question_screen.dart';
 import 'package:flutter/material.dart';
 
 class QuizOfWeek extends StatelessWidget {
@@ -10,10 +11,7 @@ class QuizOfWeek extends StatelessWidget {
       children: [
         const Text(
           "Câu đố trong tuần",
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-          ),
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: 15),
         Container(
@@ -43,7 +41,9 @@ class QuizOfWeek extends StatelessWidget {
                     ),
                     const SizedBox(height: 15),
                     ElevatedButton(
-                      onPressed: () {},
+                      onPressed: () {
+                        
+                      },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xff6C79F6),
                         shape: RoundedRectangleBorder(
@@ -54,7 +54,7 @@ class QuizOfWeek extends StatelessWidget {
                         "Bắt đầu thử thách!",
                         style: TextStyle(color: Colors.white),
                       ),
-                    )
+                    ),
                   ],
                 ),
               ),

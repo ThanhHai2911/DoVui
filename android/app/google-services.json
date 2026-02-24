@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "460307639969",
+    "project_id": "dovui-53c35",
+    "storage_bucket": "dovui-53c35.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:460307639969:android:d9620415e1cfdc18b24ae0",
+        "android_client_info": {
+          "package_name": "com.example.dovui"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD4kk5U6D8HkP1Iryx8VUpSnkPPeHhboXY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
