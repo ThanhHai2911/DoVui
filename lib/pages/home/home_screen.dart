@@ -1,3 +1,4 @@
+import 'package:dovui/app/resources/color_manager.dart';
 import 'package:dovui/pages/adddulieu/adddulieu.dart';
 import 'package:flutter/material.dart';
 import 'widgets/home_header.dart';
@@ -20,6 +21,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    //_runSetup();
     if (!_hasLoadedOnce) {
       _fakeLoading();
       _hasLoadedOnce = true;
@@ -28,6 +30,7 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  
 
   Future<void> _fakeLoading() async {
     await Future.delayed(const Duration(milliseconds: 1200));
@@ -43,7 +46,7 @@ class _HomeScreenState extends State<HomeScreen> {
     Size size = MediaQuery.sizeOf(context);
 
     return Scaffold(
-      backgroundColor: const Color(0xffF3F4F8),
+      backgroundColor: ColorManager.scaffoldBackground,
       body: SafeArea(
         child:
             isLoading

@@ -1,3 +1,4 @@
+import 'package:dovui/app/resources/color_manager.dart';
 import 'package:flutter/material.dart';
 
 class GameCompleteScreen extends StatelessWidget {
@@ -15,7 +16,7 @@ class GameCompleteScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xff2E2B72),
+      backgroundColor: ColorManager.scaffoldBackground,
       body: SafeArea(
         child: Center(
           child: Container(
@@ -60,7 +61,7 @@ class GameCompleteScreen extends StatelessWidget {
                       Navigator.pop(context, true);
                     },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xff6C4BFF),
+                      backgroundColor: ColorManager.gamecomplete,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(15),
                       ),
@@ -82,14 +83,14 @@ class GameCompleteScreen extends StatelessWidget {
                       Navigator.popUntil(context, (route) => route.isFirst);
                     },
                     style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: Color(0xff6C4BFF)),
+                      side: const BorderSide(color: ColorManager.gamecomplete),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(15),
                       ),
                     ),
                     child: const Text(
                       "Thoát",
-                      style: TextStyle(color: Color(0xff6C4BFF)),
+                      style: TextStyle(color: ColorManager.gamecomplete),
                     ),
                   ),
                 ),

@@ -4,15 +4,17 @@ import 'package:dovui/models/question_model.dart';
 import 'package:flutter/material.dart';
 
 class WordAnswerController {
-  QuestionModel question;
+  final QuestionModel question;
 
   late List<String> userInput;
   late List<String> letterPool;
+  late String correctAnswer;
 
   int lives = 3;
   int timeLeft = 30;
 
   Timer? timer;
+
   VoidCallback? onUpdate;
   VoidCallback? onTimeUp;
   VoidCallback? onCorrect;
@@ -22,24 +24,25 @@ class WordAnswerController {
   }
 
   void init() {
-    String answer =
-        question.answers[question.correctIndex].replaceAll(" ", "");
+    correctAnswer =
+        question.answers[question.correctIndex].replaceAll(" ", "").trim();
 
-    userInput = List.generate(answer.length, (_) => "");
-    generateLetterPool(answer);
+    userInput = List.generate(correctAnswer.length, (_) => "");
+    _generateLetterPool();
   }
 
-  void generateLetterPool(String correctAnswer) {
+  void _generateLetterPool() {
     List<String> letters = correctAnswer.split("");
     const extra = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
     final random = Random();
 
+    // Thêm 4 chữ random
     while (letters.length < correctAnswer.length + 4) {
       letters.add(extra[random.nextInt(extra.length)]);
     }
 
     letters.shuffle();
-    letterPool = letters;
+    letterPool = List.from(letters); // đảm bảo list mới
   }
 
   void startTimer() {
@@ -58,8 +61,9 @@ class WordAnswerController {
   }
 
   void selectLetter(int index) {
-    int emptyIndex = userInput.indexOf("");
+    if (letterPool[index].isEmpty) return;
 
+    int emptyIndex = userInput.indexOf("");
     if (emptyIndex == -1) return;
 
     userInput[emptyIndex] = letterPool[index];
@@ -75,20 +79,22 @@ class WordAnswerController {
   void removeLetter(int index) {
     if (userInput[index].isEmpty) return;
 
-    letterPool.add(userInput[index]);
-    userInput[index] = "";
+    // Trả chữ về đúng vị trí trống đầu tiên trong pool
+    int poolIndex = letterPool.indexOf("");
+    if (poolIndex != -1) {
+      letterPool[poolIndex] = userInput[index];
+    }
 
+    userInput[index] = "";
     onUpdate?.call();
   }
 
   void checkAnswer() {
-    String result = userInput.join().trim();
-    String correct =
-        question.answers[question.correctIndex].replaceAll(" ", "").trim();
-
     timer?.cancel();
 
-    if (result.toLowerCase() == correct.toLowerCase()) {
+    String result = userInput.join();
+
+    if (result.toLowerCase() == correctAnswer.toLowerCase()) {
       onCorrect?.call();
     } else {
       handleWrong();
@@ -103,13 +109,12 @@ class WordAnswerController {
       return;
     }
 
+    // Reset lại input
     for (int i = 0; i < userInput.length; i++) {
       userInput[i] = "";
     }
 
-    generateLetterPool(
-        question.answers[question.correctIndex].replaceAll(" ", ""));
-
+    _generateLetterPool();
     startTimer();
     onUpdate?.call();
   }

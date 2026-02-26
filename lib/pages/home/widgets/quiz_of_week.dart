@@ -1,3 +1,4 @@
+import 'package:dovui/app/resources/color_manager.dart';
 import 'package:dovui/pages/question/question_screen.dart';
 import 'package:flutter/material.dart';
 
@@ -37,7 +38,7 @@ class QuizOfWeek extends StatelessWidget {
                     const SizedBox(height: 8),
                     const Text(
                       "1.099 " + "người đang tranh tài – bạn có nằm trong top?",
-                      style: TextStyle(color: Colors.black54),
+                      style: TextStyle(color: ColorManager.primaryText),
                     ),
                     const SizedBox(height: 15),
                     ElevatedButton(
@@ -45,14 +46,14 @@ class QuizOfWeek extends StatelessWidget {
                         
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xff6C79F6),
+                        backgroundColor: ColorManager.gamecomplete,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
                       ),
                       child: const Text(
                         "Bắt đầu thử thách!",
-                        style: TextStyle(color: Colors.white),
+                        style: TextStyle(color: ColorManager.cardColor),
                       ),
                     ),
                   ],

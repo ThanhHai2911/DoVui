@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:math';
+import 'package:dovui/app/resources/color_manager.dart';
 import 'package:dovui/models/question_model.dart';
 import 'package:dovui/pages/gamecomplete/game_complete_sceen.dart';
 import 'package:dovui/pages/question/widgets/answer_item.dart';
@@ -247,7 +248,7 @@ class _QuizScreenState extends State<QuizScreen> {
     }
 
     return Scaffold(
-      backgroundColor: const Color(0xff2E2B72),
+      backgroundColor: ColorManager.scaffoldBackground,
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -260,7 +261,7 @@ class _QuizScreenState extends State<QuizScreen> {
                   Text(
                     "$questionCount/${questions.length}",
                     style: const TextStyle(
-                      color: Colors.white,
+                      color: ColorManager.primaryTextColor,
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                     ),
@@ -283,7 +284,7 @@ class _QuizScreenState extends State<QuizScreen> {
                   Text(
                     "$timeLeft s",
                     style: const TextStyle(
-                      color: Colors.white,
+                      color: ColorManager.primaryTextColor,
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                     ),
@@ -295,8 +296,8 @@ class _QuizScreenState extends State<QuizScreen> {
 
               LinearProgressIndicator(
                 value: timeLeft / 15,
-                backgroundColor: Colors.white24,
-                valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
+                backgroundColor: ColorManager.backgroundthanh,
+                valueColor: const AlwaysStoppedAnimation<Color>(ColorManager.primaryText),
               ),
 
               const SizedBox(height: 30),

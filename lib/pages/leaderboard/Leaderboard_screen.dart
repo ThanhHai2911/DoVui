@@ -1,3 +1,4 @@
+import 'package:dovui/app/resources/color_manager.dart';
 import 'package:dovui/pages/leaderboard/widgets/leaderboard.dart';
 import 'package:dovui/pages/leaderboard/widgets/topusercard.dart';
 import 'package:flutter/material.dart';
@@ -8,7 +9,7 @@ class LeaderboardScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xffF3F4F8),
+      backgroundColor: ColorManager.scaffoldBackground,
       body: SafeArea(
         child: Padding(
           padding: EdgeInsets.only(
@@ -24,7 +25,7 @@ class LeaderboardScreen extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 36,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xff2E2B72),
+                  color:  ColorManager.primaryDark
                 ),
               ),
 

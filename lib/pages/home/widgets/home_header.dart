@@ -1,3 +1,4 @@
+import 'package:dovui/app/resources/color_manager.dart';
 import 'package:flutter/material.dart';
 
 class HomeHeader extends StatelessWidget {
@@ -12,7 +13,7 @@ class HomeHeader extends StatelessWidget {
           "Xin Chào, " + "Hải",
           style: TextStyle(
             fontSize: 16,
-            color: Colors.black54,
+            color: ColorManager.primaryText,
           ),
         ),
         SizedBox(height: 8),
@@ -21,7 +22,7 @@ class HomeHeader extends StatelessWidget {
           style: TextStyle(
             fontSize: 32,
             fontWeight: FontWeight.bold,
-            color: Color(0xff2E2B72),
+            color:  ColorManager.primaryDark,
           ),
         ),
       ],

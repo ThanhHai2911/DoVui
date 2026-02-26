@@ -1,3 +1,4 @@
+import 'package:dovui/app/resources/color_manager.dart';
 import 'package:flutter/material.dart';
 
 class WordAnswerHeader extends StatelessWidget {
@@ -16,17 +17,26 @@ class WordAnswerHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    double screenWidth = MediaQuery.of(context).size.width;
+
+    // Scale theo màn hình
+    double baseSize = screenWidth * 0.045;
+
+    // Giới hạn để không quá to / quá nhỏ
+    double fontSize = baseSize.clamp(14.0, 22.0);
+    double iconSize = (baseSize + 2).clamp(16.0, 26.0);
+
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
+      padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.05),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          /// Hiển thị thứ tự câu
+          /// Thứ tự câu
           Text(
             "${currentIndex + 1}/$totalQuestions",
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 18,
+            style: TextStyle(
+              color: ColorManager.primaryTextColor,
+              fontSize: fontSize,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -35,13 +45,9 @@ class WordAnswerHeader extends StatelessWidget {
           Row(
             children: List.generate(
               lives,
-              (_) => const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 2),
-                child: Icon(
-                  Icons.favorite,
-                  color: Colors.red,
-                  size: 20,
-                ),
+              (index) => Padding(
+                padding: EdgeInsets.symmetric(horizontal: iconSize * 0.1),
+                child: Icon(Icons.favorite, color: Colors.red, size: iconSize),
               ),
             ),
           ),
@@ -49,9 +55,9 @@ class WordAnswerHeader extends StatelessWidget {
           /// Thời gian
           Text(
             "$timeLeft s",
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 18,
+            style: TextStyle(
+              color: ColorManager.primaryTextColor,
+              fontSize: fontSize,
               fontWeight: FontWeight.bold,
             ),
           ),

@@ -1,3 +1,4 @@
+import 'package:dovui/app/resources/color_manager.dart';
 import 'package:dovui/pages/list/level_screen.dart';
 import 'package:dovui/pages/question/question_screen.dart';
 import 'package:flutter/material.dart';
@@ -46,7 +47,7 @@ class CategoriesItem extends StatelessWidget {
       },
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: ColorManager.cardColor,
           borderRadius: BorderRadius.circular(20),
         ),
         child: Column(

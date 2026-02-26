@@ -1,3 +1,4 @@
+import 'package:dovui/app/resources/color_manager.dart';
 import 'package:dovui/models/category_model.dart';
 import 'package:dovui/pages/category/widgets/category_shimmer.dart';
 import 'package:dovui/pages/home/widgets/categories_item.dart';
@@ -10,7 +11,7 @@ class Categoriesscreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xffF5F6FA),
+      backgroundColor: ColorManager.scaffoldBackground,
       body: SafeArea(
         child: StreamBuilder<List<CategoryModel>>(
           stream: QuizService.getCategories(),
@@ -29,7 +30,7 @@ class Categoriesscreen extends StatelessWidget {
                   child: Text(
                     "Thể loại",
                     style: TextStyle(
-                      color: Color(0xff2E2B72),
+                      color:  ColorManager.primaryDark,
                       fontSize: 36,
                       fontWeight: FontWeight.bold,
                     ),
@@ -58,7 +59,7 @@ class Categoriesscreen extends StatelessWidget {
                                   title: category.name,
                                   image: category.image,
                                   categoryId: category.id,
-                                  type: category.type, 
+                                  type: category.type,
                                 );
                               },
                             ),
