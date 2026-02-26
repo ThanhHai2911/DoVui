@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math';
 import 'package:dovui/models/question_model.dart';
+import 'package:dovui/pages/gamecomplete/game_complete_sceen.dart';
 import 'package:dovui/pages/question/widgets/answer_item.dart';
 import 'package:dovui/services/quiz_service.dart';
 import 'package:flutter/material.dart';
@@ -48,7 +49,7 @@ class _QuizScreenState extends State<QuizScreen> {
   @override
   void dispose() {
     timer?.cancel();
-    _questionSubscription?.cancel(); // thêm dòng này
+    _questionSubscription?.cancel(); 
     super.dispose();
   }
 
@@ -167,27 +168,23 @@ class _QuizScreenState extends State<QuizScreen> {
 
   Future<void> finishGameByLose() async {
     timer?.cancel();
-
     if (!mounted) return;
 
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder:
-          (_) => AlertDialog(
-            title: const Text("Bạn thua rồi!"),
-            content: Text("Bạn đạt $score điểm"),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                  resetQuiz();
-                },
-                child: const Text("Chơi lại"),
-              ),
-            ],
-          ),
-    );
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder:
+            (_) => GameCompleteScreen(
+              score: score,
+              totalQuestions: questions.length,
+              isWin: false,
+            ),
+      ),
+    ).then((playAgain) {
+      if (playAgain == true) {
+        resetQuiz();
+      }
+    });
   }
 
   void nextQuestion() {
@@ -198,27 +195,23 @@ class _QuizScreenState extends State<QuizScreen> {
 
   Future<void> finishQuiz() async {
     timer?.cancel();
-
     if (!mounted) return;
 
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder:
-          (_) => AlertDialog(
-            title: const Text("🎉 Hoàn thành!"),
-            content: Text("Bạn đạt $score/${questions.length} điểm"),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                  resetQuiz();
-                },
-                child: const Text("Chơi lại"),
-              ),
-            ],
-          ),
-    );
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder:
+            (_) => GameCompleteScreen(
+              score: score,
+              totalQuestions: questions.length,
+              isWin: true,
+            ),
+      ),
+    ).then((playAgain) {
+      if (playAgain == true) {
+        resetQuiz();
+      }
+    });
   }
 
   void resetQuiz() {
@@ -254,7 +247,7 @@ class _QuizScreenState extends State<QuizScreen> {
     }
 
     return Scaffold(
-      backgroundColor: const Color(0xff6C4BFF),
+      backgroundColor: const Color(0xff2E2B72),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(16),

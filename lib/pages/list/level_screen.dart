@@ -1,6 +1,7 @@
 import 'package:dovui/models/man_model.dart';
 import 'package:dovui/pages/category/widgets/category_shimmer.dart';
 import 'package:dovui/pages/question/question_screen.dart';
+import 'package:dovui/pages/question/wordanswer_screen.dart';
 import 'package:dovui/services/quiz_service.dart';
 import 'package:flutter/material.dart';
 
@@ -62,7 +63,7 @@ class Levelscreen extends StatelessWidget {
                                       context,
                                       MaterialPageRoute(
                                         builder:
-                                            (_) => QuizScreen(
+                                            (_) => WordAnswerScreen(
                                               categoryId: categoryId,
                                               levelId: level.id,
                                               type: type,
