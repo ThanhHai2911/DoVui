@@ -10,7 +10,7 @@ class QuizOfWeek extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          "Câu đố trong tuần",
+          "Thử thách trong tuần",
           style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: 15),

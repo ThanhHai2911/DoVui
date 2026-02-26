@@ -7,8 +7,15 @@ import 'package:flutter/material.dart';
 
 class QuizScreen extends StatefulWidget {
   final String categoryId;
+  final String? levelId;
+  final String type;
 
-  const QuizScreen({super.key, required this.categoryId});
+  const QuizScreen({
+    super.key,
+    required this.categoryId,
+    required this.type,
+    this.levelId,
+  });
 
   @override
   State<QuizScreen> createState() => _QuizScreenState();
@@ -17,6 +24,8 @@ class QuizScreen extends StatefulWidget {
 class _QuizScreenState extends State<QuizScreen> {
   List<QuestionModel> questions = [];
   List<int> usedIndexes = [];
+  int lives = 3;
+  StreamSubscription<List<QuestionModel>>? _questionSubscription;
 
   QuestionModel? currentQuestion;
 
@@ -33,30 +42,33 @@ class _QuizScreenState extends State<QuizScreen> {
   @override
   void initState() {
     super.initState();
-    loadQuestions();
+    listenQuestions();
   }
 
   @override
   void dispose() {
     timer?.cancel();
+    _questionSubscription?.cancel(); // thêm dòng này
     super.dispose();
   }
 
-  Future<void> loadQuestions() async {
-    questions = await QuizService.getQuestions(widget.categoryId);
+  void listenQuestions() {
+    _questionSubscription = QuizService.getQuestions(
+      categoryId: widget.categoryId,
+      levelId: widget.levelId,
+      type: widget.type,
+    ).listen((data) {
+      if (!mounted) return;
 
-    if (questions.isEmpty) {
       setState(() {
+        questions = data;
         isLoading = false;
       });
-      return;
-    }
 
-    setState(() {
-      isLoading = false;
+      if (currentQuestion == null && questions.isNotEmpty) {
+        getRandomQuestion();
+      }
     });
-
-    getRandomQuestion();
   }
 
   void startTimer() {
@@ -66,7 +78,26 @@ class _QuizScreenState extends State<QuizScreen> {
     timer = Timer.periodic(const Duration(seconds: 1), (t) {
       if (timeLeft <= 0) {
         t.cancel();
-        nextQuestion();
+
+        // ❗ Hết thời gian = trừ mạng
+        setState(() {
+          showResult = true;
+          selectedIndex = null; // không chọn đáp án nào
+          lives--;
+        });
+
+        // Nếu hết mạng -> thua
+        if (lives <= 0) {
+          Future.delayed(const Duration(seconds: 1), () {
+            if (mounted) finishGameByLose();
+          });
+          return;
+        }
+
+        // Nếu còn mạng -> sang câu mới
+        Future.delayed(const Duration(seconds: 1), () {
+          if (mounted) nextQuestion();
+        });
       } else {
         if (mounted) {
           setState(() {
@@ -109,18 +140,54 @@ class _QuizScreenState extends State<QuizScreen> {
 
     timer?.cancel();
 
+    bool isCorrect = index == currentQuestion!.correctIndex;
+
     setState(() {
       selectedIndex = index;
       showResult = true;
+
+      if (isCorrect) {
+        score++;
+      } else {
+        lives--;
+      }
     });
 
-    if (index == currentQuestion!.correctIndex) {
-      score++;
+    if (lives <= 0) {
+      Future.delayed(const Duration(seconds: 1), () {
+        if (mounted) finishGameByLose();
+      });
+      return;
     }
 
     Future.delayed(const Duration(seconds: 1), () {
       if (mounted) nextQuestion();
     });
+  }
+
+  Future<void> finishGameByLose() async {
+    timer?.cancel();
+
+    if (!mounted) return;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder:
+          (_) => AlertDialog(
+            title: const Text("Bạn thua rồi!"),
+            content: Text("Bạn đạt $score điểm"),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  resetQuiz();
+                },
+                child: const Text("Chơi lại"),
+              ),
+            ],
+          ),
+    );
   }
 
   void nextQuestion() {
@@ -132,26 +199,25 @@ class _QuizScreenState extends State<QuizScreen> {
   Future<void> finishQuiz() async {
     timer?.cancel();
 
-    await QuizService.saveScore(score, questions.length);
-
     if (!mounted) return;
 
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (_) => AlertDialog(
-        title: const Text("🎉 Hoàn thành!"),
-        content: Text("Bạn đạt $score/${questions.length} điểm"),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              resetQuiz();
-            },
-            child: const Text("Chơi lại"),
-          )
-        ],
-      ),
+      builder:
+          (_) => AlertDialog(
+            title: const Text("🎉 Hoàn thành!"),
+            content: Text("Bạn đạt $score/${questions.length} điểm"),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  resetQuiz();
+                },
+                child: const Text("Chơi lại"),
+              ),
+            ],
+          ),
     );
   }
 
@@ -160,6 +226,7 @@ class _QuizScreenState extends State<QuizScreen> {
       score = 0;
       questionCount = 0;
       usedIndexes.clear();
+      lives = 3;
     });
 
     getRandomQuestion();
@@ -168,9 +235,7 @@ class _QuizScreenState extends State<QuizScreen> {
   @override
   Widget build(BuildContext context) {
     if (isLoading) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     if (questions.isEmpty) {
@@ -185,9 +250,7 @@ class _QuizScreenState extends State<QuizScreen> {
     }
 
     if (currentQuestion == null) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     return Scaffold(
@@ -204,23 +267,33 @@ class _QuizScreenState extends State<QuizScreen> {
                   Text(
                     "$questionCount/${questions.length}",
                     style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold),
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                  Text(
-                    "Điểm: $score",
-                    style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold),
+
+                  // ❤️ HIỂN THỊ MẠNG
+                  Row(
+                    children: List.generate(3, (index) {
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 2),
+                        child: Icon(
+                          Icons.favorite,
+                          size: 18,
+                          color: index < lives ? Colors.red : Colors.white24,
+                        ),
+                      );
+                    }),
                   ),
+
                   Text(
                     "$timeLeft s",
                     style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold),
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ],
               ),
@@ -230,8 +303,7 @@ class _QuizScreenState extends State<QuizScreen> {
               LinearProgressIndicator(
                 value: timeLeft / 15,
                 backgroundColor: Colors.white24,
-                valueColor:
-                    const AlwaysStoppedAnimation<Color>(Colors.white),
+                valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
               ),
 
               const SizedBox(height: 30),
@@ -251,8 +323,9 @@ class _QuizScreenState extends State<QuizScreen> {
                             currentQuestion!.question,
                             textAlign: TextAlign.center,
                             style: const TextStyle(
-                                fontSize: 22,
-                                fontWeight: FontWeight.bold),
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
                       ),
@@ -261,24 +334,21 @@ class _QuizScreenState extends State<QuizScreen> {
 
                       Expanded(
                         child: GridView.builder(
-                          itemCount:
-                              currentQuestion!.answers.length,
+                          itemCount: currentQuestion!.answers.length,
                           gridDelegate:
                               const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 2,
-                            crossAxisSpacing: 16,
-                            mainAxisSpacing: 16,
-                            childAspectRatio: 1.2,
-                          ),
+                                crossAxisCount: 2,
+                                crossAxisSpacing: 16,
+                                mainAxisSpacing: 16,
+                                childAspectRatio: 1.2,
+                              ),
                           itemBuilder: (context, index) {
                             Color color = Colors.blue;
 
                             if (showResult) {
-                              if (index ==
-                                  currentQuestion!.correctIndex) {
+                              if (index == currentQuestion!.correctIndex) {
                                 color = Colors.green;
-                              } else if (index ==
-                                  selectedIndex) {
+                              } else if (index == selectedIndex) {
                                 color = Colors.red;
                               }
                             }
@@ -286,9 +356,8 @@ class _QuizScreenState extends State<QuizScreen> {
                             return AnswerItem(
                               text: currentQuestion!.answers[index],
                               color: color,
-                              onTap: showResult
-                                  ? null
-                                  : () => checkAnswer(index),
+                              onTap:
+                                  showResult ? null : () => checkAnswer(index),
                             );
                           },
                         ),

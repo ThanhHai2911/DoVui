@@ -18,8 +18,11 @@ class TopUserCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+
     return Container(
-      width: 110,
+      // Chiếm ~28% màn hình (gần bằng 110 trên màn ~390px)
+      width: screenWidth * 0.28,
       padding: const EdgeInsets.symmetric(vertical: 16),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -32,6 +35,7 @@ class TopUserCard extends StatelessWidget {
         ],
       ),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
           Text(
             rank,
@@ -43,7 +47,7 @@ class TopUserCard extends StatelessWidget {
           const SizedBox(height: 10),
           CircleAvatar(
             radius: size / 2,
-            backgroundImage: AssetImage("assets/images/dovui.png"),
+            backgroundImage: const AssetImage("assets/images/dovui.png"),
           ),
           const SizedBox(height: 10),
           Text(
@@ -51,6 +55,7 @@ class TopUserCard extends StatelessWidget {
             style: const TextStyle(
               fontWeight: FontWeight.w600,
             ),
+            overflow: TextOverflow.ellipsis,
           ),
           Text(
             points,

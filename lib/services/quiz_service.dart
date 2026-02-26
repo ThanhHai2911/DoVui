@@ -1,45 +1,20 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:dovui/models/category_model.dart';
+import '../models/category_model.dart';
+import '../models/man_model.dart';
 import '../models/question_model.dart';
 
 class QuizService {
   static final _firestore = FirebaseFirestore.instance;
 
-  /// LOAD QUESTIONS (Array trong document)
-  static Future<List<QuestionModel>> getQuestions(
-      String categoryId) async {
-    try {
-      final doc = await _firestore
-          .collection("categories")
-          .doc(categoryId)
-          .get();
-
-      if (!doc.exists) return [];
-
-      final data = doc.data();
-      if (data == null) return [];
-
-      final questionsData = data["questions"];
-
-      if (questionsData == null || questionsData is! List) {
-        return [];
-      }
-
-      return questionsData
-          .whereType<Map<String, dynamic>>()
-          .map((e) => QuestionModel.fromMap(e))
-          .toList();
-    } catch (e) {
-      print("Error loading questions: $e");
-      return [];
-    }
-  }
-
-  static Future<List<CategoryModel>> getCategories() async {
-  try {
-    final snapshot =
-        await FirebaseFirestore.instance.collection("Categories").get();
-
+  /// ===============================
+  /// LOAD CATEGORIES
+  /// ===============================
+  static Stream<List<CategoryModel>> getCategories() {
+  return _firestore
+      .collection("categories")
+      .orderBy("order")
+      .snapshots()
+      .map((snapshot) {
     return snapshot.docs.map((doc) {
       final data = doc.data();
 
@@ -47,24 +22,77 @@ class QuizService {
         id: doc.id,
         name: data["name"] ?? "",
         image: data["image"] ?? "",
+        order: data["order"] ?? 0,
+        type: data["type"] ?? "direct",
       );
     }).toList();
-  } catch (e) {
-    print("Error loading categories: $e");
-    return [];
-  }
+  });
 }
 
-  /// SAVE SCORE
-  static Future<void> saveScore(int score, int total) async {
-    try {
-      await _firestore.collection("scores").add({
-        "score": score,
-        "total": total,
-        "createdAt": Timestamp.now(),
+  /// ===============================
+  /// LOAD QUESTIONS (AUTO HANDLE)
+  /// ===============================
+  static Stream<List<QuestionModel>> getQuestions({
+    required String categoryId,
+    String? levelId,
+    required String type,
+  }) {
+    /// ===== DIRECT MODE =====
+    if (type == "direct") {
+      return _firestore
+          .collection("categories")
+          .doc(categoryId)
+          .snapshots()
+          .map((doc) {
+        if (!doc.exists) return [];
+
+        final data = doc.data();
+        if (data == null) return [];
+
+        final questionsData = data["questions"];
+        if (questionsData is! List) return [];
+
+        return questionsData
+            .whereType<Map<String, dynamic>>()
+            .map((e) => QuestionModel.fromMap(e))
+            .toList();
       });
-    } catch (e) {
-      print("Error saving score: $e");
     }
+    else {
+      return _firestore
+          .collection("categories")
+          .doc(categoryId)
+          .collection("mans")
+          .doc(levelId)
+          .collection("questions")
+          .orderBy("order")
+          .snapshots()
+          .map((snapshot) {
+        return snapshot.docs
+            .map((doc) => QuestionModel.fromMap(doc.data()))
+            .toList();
+      });
+    }
+  }
+
+  /// ===============================
+  /// LOAD LEVELS (LEVEL MODE)
+  /// ===============================
+  static Stream<List<LevelModel>> getLevels(String categoryId) {
+    return _firestore
+        .collection("categories")
+        .doc(categoryId)
+        .collection("mans")
+        .orderBy("order")
+        .snapshots()
+        .map((snapshot) {
+      return snapshot.docs.map((doc) {
+        final data = doc.data();
+        return LevelModel(
+          id: doc.id,
+          name: data["name"] ?? "",
+        );
+      }).toList();
+    });
   }
 }

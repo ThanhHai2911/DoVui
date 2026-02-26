@@ -1,3 +1,4 @@
+import 'package:dovui/pages/category/widgets/category_shimmer.dart';
 import 'package:flutter/material.dart';
 import 'package:dovui/services/quiz_service.dart';
 import 'package:dovui/models/category_model.dart';
@@ -8,34 +9,30 @@ class CategoriesSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<List<CategoryModel>>(
-      future: QuizService.getCategories(),
+    return StreamBuilder<List<CategoryModel>>(
+      stream: QuizService.getCategories(),
       builder: (context, snapshot) {
-        if (!snapshot.hasData) {
-          return const Center(child: CircularProgressIndicator());
+        if (snapshot.connectionState == ConnectionState.waiting ||
+            !snapshot.hasData ||
+            snapshot.data!.isEmpty) {
+          return const CategoryShimmer();
         }
 
         final categories = snapshot.data!;
-
-        if (categories.isEmpty) {
-          return const Text("Chưa có thể loại");
-        }
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
               "Thể loại",
-              style:
-                  TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 20),
             GridView.builder(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               itemCount: categories.length,
-              gridDelegate:
-                  const SliverGridDelegateWithFixedCrossAxisCount(
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 2,
                 mainAxisSpacing: 20,
                 crossAxisSpacing: 20,
@@ -48,6 +45,7 @@ class CategoriesSection extends StatelessWidget {
                   title: category.name,
                   image: category.image,
                   categoryId: category.id,
+                  type: category.type, 
                 );
               },
             ),

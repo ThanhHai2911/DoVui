@@ -1,29 +1,48 @@
+import 'package:dovui/pages/list/level_screen.dart';
 import 'package:dovui/pages/question/question_screen.dart';
 import 'package:flutter/material.dart';
-
 
 class CategoriesItem extends StatelessWidget {
   final String title;
   final String image;
   final String categoryId;
+  final String type;
 
   const CategoriesItem({
     super.key,
     required this.title,
     required this.image,
     required this.categoryId,
+    required this.type,
   });
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => QuizScreen(categoryId: categoryId),
-          ),
-        );
+        if (type == "level") {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder:
+                  (_) => Levelscreen(
+                    categoryId: categoryId,
+                    type: type, // 👈 thêm
+                  ),
+            ),
+          );
+        } else {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder:
+                  (_) => QuizScreen(
+                    categoryId: categoryId,
+                    type: type, // 👈 thêm
+                  ),
+            ),
+          );
+        }
       },
       child: Container(
         decoration: BoxDecoration(
@@ -41,10 +60,7 @@ class CategoriesItem extends StatelessWidget {
               },
             ),
             const SizedBox(height: 10),
-            Text(
-              title,
-              style: const TextStyle(fontSize: 15),
-            ),
+            Text(title, style: const TextStyle(fontSize: 15)),
           ],
         ),
       ),

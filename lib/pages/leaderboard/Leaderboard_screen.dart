@@ -11,7 +11,11 @@ class LeaderboardScreen extends StatelessWidget {
       backgroundColor: const Color(0xffF3F4F8),
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
+          padding: EdgeInsets.only(
+            left: 20,
+            right: 20,
+            bottom: MediaQuery.of(context).padding.bottom + 20,
+          ),
           child: Column(
             children: [
               const SizedBox(height: 20),
@@ -101,6 +105,3 @@ class LeaderboardScreen extends StatelessWidget {
     );
   }
 }
-
-
-

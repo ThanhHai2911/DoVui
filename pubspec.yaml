@@ -38,6 +38,8 @@ dependencies:
   cupertino_icons: ^1.0.8
   firebase_core: ^4.4.0
   cloud_firestore: ^6.1.2
+  shimmer: ^3.0.0
+  wakelock_plus: ^1.1.4
 
 dev_dependencies:
   flutter_test:
@@ -50,8 +52,6 @@ flutter_launcher_icons:
   ios: true
   image_path: "assets/logo.png"
   remove_alpha_ios: true
-  adaptive_icon_background: "#ffffff"
-  adaptive_icon_foreground: "assets/logo.png"
 
 # The following section is specific to Flutter packages.
 flutter:
