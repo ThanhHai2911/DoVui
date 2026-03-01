@@ -1,4 +1,5 @@
 import 'package:dovui/app/resources/color_manager.dart';
+import 'package:dovui/pages/it/ittopic_screen.dart';
 import 'package:dovui/pages/list/level_screen.dart';
 import 'package:dovui/pages/question/question_screen.dart';
 import 'package:flutter/material.dart';
@@ -21,26 +22,25 @@ class CategoriesItem extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () {
-        if (type == "level") {
+        if (type == "kythuat") {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder:
-                  (_) => Levelscreen(
-                    categoryId: categoryId,
-                    type: type, // 👈 thêm
-                  ),
+              builder: (_) => ITTopicScreen(categoryId: categoryId),
+            ),
+          );
+        } else if (type == "level") {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => Levelscreen(categoryId: categoryId, type: type),
             ),
           );
         } else {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder:
-                  (_) => QuizScreen(
-                    categoryId: categoryId,
-                    type: type, // 👈 thêm
-                  ),
+              builder: (_) => QuizScreen(categoryId: categoryId, type: type),
             ),
           );
         }

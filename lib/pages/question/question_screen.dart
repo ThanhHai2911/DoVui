@@ -50,8 +50,27 @@ class _QuizScreenState extends State<QuizScreen> {
   @override
   void dispose() {
     timer?.cancel();
-    _questionSubscription?.cancel(); 
+    _questionSubscription?.cancel();
+    loadQuestions();
     super.dispose();
+  
+  }
+
+  void loadQuestions() async {
+    setState(() {
+      isLoading = true;
+    });
+
+    try {
+      questions = await QuizService.fetchQuestions(widget.categoryId);
+      getRandomQuestion();
+    } catch (e) {
+      print(e);
+    }
+
+    setState(() {
+      isLoading = false;
+    });
   }
 
   void listenQuestions() {
@@ -297,7 +316,9 @@ class _QuizScreenState extends State<QuizScreen> {
               LinearProgressIndicator(
                 value: timeLeft / 15,
                 backgroundColor: ColorManager.backgroundthanh,
-                valueColor: const AlwaysStoppedAnimation<Color>(ColorManager.primaryText),
+                valueColor: const AlwaysStoppedAnimation<Color>(
+                  ColorManager.primaryText,
+                ),
               ),
 
               const SizedBox(height: 30),

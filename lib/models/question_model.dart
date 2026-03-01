@@ -19,4 +19,28 @@ class QuestionModel {
       order: data['order'] ?? 0,
     );
   }
+  factory QuestionModel.fromQuizApi(Map<String, dynamic> json) {
+    List<String> answers = [];
+    int correctIndex = 0;
+
+    final answerMap = json['answers'] as Map<String, dynamic>;
+    final correctMap = json['correct_answers'] as Map<String, dynamic>;
+
+    answerMap.forEach((key, value) {
+      if (value != null && value.toString().isNotEmpty) {
+        answers.add(value);
+
+        if (correctMap["${key}_correct"] == "true") {
+          correctIndex = answers.length - 1;
+        }
+      }
+    });
+
+    return QuestionModel(
+      question: json['question'] ?? "",
+      answers: answers,
+      correctIndex: correctIndex,
+      order: 0,
+    );
+  }
 }
