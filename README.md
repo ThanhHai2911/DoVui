@@ -2,8 +2,8 @@
 
 > A scalable and real-time quiz application built with Flutter & Firebase.
 
-Đố Vui là ứng dụng trắc nghiệm được xây dựng nhằm kiểm tra và nâng cao kiến thức người dùng thông qua nhiều chủ đề khác nhau.  
-Dự án tập trung vào kiến trúc rõ ràng, khả năng mở rộng và đồng bộ dữ liệu realtime.
+Do Vui is a quiz application developed to test and enhance users' knowledge across various topics.
+The project focuses on a clean architecture, scalability, and real-time data synchronization.
 
 ---
 
