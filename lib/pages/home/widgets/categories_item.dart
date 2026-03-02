@@ -1,7 +1,7 @@
 import 'package:dovui/app/resources/color_manager.dart';
-import 'package:dovui/pages/it/ittopic_screen.dart';
-import 'package:dovui/pages/list/level_screen.dart';
-import 'package:dovui/pages/question/question_screen.dart';
+import 'package:dovui/pages/it_topic/topic_screen.dart';
+import 'package:dovui/pages/level/level_screen.dart';
+import 'package:dovui/pages/quiz/quiz_screen.dart';
 import 'package:flutter/material.dart';
 
 class CategoriesItem extends StatelessWidget {

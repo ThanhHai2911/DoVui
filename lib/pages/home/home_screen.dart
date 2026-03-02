@@ -1,57 +1,36 @@
 import 'package:dovui/app/resources/color_manager.dart';
 import 'package:dovui/pages/adddulieu/adddulieu.dart';
+import 'package:dovui/pages/home/bloc/home_bloc.dart';
+import 'package:dovui/pages/home/bloc/home_event.dart';
+import 'package:dovui/pages/home/bloc/home_state.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'widgets/home_header.dart';
 import 'widgets/streak_card.dart';
 import 'widgets/quiz_of_week.dart';
 import 'widgets/categories_section.dart';
 import 'widgets/home_shimmer.dart';
 
-class HomeScreen extends StatefulWidget {
+class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
   @override
-  State<HomeScreen> createState() => _HomeScreenState();
-}
-
-class _HomeScreenState extends State<HomeScreen> {
-  bool isLoading = true;
-  static bool _hasLoadedOnce = false;
-
-  @override
-  void initState() {
-    super.initState();
-    //_runSetup();
-    if (!_hasLoadedOnce) {
-      _fakeLoading();
-      _hasLoadedOnce = true;
-    } else {
-      isLoading = false;
-    }
-  }
-
-  
-
-  Future<void> _fakeLoading() async {
-    await Future.delayed(const Duration(milliseconds: 1200));
-    if (mounted) {
-      setState(() {
-        isLoading = false;
-      });
-    }
-  }
-
-  @override
   Widget build(BuildContext context) {
-    Size size = MediaQuery.sizeOf(context);
+    return BlocProvider(
+      create: (_) => HomeBloc()..add(LoadHome()),
+      child: Scaffold(
+        backgroundColor: ColorManager.scaffoldBackground,
+        body: SafeArea(
+          child: BlocBuilder<HomeBloc, HomeState>(
+            builder: (context, state) {
+              if (state is HomeLoading) {
+                return const HomeShimmer();
+              }
 
-    return Scaffold(
-      backgroundColor: ColorManager.scaffoldBackground,
-      body: SafeArea(
-        child:
-            isLoading
-                ? const HomeShimmer()
-                : SingleChildScrollView(
+              if (state is HomeLoaded) {
+                Size size = MediaQuery.sizeOf(context);
+
+                return SingleChildScrollView(
                   padding: EdgeInsets.fromLTRB(
                     size.width * 0.06,
                     0,
@@ -72,7 +51,13 @@ class _HomeScreenState extends State<HomeScreen> {
                       SizedBox(height: 30),
                     ],
                   ),
-                ),
+                );
+              }
+
+              return const SizedBox();
+            },
+          ),
+        ),
       ),
     );
   }

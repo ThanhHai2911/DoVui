@@ -1,5 +1,5 @@
 import 'package:dovui/app/resources/color_manager.dart';
-import 'package:dovui/pages/question/question_screen.dart';
+import 'package:dovui/pages/quiz/quiz_screen.dart';
 import 'package:flutter/material.dart';
 
 class QuizOfWeek extends StatelessWidget {

@@ -1,4 +1,4 @@
-import 'package:dovui/pages/home/widgets/home_bottom_nav.dart';
+import 'package:dovui/pages/splash/splash_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -31,7 +31,7 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
-      home: const HomeBottomNav(),
+      home: const SplashScreen(),
     );
   }
 }
