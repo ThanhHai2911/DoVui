@@ -20,6 +20,7 @@ class LeaderboardScreen extends StatelessWidget {
               LeaderboardBloc(LeaderboardRepository())..add(LoadLeaderboard()),
       child: Scaffold(
         backgroundColor: ColorManager.scaffoldBackground,
+        resizeToAvoidBottomInset: true,
         body: SafeArea(
           child: BlocBuilder<LeaderboardBloc, LeaderboardState>(
             builder: (context, state) {
@@ -35,11 +36,7 @@ class LeaderboardScreen extends StatelessWidget {
                 }
 
                 return Padding(
-                  padding: EdgeInsets.only(
-                    left: 20,
-                    right: 20,
-                    bottom: MediaQuery.of(context).padding.bottom + 20,
-                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: Column(
                     children: [
                       const SizedBox(height: 20),
@@ -53,7 +50,7 @@ class LeaderboardScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 30),
 
-                      /// 🔥 TOP 3 (dynamic)
+                      /// 🔥 TOP 3
                       if (users.isNotEmpty)
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -94,6 +91,9 @@ class LeaderboardScreen extends StatelessWidget {
                       /// 🔥 DANH SÁCH CÒN LẠI
                       Expanded(
                         child: ListView.builder(
+                          padding: EdgeInsets.only(
+                            bottom: MediaQuery.of(context).padding.bottom + 80,
+                          ),
                           itemCount: users.length > 3 ? users.length - 3 : 0,
                           itemBuilder: (context, index) {
                             final user = users[index + 3];
