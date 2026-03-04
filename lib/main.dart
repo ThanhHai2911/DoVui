@@ -1,6 +1,9 @@
-import 'package:dovui/pages/splash/splash_screen.dart';
+import 'package:dovui/data/repositories/user_repository.dart';
+import 'package:dovui/presentation/splash/splash_screen.dart';
+import 'package:dovui/presentation/user/bloc/user_bloc.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'firebase_options.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
@@ -24,14 +27,18 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Do Vui Demo',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-        useMaterial3: true,
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider<UserBloc>(
+          create: (_) => UserBloc(
+             UserRepository()
+          ),
+        ),
+      ],
+      child: const MaterialApp(
+        debugShowCheckedModeBanner: false,
+        home: SplashScreen(),
       ),
-      home: const SplashScreen(),
     );
   }
 }

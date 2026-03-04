@@ -1,10 +1,10 @@
 import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:dovui/models/topic_model.dart';
+import 'package:dovui/data/models/topic_model.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import '../models/category_model.dart';
-import '../models/man_model.dart';
-import '../models/question_model.dart';
+import '../data/models/category_model.dart';
+import '../data/models/man_model.dart';
+import '../data/models/question_model.dart';
 import 'package:http/http.dart' as http;
 
 class QuizService {
