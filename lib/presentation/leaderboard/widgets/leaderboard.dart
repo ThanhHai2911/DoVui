@@ -13,6 +13,23 @@ class LeaderboardTile extends StatelessWidget {
     required this.points,
     this.isHighlight = false,
   });
+  Color _getColorByName(String name) {
+    if (name.isEmpty) return Colors.grey;
+
+    final code = name.codeUnitAt(0);
+
+    final colors = [
+      Colors.blue,
+      Colors.red,
+      Colors.green,
+      Colors.orange,
+      Colors.purple,
+      Colors.teal,
+      Colors.indigo,
+    ];
+
+    return colors[code % colors.length];
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -22,7 +39,6 @@ class LeaderboardTile extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        
       ),
       child: Row(
         children: [
@@ -34,9 +50,16 @@ class LeaderboardTile extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 20),
-          const CircleAvatar(
+          CircleAvatar(
             radius: 20,
-            backgroundImage: AssetImage("assets/images/nao.png"),
+            backgroundColor: _getColorByName(name),
+            child: Text(
+              name.isNotEmpty ? name[0].toUpperCase() : "A",
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ),
           const SizedBox(width: 20),
           Expanded(

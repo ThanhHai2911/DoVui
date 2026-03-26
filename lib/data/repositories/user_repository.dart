@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user_model.dart';
 
@@ -24,7 +25,12 @@ class UserRepository {
 
     final doc = _firestore.collection("users").doc();
 
-    final user = AppUser(id: doc.id, name: trimmedName, score: 0);
+    final user = AppUser(
+      id: doc.id,
+      name: trimmedName,
+      score: 0,
+      createdAt: DateTime.now(),
+    );
 
     await doc.set(user.toJson());
 
@@ -64,10 +70,7 @@ class UserRepository {
     yield* _firestore.collection("users").doc(userId).snapshots().map((doc) {
       if (!doc.exists) return null;
 
-      return AppUser.fromJson({
-        ...doc.data()!,
-        "id": doc.id, // 🔥 BẮT BUỘC
-      });
+      return AppUser.fromJson({...doc.data()!, "id": doc.id});
     });
   }
 
@@ -83,15 +86,18 @@ class UserRepository {
     });
   }
 
+  Future<String?> getCurrentUserId() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_userKey);
+  }
+
   /// ================= UPDATE SCORE =================
   Future<void> updateScore(String id, int newScore) async {
-  await _firestore.collection("users").doc(id).update({
-    "score": newScore,
-  });
+    await _firestore.collection("users").doc(id).update({"score": newScore});
 
-  // 🔥 Sau khi đổi điểm → tính lại rank
-  await updateRanks();
-}
+    // 🔥 Sau khi đổi điểm → tính lại rank
+    await updateRanks();
+  }
 
   /// ================= STREAM LEADERBOARD (REALTIME) =================
   Stream<List<AppUser>> streamTopUsers() {
@@ -117,20 +123,53 @@ class UserRepository {
   }
 
   Future<void> updateRanks() async {
-  final snapshot = await _firestore
-      .collection('users')
-      .orderBy('score', descending: true)
-      .get();
+    final snapshot =
+        await _firestore
+            .collection('users')
+            .orderBy('score', descending: true)
+            .get();
 
-  final batch = _firestore.batch();
+    final batch = _firestore.batch();
 
-  for (int i = 0; i < snapshot.docs.length; i++) {
-    final doc = snapshot.docs[i];
-    batch.update(doc.reference, {
-      'rank': i + 1,
+    for (int i = 0; i < snapshot.docs.length; i++) {
+      final doc = snapshot.docs[i];
+      batch.update(doc.reference, {'rank': i + 1});
+    }
+
+    await batch.commit();
+  }
+
+  Stream<int> getTotalUsersStream() {
+    return _firestore
+        .collection('users')
+        .snapshots()
+        .map((snapshot) => snapshot.docs.length);
+  }
+
+  Stream<int> getUserStreakDaysStream(String uid) {
+    return _firestore.collection('users').doc(uid).snapshots().map((doc) {
+      if (!doc.exists) return 0;
+
+      final data = doc.data();
+      if (data == null) return 0;
+
+      final timestamp = data['createdAt'];
+
+      if (timestamp == null) return 0;
+
+      final createdDate = (timestamp as Timestamp).toDate();
+
+      final days = DateTime.now().difference(createdDate).inDays;
+
+      return days < 0 ? 0 : days;
     });
   }
 
-  await batch.commit();
-}
+  Future<void> saveLevelResult(String uid, String levelId, int correct) async {
+    final ref = _firestore.collection("users").doc(uid);
+
+    await ref.set({
+      "levelResults": {levelId: correct},
+    }, SetOptions(merge: true));
+  }
 }

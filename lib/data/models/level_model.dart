@@ -1,12 +1,16 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class LevelModel {
   final String id;
   final String name;
   final int order;
+  
 
   LevelModel({
     required this.id,
     required this.name,
     required this.order,
+    
   });
 
   factory LevelModel.fromDoc(doc) {
@@ -15,6 +19,7 @@ class LevelModel {
       id: doc.id,
       name: data['name'] ?? '',
       order: data['order'] ?? 0,
+      
     );
   }
 }

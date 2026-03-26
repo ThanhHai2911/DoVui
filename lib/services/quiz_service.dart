@@ -94,6 +94,28 @@ class QuizService {
         });
   }
 
+  static Future<List<LevelModel>> getLevelsOnce(String categoryId) async {
+  try {
+    final snapshot = await _firestore
+        .collection("categories")
+        .doc(categoryId)
+        .collection("mans")
+        .orderBy("order")
+        .get();
+
+    return snapshot.docs.map((doc) {
+      final data = doc.data();
+      return LevelModel(
+        id: doc.id,
+        name: data["name"] ?? "",
+      );
+    }).toList();
+  } catch (e) {
+    print("❌ LOAD LEVEL ERROR: $e");
+    return [];
+  }
+}
+
   /// ===============================
   /// LOAD TOPICS (IT MODE)
   /// ===============================
@@ -111,7 +133,7 @@ class QuizService {
               id: doc.id,
               name: data["name"] ?? "",
               image: data["image"] ?? "",
-              category: data['category'] ?? '', 
+              category: data['category'] ?? '',
             );
           }).toList();
         });

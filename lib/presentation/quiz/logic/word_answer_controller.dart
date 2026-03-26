@@ -18,10 +18,15 @@ class WordAnswerController {
   VoidCallback? onUpdate;
   VoidCallback? onTimeUp;
   VoidCallback? onCorrect;
+  
 
   WordAnswerController(this.question) {
     init();
   }
+  void stopTimer() {
+  timer?.cancel();
+}
+  
 
   void init() {
     correctAnswer =

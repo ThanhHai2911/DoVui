@@ -1,5 +1,6 @@
 import 'package:dovui/app/resources/color_manager.dart';
-import 'package:dovui/presentation/quiz/quiz_screen.dart';
+import 'package:dovui/data/repositories/user_repository.dart';
+import 'package:dovui/presentation/category/categories_screen.dart';
 import 'package:flutter/material.dart';
 
 class QuizOfWeek extends StatelessWidget {
@@ -7,6 +8,7 @@ class QuizOfWeek extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final userRepository = UserRepository();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -36,14 +38,36 @@ class QuizOfWeek extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 8),
-                    const Text(
-                      "1.099 " + "người đang tranh tài – bạn có nằm trong top?",
-                      style: TextStyle(color: ColorManager.primaryText),
+                    StreamBuilder<int>(
+                      stream: userRepository.getTotalUsersStream(),
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState ==
+                            ConnectionState.waiting) {
+                          return const Text(
+                            "Đang tải...",
+                            style: TextStyle(color: ColorManager.primaryText),
+                          );
+                        }
+
+                        final totalUsers = snapshot.data ?? 0;
+
+                        return Text(
+                          "$totalUsers người đang tranh tài – bạn có nằm trong top?",
+                          style: const TextStyle(
+                            color: ColorManager.primaryText,
+                          ),
+                        );
+                      },
                     ),
                     const SizedBox(height: 15),
                     ElevatedButton(
                       onPressed: () {
-                        
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => Categoriesscreen(),
+                          ),
+                        );
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: ColorManager.gamecomplete,

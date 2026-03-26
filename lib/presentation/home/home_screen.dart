@@ -1,5 +1,4 @@
 import 'package:dovui/app/resources/color_manager.dart';
-import 'package:dovui/presentation/adddulieu/adddulieu.dart';
 import 'package:dovui/presentation/home/bloc/home_bloc.dart';
 import 'package:dovui/presentation/home/bloc/home_event.dart';
 import 'package:dovui/presentation/home/bloc/home_state.dart';
@@ -37,18 +36,23 @@ class HomeScreen extends StatelessWidget {
                     size.width * 0.06,
                     70,
                   ),
-                  child: const Column(
+                  child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      SizedBox(height: 20),
+                      const SizedBox(height: 20),
                       HomeHeader(),
-                      SizedBox(height: 25),
-                      StreakCard(),
-                      SizedBox(height: 30),
+                      const SizedBox(height: 25),
+                      StreakCard(
+                        days: state.expDays,
+                        name: state.name,
+                        score: state.score,
+                      ),
+
+                      const SizedBox(height: 30),
                       QuizOfWeek(),
-                      SizedBox(height: 30),
+                      const SizedBox(height: 30),
                       CategoriesSection(),
-                      SizedBox(height: 30),
+                      const SizedBox(height: 30),
                     ],
                   ),
                 );

@@ -1,6 +1,8 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:dovui/app/resources/color_manager.dart';
 import 'package:dovui/presentation/home/widgets/home_bottom_nav.dart';
 import 'package:dovui/presentation/user/bloc/user_bloc.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -55,14 +57,35 @@ class _RegisterScreenState extends State<RegisterScreen> {
           listener: (context, state) async {
             /// ✅ Đăng ký thành công
             if (state is UserRegistered) {
-              await _saveRegisterFlag();
+              try {
+                final userCredential =
+                    await FirebaseAuth.instance.signInAnonymously();
 
-              if (!mounted) return;
+                final uid = userCredential.user!.uid;
 
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (_) => const HomeBottomNav()),
-              );
+                print("✅ UID: $uid");
+
+                await FirebaseFirestore.instance
+                    .collection('users')
+                    .doc(uid)
+                    .set({
+                      'name': state.user.name,
+                      'createdAt': FieldValue.serverTimestamp(),
+                    });
+
+                await _saveRegisterFlag();
+
+                if (!mounted) return;
+
+                print("➡️ NAVIGATE"); // 👈 check dòng này
+
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (_) => const HomeBottomNav()),
+                );
+              } catch (e) {
+                print("❌ ERROR: $e");
+              }
             }
 
             /// 🔥 Tên đã tồn tại hoặc lỗi khác

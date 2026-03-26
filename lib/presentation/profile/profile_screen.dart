@@ -6,6 +6,23 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
+  Color _getColorByName(String name) {
+    if (name.isEmpty) return Colors.grey;
+
+    final code = name.codeUnitAt(0);
+
+    final colors = [
+      Colors.blue,
+      Colors.red,
+      Colors.green,
+      Colors.orange,
+      Colors.purple,
+      Colors.teal,
+      Colors.indigo,
+    ];
+
+    return colors[code % colors.length];
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -32,8 +49,7 @@ class ProfileScreen extends StatelessWidget {
               rank = state.user.rank;
 
               // Bạn có thể tính lại nếu có logic đúng
-              correct = "62%";
-              
+              correct = "0%";
             }
 
             return SingleChildScrollView(
@@ -76,15 +92,13 @@ class ProfileScreen extends StatelessWidget {
                           backgroundColor: Colors.white,
                           child: CircleAvatar(
                             radius: 60,
-                            backgroundColor: const Color(0xffE0E0E0),
+                            backgroundColor: _getColorByName(name),
                             child: Text(
-                              name.isNotEmpty
-                                  ? name[0].toUpperCase()
-                                  : "A",
+                              name.isNotEmpty ? name[0].toUpperCase() : "A",
                               style: const TextStyle(
-                                fontSize: 40,
+                                color: Colors.white,
                                 fontWeight: FontWeight.bold,
-                                color: ColorManager.primaryColor,
+                                fontSize: 40
                               ),
                             ),
                           ),
@@ -108,10 +122,7 @@ class ProfileScreen extends StatelessWidget {
 
                   Text(
                     "@${name.toLowerCase()}",
-                    style: const TextStyle(
-                      fontSize: 16,
-                      color: Colors.grey,
-                    ),
+                    style: const TextStyle(fontSize: 16, color: Colors.grey),
                   ),
 
                   const SizedBox(height: 30),
@@ -128,7 +139,7 @@ class ProfileScreen extends StatelessWidget {
                       children: [
                         _buildStatCard(correct, "Correct"),
                         _buildStatCard("$score", "Points"),
-                        _buildStatCard("#"+"$rank", "Rank"),
+                        _buildStatCard("#" + "$rank", "Rank"),
                       ],
                     ),
                   ),
@@ -175,14 +186,13 @@ class ProfileScreen extends StatelessWidget {
                                       ),
                                       onPressed: () {
                                         Navigator.pop(dialogContext);
-                                        context
-                                            .read<UserBloc>()
-                                            .add(LogoutUserEvent());
+                                        context.read<UserBloc>().add(
+                                          LogoutUserEvent(),
+                                        );
                                       },
                                       child: const Text(
                                         "Đăng xuất",
-                                        style:
-                                            TextStyle(color: Colors.white),
+                                        style: TextStyle(color: Colors.white),
                                       ),
                                     ),
                                   ],
@@ -236,12 +246,9 @@ class ProfileScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 6),
-          Text(
-            title,
-            style: const TextStyle(fontSize: 14, color: Colors.grey),
-          ),
+          Text(title, style: const TextStyle(fontSize: 14, color: Colors.grey)),
         ],
       ),
     );
   }
-} 
+}

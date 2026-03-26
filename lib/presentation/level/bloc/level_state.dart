@@ -1,29 +1,17 @@
-import 'package:equatable/equatable.dart';
-import 'package:dovui/data/models/man_model.dart';
+import 'package:dovui/data/models/user_level_model.dart';
 
-abstract class LevelState extends Equatable {
-  const LevelState();
+abstract class LevelState {}
 
-  @override
-  List<Object?> get props => [];
-}
-
+class LevelInitial extends LevelState {}
 class LevelLoading extends LevelState {}
-
-class LevelLoaded extends LevelState {
-  final List<LevelModel> levels;
-
-  const LevelLoaded(this.levels);
-
-  @override
-  List<Object?> get props => [levels];
-}
-
 class LevelError extends LevelState {
   final String message;
+  LevelError(this.message);
+}
 
-  const LevelError(this.message);
+class LevelLoaded extends LevelState {
+  final List levels;
+  final Map<String, UserLevelModel> levelStatuses; // ✅ thêm
 
-  @override
-  List<Object?> get props => [message];
+  LevelLoaded(this.levels, {this.levelStatuses = const {}});
 }

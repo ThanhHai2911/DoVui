@@ -16,55 +16,75 @@ class TopUserCard extends StatelessWidget {
     this.isFirst = false,
   });
 
+  Color _getColorByName(String name) {
+    if (name.isEmpty) return Colors.grey;
+    final code = name.codeUnitAt(0);
+    final colors = [
+      Colors.blue, Colors.red, Colors.green,
+      Colors.orange, Colors.purple, Colors.teal, Colors.indigo,
+    ];
+    return colors[code % colors.length];
+  }
+
   @override
   Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
+    // ✅ Tất cả scale theo size, không hardcode
+    final double avatarRadius = size * 0.38;
+    final double nameFontSize = size * 0.16;
+    final double pointFontSize = size * 0.13;
+    final double rankFontSize = size * 0.15;
 
-    return Container(
-      // Chiếm ~28% màn hình (gần bằng 110 trên màn ~390px)
-      width: screenWidth * 0.28,
-      padding: const EdgeInsets.symmetric(vertical: 16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Rank badge nhỏ phía trên
+        Text(
+          rank,
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: rankFontSize,
+            color: const Color(0xFF2E2B72),
           ),
-        ],
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            rank,
-            style: const TextStyle(
+        ),
+        const SizedBox(height: 4),
+
+        // Avatar — to hơn với #1
+        CircleAvatar(
+          radius: avatarRadius,
+          backgroundColor: _getColorByName(name),
+          child: Text(
+            name.isNotEmpty ? name[0].toUpperCase() : "?",
+            style: TextStyle(
+              color: Colors.white,
               fontWeight: FontWeight.bold,
-              color: Color(0xff2E2B72),
+              fontSize: avatarRadius * 0.9,
             ),
           ),
-          const SizedBox(height: 10),
-          CircleAvatar(
-            radius: size / 2,
-            backgroundImage: const AssetImage("assets/images/dovui.png"),
+        ),
+        const SizedBox(height: 6),
+
+        // Tên
+        Text(
+          name,
+          style: TextStyle(
+            fontWeight: FontWeight.w700,
+            fontSize: nameFontSize,
+            color: const Color(0xFF2E2B72),
           ),
-          const SizedBox(height: 10),
-          Text(
-            name,
-            style: const TextStyle(
-              fontWeight: FontWeight.w600,
-            ),
-            overflow: TextOverflow.ellipsis,
+          overflow: TextOverflow.ellipsis,
+          maxLines: 1,
+        ),
+        const SizedBox(height: 2),
+
+        // Điểm
+        Text(
+          points,
+          style: TextStyle(
+            fontSize: pointFontSize,
+            color: Colors.grey.shade600,
           ),
-          Text(
-            points,
-            style: const TextStyle(
-              color: Colors.grey,
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

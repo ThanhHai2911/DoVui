@@ -2,7 +2,17 @@ import 'package:dovui/app/resources/color_manager.dart';
 import 'package:flutter/material.dart';
 
 class StreakCard extends StatelessWidget {
-  const StreakCard({super.key});
+  final int days;
+  final String name;
+  final int score;
+
+  const StreakCard({
+    super.key,
+    required this.days,
+    required this.name, 
+    required this.score,
+  });
+  
 
   @override
   Widget build(BuildContext context) {
@@ -15,8 +25,8 @@ class StreakCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            "Bạn đã trải nghiệm" + " 200 " + "ngày",
+           Text(
+            "Bạn đã trải nghiệm $days ngày",
             style: TextStyle(
               color: ColorManager.cardColor,
               fontSize: 20,
@@ -24,15 +34,15 @@ class StreakCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 8),
-          const Text(
-            "+10 điểm mỗi ngày",
+          Text(
+            "Số điểm của bạn: $score " ,
             style: TextStyle(color: ColorManager.textWhite),
           ),
           const SizedBox(height: 15),
           ClipRRect(
             borderRadius: BorderRadius.circular(10),
-            child: const LinearProgressIndicator(
-              value: 0.6,
+            child: LinearProgressIndicator(
+              value: (days % 365) / 365,
               minHeight: 8,
               backgroundColor: ColorManager.backgroundthanh,
               valueColor: AlwaysStoppedAnimation<Color>(ColorManager.mauthanh),

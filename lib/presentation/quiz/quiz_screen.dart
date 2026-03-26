@@ -22,25 +22,26 @@ class QuizScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (_) => QuizBloc()
-        ..add(
-          LoadQuiz(
-            categoryId: categoryId,
-            levelId: levelId,
-            type: type,
-          ),
-        ),
+      create:
+          (_) =>
+              QuizBloc()..add(
+                LoadQuiz(categoryId: categoryId, levelId: levelId, type: type),
+              ),
       child: BlocConsumer<QuizBloc, QuizState>(
         listener: (context, state) {
           if (state.isGameOver) {
             Navigator.pushReplacement(
               context,
               MaterialPageRoute(
-                builder: (_) => GameCompleteScreen(
-                  score: state.score,
-                  totalQuestions: state.questions.length,
-                  isWin: state.isWin,
-                ),
+                builder:
+                    (_) => GameCompleteScreen(
+                      score: state.score,
+                      totalQuestions: state.questions.length,
+                      isWin: state.isWin,
+                      categoryId: categoryId,
+                      levelId: levelId,
+                      type: type,
+                    ),
               ),
             );
           }
@@ -93,13 +94,16 @@ class QuizScreen extends StatelessWidget {
                         Row(
                           children: List.generate(3, (index) {
                             return Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 2),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 2,
+                              ),
                               child: Icon(
                                 Icons.favorite,
                                 size: 18,
-                                color: index < state.lives
-                                    ? Colors.red
-                                    : Colors.white24,
+                                color:
+                                    index < state.lives
+                                        ? Colors.red
+                                        : Colors.white24,
                               ),
                             );
                           }),
@@ -158,11 +162,11 @@ class QuizScreen extends StatelessWidget {
                                     state.currentQuestion!.answers.length,
                                 gridDelegate:
                                     const SliverGridDelegateWithFixedCrossAxisCount(
-                                  crossAxisCount: 2,
-                                  crossAxisSpacing: 16,
-                                  mainAxisSpacing: 16,
-                                  childAspectRatio: 1.2,
-                                ),
+                                      crossAxisCount: 2,
+                                      crossAxisSpacing: 16,
+                                      mainAxisSpacing: 16,
+                                      childAspectRatio: 1.2,
+                                    ),
                                 itemBuilder: (context, index) {
                                   Color color = Colors.blue;
 
@@ -170,21 +174,20 @@ class QuizScreen extends StatelessWidget {
                                     if (index ==
                                         state.currentQuestion!.correctIndex) {
                                       color = Colors.green;
-                                    } else if (index ==
-                                        state.selectedIndex) {
+                                    } else if (index == state.selectedIndex) {
                                       color = Colors.red;
                                     }
                                   }
 
                                   return AnswerItem(
-                                    text: state.currentQuestion!
-                                        .answers[index],
+                                    text: state.currentQuestion!.answers[index],
                                     color: color,
-                                    onTap: state.showResult
-                                        ? null
-                                        : () => context
-                                            .read<QuizBloc>()
-                                            .add(SelectAnswer(index)),
+                                    onTap:
+                                        state.showResult
+                                            ? null
+                                            : () => context
+                                                .read<QuizBloc>()
+                                                .add(SelectAnswer(index)),
                                   );
                                 },
                               ),
