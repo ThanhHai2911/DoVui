@@ -37,20 +37,18 @@ class UserLevelRepository {
 
     final status = score >= 60 ? 'completed' : 'failed';
 
-    /// 🔥 Convert sang dạng man1
-    final levelKey = "man$levelId";
 
     try {
       await _firestore.collection('level_user').doc(username).set({
         'levels': {
-          levelKey: {
+          levelId: {
             'score': score,
             'status': status,
           },
         },
       }, SetOptions(merge: true));
 
-      print("✅ SAVE OK: $username - $levelKey");
+      print("✅ SAVE OK: $username - $levelId");
     } catch (e) {
       print("❌ SAVE ERROR: $e");
     }
@@ -75,7 +73,7 @@ class UserLevelRepository {
 
     return data.map(
       (key, value) => MapEntry(
-        key, // ví dụ: man1
+        key, 
         UserLevelModel.fromMap(value),
       ),
     );

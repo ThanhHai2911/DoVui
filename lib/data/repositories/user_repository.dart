@@ -28,7 +28,7 @@ class UserRepository {
     final user = AppUser(
       id: doc.id,
       name: trimmedName,
-      score: 0,
+      score: 300,
       createdAt: DateTime.now(),
     );
 
@@ -40,39 +40,7 @@ class UserRepository {
     return user;
   }
 
-  /// ================= GET CURRENT USER (1 LẦN) =================
-  Future<AppUser?> getCurrentUser() async {
-    final prefs = await SharedPreferences.getInstance();
-    final userId = prefs.getString(_userKey);
-
-    if (userId == null) return null;
-
-    final doc = await _firestore.collection("users").doc(userId).get();
-
-    if (!doc.exists) return null;
-
-    return AppUser.fromJson({
-      ...doc.data()!,
-      "id": doc.id, // 🔥 QUAN TRỌNG
-    });
-  }
-
-  /// ================= STREAM CURRENT USER (REALTIME) =================
-  Stream<AppUser?> streamCurrentUser() async* {
-    final prefs = await SharedPreferences.getInstance();
-    final userId = prefs.getString(_userKey);
-
-    if (userId == null) {
-      yield null;
-      return;
-    }
-
-    yield* _firestore.collection("users").doc(userId).snapshots().map((doc) {
-      if (!doc.exists) return null;
-
-      return AppUser.fromJson({...doc.data()!, "id": doc.id});
-    });
-  }
+  
 
   /// ================= STREAM USER BY ID =================
   Stream<AppUser?> streamUserById(String id) {

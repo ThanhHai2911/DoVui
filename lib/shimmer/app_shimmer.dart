@@ -1,4 +1,4 @@
-import 'package:dovui/app/resources/color_manager.dart';
+import 'package:dovui/resources/color_manager.dart';
 import 'package:flutter/material.dart';
 import 'package:shimmer/shimmer.dart';
 

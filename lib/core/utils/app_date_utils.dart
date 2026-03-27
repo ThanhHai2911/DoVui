@@ -18,9 +18,3 @@ double calculateYearProgress(int days) {
   return progress;
 }
 
-/// ================= FORMAT DAYS TEXT =================
-String formatExperienceText(int days) {
-  if (days <= 0) return "Mới tham gia";
-  if (days == 1) return "1 ngày trải nghiệm";
-  return "$days ngày trải nghiệm";
-}

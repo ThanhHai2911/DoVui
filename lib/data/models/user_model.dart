@@ -5,28 +5,30 @@ class AppUser {
   final String name;
   final int score;
   final int rank;
-  final DateTime? createdAt;
+  final DateTime createdAt;
 
   AppUser({
     required this.id,
     required this.name,
-    required this.score,
+    this.score = 300,
     this.rank = 0,
-    this.createdAt,
-  });
+    required this.createdAt,
+  }); 
 
   factory AppUser.fromJson(Map<String, dynamic> json) {
-    return AppUser(
-      id: json["id"] ?? "",
-      name: json["name"] ?? "",
-      score: json["score"] ?? 0,
-      rank: json["rank"] ?? 0,
-      createdAt:
-          json["createdAt"] != null
-              ? (json["createdAt"] as Timestamp).toDate()
-              : null,
-    );
-  }
+  final createdAt = json['createdAt'];
+  return AppUser(
+    id: json["id"] ?? "",
+    name: json["name"] ?? "",
+    score: json["score"] ?? 300,
+    rank: json["rank"] ?? 0,
+    createdAt: createdAt is Timestamp
+        ? createdAt.toDate()
+        : createdAt is DateTime
+            ? createdAt
+            : DateTime.now(),  // fallback an toàn
+  );
+}
 
   Map<String, dynamic> toJson() {
     return {"name": name, "score": score, "rank": rank, 'createdAt': createdAt};
