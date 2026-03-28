@@ -31,7 +31,6 @@ class _HomeBottomNavState extends State<HomeBottomNav> {
         children: [
           /// Nội dung chính
           _pages[_currentIndex],
-
           /// Bottom nổi blur thật
           Positioned(
             left: 20,
@@ -76,6 +75,7 @@ class _HomeBottomNavState extends State<HomeBottomNav> {
           setState(() {
             _currentIndex = index;
             //await FoodDataSetup.setup();
+            //VietnamLandmarkSetup.setupVietnamLandmarks();
           });
         },
         child: Center(

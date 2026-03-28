@@ -1,9 +1,9 @@
-import 'package:dovui/resources/color_manager.dart';
 import 'package:dovui/data/models/user_level_model.dart';
 import 'package:dovui/pages/category/widgets/category_shimmer.dart';
 import 'package:dovui/pages/level/bloc/level_bloc.dart';
 import 'package:dovui/pages/level/bloc/level_event.dart';
 import 'package:dovui/pages/level/bloc/level_state.dart';
+import 'package:dovui/pages/quiz_image/quiz_image_screen.dart';
 import 'package:dovui/pages/word_answer/word_answer_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -47,14 +47,16 @@ class Levelscreen extends StatelessWidget {
                             return GridView.builder(
                               itemCount: levels.length,
                               padding: const EdgeInsets.only(
-                                  top: 8, bottom: 20),
+                                top: 8,
+                                bottom: 20,
+                              ),
                               gridDelegate:
                                   const SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount: 2,
-                                mainAxisSpacing: 16,
-                                crossAxisSpacing: 16,
-                                childAspectRatio: 0.88,
-                              ),
+                                    crossAxisCount: 2,
+                                    mainAxisSpacing: 16,
+                                    crossAxisSpacing: 16,
+                                    childAspectRatio: 0.88,
+                                  ),
                               itemBuilder: (context, index) {
                                 final level = levels[index];
                                 final UserLevelModel? userLevel =
@@ -76,23 +78,49 @@ class Levelscreen extends StatelessWidget {
                                   index: index,
                                   status: status,
                                   isUnlocked: isUnlocked,
-                                  onTap: isUnlocked
-                                      ? () {
-                                          Navigator.push(
-                                            context,
-                                            MaterialPageRoute(
-                                              builder: (_) => WordAnswerScreen(
-                                                categoryId: categoryId,
-                                                levelId: level.id,
-                                                type: type,
+                                  onTap:
+                                      isUnlocked
+                                          ? () {
+                                            Widget screen;
+
+                                            switch (type) {
+                                              case "level":
+                                                screen = WordAnswerScreen(
+                                                  categoryId: categoryId,
+                                                  levelId: level.id,
+                                                  type: type,
+                                                );
+                                                
+                                                break;
+
+                                              case "imagequiz":
+                                                screen = QuizImageScreen(
+                                                  categoryId: categoryId,
+                                                  levelId: level.id,
+                                                  type: type,
+                                                );
+                                                break;
+
+                                              default:
+                                                screen = WordAnswerScreen(
+                                                  categoryId: categoryId,
+                                                  levelId: level.id,
+                                                  type: type,
+                                                );
+                                            }
+
+                                            Navigator.push(
+                                              context,
+                                              MaterialPageRoute(
+                                                builder: (_) => screen,
                                               ),
-                                            ),
-                                          ).then((_) {
-                                            context.read<LevelBloc>().add(
-                                                LoadLevels(categoryId));
-                                          });
-                                        }
-                                      : null,
+                                            ).then((_) {
+                                              context.read<LevelBloc>().add(
+                                                LoadLevels(categoryId),
+                                              );
+                                            });
+                                          }
+                                          : null,
                                 );
                               },
                             );
@@ -192,18 +220,24 @@ class Levelscreen extends StatelessWidget {
           Positioned(
             top: -10,
             right: 20,
-            child: Text("🎮",
-                style: TextStyle(
-                    fontSize: 50,
-                    color: Colors.white.withOpacity(0.15))),
+            child: Text(
+              "🎮",
+              style: TextStyle(
+                fontSize: 50,
+                color: Colors.white.withOpacity(0.15),
+              ),
+            ),
           ),
           Positioned(
             bottom: -8,
             right: 70,
-            child: Text("⭐",
-                style: TextStyle(
-                    fontSize: 30,
-                    color: Colors.white.withOpacity(0.12))),
+            child: Text(
+              "⭐",
+              style: TextStyle(
+                fontSize: 30,
+                color: Colors.white.withOpacity(0.12),
+              ),
+            ),
           ),
 
           Column(
@@ -244,12 +278,16 @@ class Levelscreen extends StatelessWidget {
               const SizedBox(height: 14),
               Container(
                 padding: const EdgeInsets.symmetric(
-                    horizontal: 16, vertical: 10),
+                  horizontal: 16,
+                  vertical: 10,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.white.withOpacity(0.15),
                   borderRadius: BorderRadius.circular(14),
                   border: Border.all(
-                      color: Colors.white.withOpacity(0.2), width: 1),
+                    color: Colors.white.withOpacity(0.2),
+                    width: 1,
+                  ),
                 ),
                 child: const Row(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -301,9 +339,10 @@ class Levelscreen extends StatelessWidget {
           decoration: BoxDecoration(color: color, shape: BoxShape.circle),
         ),
         const SizedBox(width: 4),
-        Text(label,
-            style:
-                TextStyle(fontSize: 11, color: Colors.grey.shade600)),
+        Text(
+          label,
+          style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+        ),
       ],
     );
   }
@@ -343,12 +382,10 @@ class _LevelCardState extends State<_LevelCard>
       duration: const Duration(milliseconds: 500),
     );
 
-    _scaleAnim = Tween<double>(begin: 0.7, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _controller,
-        curve: Curves.elasticOut,
-      ),
-    );
+    _scaleAnim = Tween<double>(
+      begin: 0.7,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.elasticOut));
 
     _fadeAnim = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
@@ -358,12 +395,9 @@ class _LevelCardState extends State<_LevelCard>
     );
 
     // Stagger delay theo index
-    Future.delayed(
-      Duration(milliseconds: 80 * widget.index),
-      () {
-        if (mounted) _controller.forward();
-      },
-    );
+    Future.delayed(Duration(milliseconds: 80 * widget.index), () {
+      if (mounted) _controller.forward();
+    });
   }
 
   @override
@@ -430,8 +464,9 @@ class _LevelCardState extends State<_LevelCard>
               borderRadius: BorderRadius.circular(24),
               boxShadow: [
                 BoxShadow(
-                  color: gradient[0]
-                      .withOpacity(widget.isUnlocked ? 0.4 : 0.15),
+                  color: gradient[0].withOpacity(
+                    widget.isUnlocked ? 0.4 : 0.15,
+                  ),
                   blurRadius: 14,
                   offset: const Offset(0, 6),
                 ),
@@ -487,10 +522,7 @@ class _LevelCardState extends State<_LevelCard>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // Emoji to
-                      Text(
-                        _getEmoji(),
-                        style: const TextStyle(fontSize: 32),
-                      ),
+                      Text(_getEmoji(), style: const TextStyle(fontSize: 32)),
 
                       const Spacer(),
 
@@ -509,7 +541,9 @@ class _LevelCardState extends State<_LevelCard>
                       // Badge trạng thái
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 4),
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.white.withOpacity(0.22),
                           borderRadius: BorderRadius.circular(12),

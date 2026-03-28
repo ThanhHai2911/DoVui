@@ -36,11 +36,12 @@ class CategoriesItem extends StatelessWidget {
 
     return GestureDetector(
       onTap: () {
-        if (type == "kythuat") {
+        if (type == "imagequiz") {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (_) => ITTopicScreen(categoryId: categoryId),
+              builder: (_) =>
+                  Levelscreen(categoryId: categoryId, type: type),
             ),
           );
         } else if (type == "level") {
