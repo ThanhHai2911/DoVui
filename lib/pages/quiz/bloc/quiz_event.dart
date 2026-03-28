@@ -1,4 +1,4 @@
-import 'package:dovui/pages/quiz/bloc/word_answer_event.dart';
+import 'package:dovui/pages/word_answer/bloc/word_answer_event.dart';
 import 'package:equatable/equatable.dart';
 
 abstract class QuizEvent extends Equatable {

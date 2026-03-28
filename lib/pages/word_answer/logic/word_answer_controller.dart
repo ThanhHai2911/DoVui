@@ -9,6 +9,8 @@ class WordAnswerController {
   late List<String> userInput;
   late List<String> letterPool;
   late String correctAnswer;
+  final ValueNotifier<int> rebuildNotifier = ValueNotifier(0);
+
   Set<int> hintIndexes = {};
 
   int lives = 3;
@@ -105,6 +107,11 @@ class WordAnswerController {
     }
   }
 
+  void _notifyUpdate() {
+    rebuildNotifier.value++;
+    onUpdate?.call();
+  }
+
   void revealOneWord() {
     final fullAnswer = question.answers[question.correctIndex];
     final words = fullAnswer.split(' ');
@@ -132,12 +139,20 @@ class WordAnswerController {
           if (i >= userInput.length) break;
           hintIndexes.add(i); // ← đánh dấu vị trí gợi ý
         }
-        onUpdate?.call();
+        _notifyUpdate();
         return;
       }
 
       offset += wordLength;
     }
+  }
+
+  void revealAllWords() {
+    final wordCount = question.answers[question.correctIndex].split(' ').length;
+    for (int i = 0; i < wordCount; i++) {
+      revealOneWord();
+    }
+    _notifyUpdate();
   }
 
   // Kiểm tra chữ tại vị trí index có phải gợi ý không
@@ -181,7 +196,9 @@ class WordAnswerController {
     onUpdate?.call();
   }
 
+  @override
   void dispose() {
+    rebuildNotifier.dispose();
     timer?.cancel();
   }
 }

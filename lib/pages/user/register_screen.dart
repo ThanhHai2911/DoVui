@@ -14,13 +14,33 @@ class RegisterScreen extends StatefulWidget {
   State<RegisterScreen> createState() => _RegisterScreenState();
 }
 
-class _RegisterScreenState extends State<RegisterScreen> {
+class _RegisterScreenState extends State<RegisterScreen>
+    with SingleTickerProviderStateMixin {
+
   final TextEditingController controller = TextEditingController();
   final _formKey = GlobalKey<FormState>();
+
+  late AnimationController _floatCtrl;
+  late Animation<double> _floatAnim;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _floatCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2000),
+    )..repeat(reverse: true);
+
+    _floatAnim = Tween<double>(begin: -8, end: 8).animate(
+      CurvedAnimation(parent: _floatCtrl, curve: Curves.easeInOut),
+    );
+  }
 
   @override
   void dispose() {
     controller.dispose();
+    _floatCtrl.dispose();
     super.dispose();
   }
 
@@ -51,132 +71,220 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Padding(
-        padding: const EdgeInsets.all(24),
-        child: BlocListener<UserBloc, UserState>(
-          listener: (context, state) async {
-            /// ✅ Đăng ký thành công
-            if (state is UserRegistered) {
-              try {
-                final userCredential =
-                    await FirebaseAuth.instance.signInAnonymously();
+      body: BlocListener<UserBloc, UserState>(
+        listener: (context, state) async {
 
-                final uid = userCredential.user!.uid;
+          if (state is UserRegistered) {
+            try {
 
-                print("✅ UID: $uid");
+              final userCredential =
+                  await FirebaseAuth.instance.signInAnonymously();
 
-                await FirebaseFirestore.instance
-                    .collection('users')
-                    .doc(uid)
-                    .set({
-                      'name': state.user.name,
-                      'createdAt': FieldValue.serverTimestamp(),
-                    });
+              final uid = userCredential.user!.uid;
 
-                await _saveRegisterFlag();
+              await FirebaseFirestore.instance
+                  .collection('users')
+                  .doc(uid)
+                  .set({
+                'name': state.user.name,
+                'createdAt': FieldValue.serverTimestamp(),
+              });
 
-                if (!mounted) return;
+              await _saveRegisterFlag();
 
-                print("➡️ NAVIGATE"); // 👈 check dòng này
+              if (!mounted) return;
 
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (_) => const HomeBottomNav()),
-                );
-              } catch (e) {
-                print("❌ ERROR: $e");
-              }
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (_) => const HomeBottomNav()),
+              );
+
+            } catch (e) {
+              print("ERROR $e");
             }
+          }
 
-            /// 🔥 Tên đã tồn tại hoặc lỗi khác
-            if (state is UserError) {
-              _showErrorDialog(context, state.message);
-            }
-          },
-          child: BlocBuilder<UserBloc, UserState>(
-            builder: (context, state) {
-              final isLoading = state is UserLoading;
+          if (state is UserError) {
+            _showErrorDialog(context, state.message);
+          }
+        },
 
-              return Form(
-                key: _formKey,
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Text(
-                      "Nhập tên của bạn",
-                      style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+        child: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                Color(0xFFE6F0FA),
+                Color(0xFFDDE8FF),
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
 
-                    const SizedBox(height: 20),
+          child: Stack(
+            children: [
 
-                    TextFormField(
-                      controller: controller,
-                      decoration: const InputDecoration(
-                        border: OutlineInputBorder(),
-                        hintText: "Ví dụ: Hải",
-                      ),
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return "Vui lòng nhập tên";
-                        }
-                        return null;
-                      },
-                    ),
+              /// background blob
+              Positioned(
+                top: -40,
+                right: -40,
+                child: Container(
+                  width: 160,
+                  height: 160,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white.withOpacity(0.2),
+                  ),
+                ),
+              ),
 
-                    const SizedBox(height: 20),
+              Positioned(
+                bottom: -40,
+                left: -40,
+                child: Container(
+                  width: 180,
+                  height: 180,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white.withOpacity(0.2),
+                  ),
+                ),
+              ),
 
-                    SizedBox(
-                      width: double.infinity,
-                      height: 55,
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: ColorManager.primaryColor,
-                          disabledBackgroundColor: Colors.grey.shade400,
-                          elevation: 6,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(15),
-                          ),
-                        ),
-                        onPressed:
-                            isLoading
-                                ? null
-                                : () {
-                                  if (_formKey.currentState!.validate()) {
-                                    context.read<UserBloc>().add(
-                                      RegisterUserEvent(controller.text.trim()),
-                                    );
-                                  }
+              /// MAIN CONTENT
+              Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: BlocBuilder<UserBloc, UserState>(
+                    builder: (context, state) {
+
+                      final isLoading = state is UserLoading;
+
+                      return TweenAnimationBuilder(
+                        tween: Tween(begin: 0.9, end: 1.0),
+                        duration: const Duration(milliseconds: 400),
+                        curve: Curves.easeOutBack,
+                        builder: (context, value, child) {
+                          return Transform.scale(scale: value, child: child);
+                        },
+
+                        child: Form(
+                          key: _formKey,
+
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+
+                              /// ICON FLOAT
+                              AnimatedBuilder(
+                                animation: _floatAnim,
+                                builder: (_, child) {
+                                  return Transform.translate(
+                                    offset: Offset(0, _floatAnim.value),
+                                    child: child,
+                                  );
                                 },
-                        child:
-                            isLoading
-                                ? const SizedBox(
-                                  width: 22,
-                                  height: 22,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2.5,
-                                    color: ColorManager.cardColor,
-                                  ),
-                                )
-                                : const Text(
-                                  "Bắt đầu",
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                    color: ColorManager.cardColor,
+                                child: const Text(
+                                  "🎮",
+                                  style: TextStyle(fontSize: 60),
+                                ),
+                              ),
+
+                              const SizedBox(height: 20),
+
+                              const Text(
+                                "Nhập tên của bạn",
+                                style: TextStyle(
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+
+                              const SizedBox(height: 20),
+
+                              /// TEXT FIELD
+                              TextFormField(
+                                controller: controller,
+                                decoration: InputDecoration(
+                                  filled: true,
+                                  fillColor: Colors.white,
+                                  hintText: "Ví dụ: Hải",
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(15),
                                   ),
                                 ),
-                      ),
-                    ),
-                  ],
+                                validator: (value) {
+                                  if (value == null || value.trim().isEmpty) {
+                                    return "Vui lòng nhập tên";
+                                  }
+                                  return null;
+                                },
+                              ),
+
+                              const SizedBox(height: 24),
+
+                              /// BUTTON
+                              SizedBox(
+                                width: double.infinity,
+                                height: 55,
+
+                                child: ElevatedButton(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: ColorManager.primaryColor,
+                                    disabledBackgroundColor:
+                                        Colors.grey.shade400,
+                                    elevation: 6,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(15),
+                                    ),
+                                  ),
+
+                                  onPressed: isLoading
+                                      ? null
+                                      : () {
+
+                                          if (_formKey.currentState!
+                                              .validate()) {
+
+                                            context.read<UserBloc>().add(
+                                                  RegisterUserEvent(
+                                                      controller.text.trim()),
+                                                );
+                                          }
+                                        },
+
+                                  child: isLoading
+                                      ? const SizedBox(
+                                          width: 22,
+                                          height: 22,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2.5,
+                                            color: ColorManager.cardColor,
+                                          ),
+                                        )
+                                      : const Text(
+                                          "Bắt đầu",
+                                          style: TextStyle(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.bold,
+                                            color: ColorManager.cardColor,
+                                          ),
+                                        ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
                 ),
-              );
-            },
+              ),
+            ],
           ),
         ),
       ),
     );
   }
 }
+

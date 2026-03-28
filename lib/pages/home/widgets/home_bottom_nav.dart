@@ -1,3 +1,4 @@
+import 'package:dovui/pages/adddulieu/adddulieu.dart';
 import 'package:dovui/pages/category/categories_screen.dart';
 import 'package:dovui/pages/home/home_screen.dart';
 import 'package:dovui/pages/leaderboard/Leaderboard_screen.dart';
@@ -74,6 +75,7 @@ class _HomeBottomNavState extends State<HomeBottomNav> {
         onTap: () {
           setState(() {
             _currentIndex = index;
+            //await FoodDataSetup.setup();
           });
         },
         child: Center(

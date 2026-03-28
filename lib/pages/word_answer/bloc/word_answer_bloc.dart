@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:dovui/data/repositories/user_repository.dart';
-import 'package:dovui/pages/quiz/bloc/word_answer_state.dart';
+import 'package:dovui/pages/word_answer/bloc/word_answer_state.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:dovui/services/quiz_service.dart';
 import 'package:dovui/data/models/question_model.dart';
@@ -165,18 +165,17 @@ class WordAnswerBloc extends Bloc<WordAnswerEvent, WordAnswerState> {
   void _onUseHintLetter(UseHintLetter event, Emitter<WordAnswerState> emit) {
     if (_controller == null) return;
     _score = (_score - 10).clamp(0, 99999);
-    _syncScoreDelta(-10);  
+    _syncScoreDelta(-50);  
     _controller!.revealOneWord();
     _rebuildLoaded(emit);
   }
 
-  // ================= SKIP (trừ 15đ, qua câu) =================
-  void _onUseSkip(UseSkip event, Emitter<WordAnswerState> emit) {
-    _score = (_score - 15).clamp(0, 99999);
-    _syncScoreDelta(-15); 
-    _currentIndex++;
-    _loadCurrentQuestion(emit);
-  }
+void _onUseSkip(UseSkip event, Emitter<WordAnswerState> emit) {
+  _score = (_score - 100).clamp(0, 99999);
+  _syncScoreDelta(-100);
+  _controller!.revealAllWords(); // ← hiển thị gợi ý
+  _rebuildLoaded(emit);          // ← chỉ rebuild, không qua câu mới
+}
 
   // ================= HINT FREE (từ ads) =================
   void _onUseHintLetterFree(

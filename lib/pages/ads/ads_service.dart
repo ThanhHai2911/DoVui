@@ -5,7 +5,7 @@ class AdsService {
 
   // ID thật của bạn
   static const String rewardedAdUnitId =
-    'ca-app-pub-3940256099942544/5224354917';
+    'ca-app-pub-2371706562137273~1093591053';
 
   /// Load quảng cáo
   static void loadRewardedAd() {

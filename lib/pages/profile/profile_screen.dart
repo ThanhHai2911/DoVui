@@ -6,248 +6,484 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
+
   Color _getColorByName(String name) {
     if (name.isEmpty) return Colors.grey;
-
     final code = name.codeUnitAt(0);
-
     final colors = [
-      Colors.blue,
-      Colors.red,
-      Colors.green,
-      Colors.orange,
-      Colors.purple,
-      Colors.teal,
-      Colors.indigo,
+      const Color(0xFF6C63FF),
+      const Color(0xFFFF6584),
+      const Color(0xFF43C6AC),
+      const Color(0xFFFF9A3C),
+      const Color(0xFF4FACFE),
+      const Color(0xFFA18CD1),
+      const Color(0xFFFDA085),
     ];
-
     return colors[code % colors.length];
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: ColorManager.cardColor,
-      extendBody: true,
-      body: SafeArea(
-        child: BlocBuilder<UserBloc, UserState>(
-          builder: (context, state) {
-            if (state is UserLoading) {
-              return const ProfileShimmer();
-            }
+      backgroundColor: const Color(0xFFF4F6FF),
+      body: BlocBuilder<UserBloc, UserState>(
+        builder: (context, state) {
+          if (state is UserLoading) return const ProfileShimmer();
 
-            /// 🔥 Giá trị mặc định khi logout
-            String name = "Admin";
-            int score = 0;
-            String correct = "0%";
-            int rank = 0;
+          String name = "Admin";
+          int score = 0;
+          String correct = "0%";
+          int rank = 0;
 
-            /// ✅ Nếu đã đăng nhập
-            if (state is UserRegistered) {
-              name = state.user.name;
-              score = state.user.score;
-              rank = state.user.rank;
+          if (state is UserRegistered) {
+            name = state.user.name;
+            score = state.user.score;
+            rank = state.user.rank;
+            correct = "0%";
+          }
 
-              // Bạn có thể tính lại nếu có logic đúng
-              correct = "0%";
-            }
+          final avatarColor = _getColorByName(name);
 
-            return SingleChildScrollView(
-              padding: const EdgeInsets.only(bottom: 140),
-              child: Column(
-                children: [
-                  /// ================= HEADER =================
-                  Stack(
-                    clipBehavior: Clip.none,
-                    alignment: Alignment.center,
-                    children: [
-                      Container(
-                        height: 260,
-                        decoration: const BoxDecoration(
-                          color: ColorManager.primaryColor,
-                          borderRadius: BorderRadius.only(
-                            bottomLeft: Radius.circular(40),
-                            bottomRight: Radius.circular(40),
-                          ),
+          return SingleChildScrollView(
+            padding: const EdgeInsets.only(bottom: 140),
+            child: Column(
+              children: [
+                /// ===== HEADER =====
+                Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    // Background gradient header
+                    Container(
+                      height: 220,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            avatarColor,
+                            avatarColor.withOpacity(0.7),
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
                         ),
-                        child: const Padding(
-                          padding: EdgeInsets.only(top: 60),
-                          child: Center(
-                            child: Text(
-                              "Thông Tin",
-                              style: TextStyle(
-                                fontSize: 32,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ),
+                        borderRadius: const BorderRadius.only(
+                          bottomLeft: Radius.circular(40),
+                          bottomRight: Radius.circular(40),
                         ),
                       ),
+                      child: SafeArea(
+                        child: Stack(
+                          children: [
+                            // Decorative circles
+                            Positioned(
+                              top: -20,
+                              right: -20,
+                              child: Container(
+                                width: 120,
+                                height: 120,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: Colors.white.withOpacity(0.08),
+                                ),
+                              ),
+                            ),
+                            Positioned(
+                              top: 30,
+                              right: 50,
+                              child: Container(
+                                width: 60,
+                                height: 60,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: Colors.white.withOpacity(0.08),
+                                ),
+                              ),
+                            ),
+                            Positioned(
+                              bottom: 10,
+                              left: 20,
+                              child: Container(
+                                width: 80,
+                                height: 80,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: Colors.white.withOpacity(0.06),
+                                ),
+                              ),
+                            ),
+                            const Padding(
+                              padding: EdgeInsets.only(top: 20),
+                              child: Center(
+                                child: Text(
+                                  "Hồ Sơ",
+                                  style: TextStyle(
+                                    fontSize: 26,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                    letterSpacing: 1,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
 
-                      Positioned(
-                        bottom: -60,
-                        child: CircleAvatar(
-                          radius: 65,
-                          backgroundColor: Colors.white,
+                    // Avatar nổi
+                    Positioned(
+                      bottom: -55,
+                      left: 0,
+                      right: 0,
+                      child: Center(
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Colors.white,
+                            boxShadow: [
+                              BoxShadow(
+                                color: avatarColor.withOpacity(0.4),
+                                blurRadius: 20,
+                                spreadRadius: 2,
+                              ),
+                            ],
+                          ),
                           child: CircleAvatar(
-                            radius: 60,
-                            backgroundColor: _getColorByName(name),
+                            radius: 55,
+                            backgroundColor: avatarColor,
                             child: Text(
                               name.isNotEmpty ? name[0].toUpperCase() : "A",
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontWeight: FontWeight.bold,
-                                fontSize: 40
+                                fontSize: 42,
                               ),
                             ),
                           ),
                         ),
                       ),
-                    ],
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 70),
+
+                /// ===== TÊN & USERNAME =====
+                Text(
+                  name,
+                  style: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF1E1B4B),
                   ),
-
-                  const SizedBox(height: 80),
-
-                  Text(
-                    name,
-                    style: const TextStyle(
-                      fontSize: 26,
-                      fontWeight: FontWeight.bold,
+                ),
+                const SizedBox(height: 6),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: ColorManager.primaryColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    "@${name.toLowerCase()}",
+                    style: TextStyle(
+                      fontSize: 14,
                       color: ColorManager.primaryColor,
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
+                ),
 
-                  const SizedBox(height: 8),
+                const SizedBox(height: 30),
 
-                  Text(
-                    "@${name.toLowerCase()}",
-                    style: const TextStyle(fontSize: 16, color: Colors.grey),
+                /// ===== STATS =====
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Row(
+                    children: [
+                      _buildStatCard(
+                        value: correct,
+                        label: "Chính xác",
+                        icon: "🎯",
+                        color: const Color(0xFF43C6AC),
+                      ),
+                      const SizedBox(width: 12),
+                      _buildStatCard(
+                        value: "$score",
+                        label: "Điểm số",
+                        icon: "⭐",
+                        color: const Color(0xFFFFB347),
+                      ),
+                      const SizedBox(width: 12),
+                      _buildStatCard(
+                        value: "#$rank",
+                        label: "Xếp hạng",
+                        icon: "🏆",
+                        color: const Color(0xFF6C63FF),
+                      ),
+                    ],
                   ),
+                ),
 
-                  const SizedBox(height: 30),
+                const SizedBox(height: 28),
 
-                  /// ================= STATS =================
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    child: GridView.count(
-                      crossAxisCount: 3,
-                      shrinkWrap: true,
-                      mainAxisSpacing: 15,
-                      crossAxisSpacing: 15,
-                      physics: const NeverScrollableScrollPhysics(),
+                /// ===== ACHIEVEMENT BANNER =====
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Container(
+                    padding: const EdgeInsets.all(18),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          const Color(0xFF6C63FF).withOpacity(0.15),
+                          const Color(0xFF43C6AC).withOpacity(0.15),
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: const Color(0xFF6C63FF).withOpacity(0.2),
+                      ),
+                    ),
+                    child: Row(
                       children: [
-                        _buildStatCard(correct, "Correct"),
-                        _buildStatCard("$score", "Points"),
-                        _buildStatCard("#" + "$rank", "Rank"),
+                        const Text("🎮", style: TextStyle(fontSize: 32)),
+                        const SizedBox(width: 14),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              "Người chơi tích cực",
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 15,
+                                color: Color(0xFF1E1B4B),
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              "Tiếp tục chinh phục các thử thách!",
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey.shade600,
+                              ),
+                            ),
+                          ],
+                        ),
                       ],
                     ),
                   ),
+                ),
 
-                  const SizedBox(height: 40),
+                const SizedBox(height: 28),
 
-                  /// ================= LOGOUT BUTTON =================
-                  if (state is UserRegistered)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 40),
-                      child: SizedBox(
+                /// ===== LOGOUT =====
+                if (state is UserRegistered)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: GestureDetector(
+                      onTap: () => _showLogoutDialog(context),
+                      child: Container(
                         width: double.infinity,
-                        height: 55,
-                        child: ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: ColorManager.gamecomplete,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(15),
-                            ),
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(18),
+                          border: Border.all(
+                            color: Colors.red.shade200,
+                            width: 1.5,
                           ),
-                          onPressed: () {
-                            showDialog(
-                              context: context,
-                              builder: (dialogContext) {
-                                return AlertDialog(
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(20),
-                                  ),
-                                  title: const Text("Xác nhận"),
-                                  content: const Text(
-                                    "Bạn có chắc muốn đăng xuất không?",
-                                  ),
-                                  actions: [
-                                    TextButton(
-                                      onPressed: () {
-                                        Navigator.pop(dialogContext);
-                                      },
-                                      child: const Text("Huỷ"),
-                                    ),
-                                    ElevatedButton(
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor:
-                                            ColorManager.gamecomplete,
-                                      ),
-                                      onPressed: () {
-                                        Navigator.pop(dialogContext);
-                                        context.read<UserBloc>().add(
-                                          LogoutUserEvent(),
-                                        );
-                                      },
-                                      child: const Text(
-                                        "Đăng xuất",
-                                        style: TextStyle(color: Colors.white),
-                                      ),
-                                    ),
-                                  ],
-                                );
-                              },
-                            );
-                          },
-                          child: const Text(
-                            "Đăng xuất",
-                            style: TextStyle(
-                              fontSize: 18,
-                              color: ColorManager.cardColor,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.red.withOpacity(0.08),
+                              blurRadius: 12,
+                              offset: const Offset(0, 4),
                             ),
-                          ),
+                          ],
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.logout_rounded,
+                                color: Colors.red.shade400, size: 22),
+                            const SizedBox(width: 10),
+                            Text(
+                              "Đăng xuất",
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.red.shade400,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
+                  ),
 
-                  const SizedBox(height: 40),
+                const SizedBox(height: 20),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  void _showLogoutDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      barrierColor: Colors.black54,
+      builder: (_) => Dialog(
+        backgroundColor: Colors.transparent,
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(28),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.red.withOpacity(0.15),
+                blurRadius: 20,
+                spreadRadius: 2,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 72,
+                height: 72,
+                decoration: BoxDecoration(
+                  color: Colors.red.shade50,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.red.shade200, width: 2),
+                ),
+                child: const Center(
+                  child: Text("👋", style: TextStyle(fontSize: 32)),
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                "Đăng xuất?",
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF1E1B4B),
+                ),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                "Bạn có chắc muốn thoát không?\nTiến trình của bạn sẽ được lưu lại.",
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey.shade600,
+                  height: 1.5,
+                ),
+              ),
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          side: BorderSide(color: Colors.grey.shade300),
+                        ),
+                      ),
+                      child: Text(
+                        "Ở lại",
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.grey.shade600,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        context.read<UserBloc>().add(LogoutUserEvent());
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red.shade400,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                      child: const Text(
+                        "Đăng xuất",
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
                 ],
               ),
-            );
-          },
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildStatCard(String value, String title) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: const [
-          BoxShadow(
-            color: Colors.black12,
-            blurRadius: 10,
-            offset: Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: Color(0xff2E2A72),
+  Widget _buildStatCard({
+    required String value,
+    required String label,
+    required String icon,
+    required Color color,
+  }) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 8),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: color.withOpacity(0.15),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
             ),
-          ),
-          const SizedBox(height: 6),
-          Text(title, style: const TextStyle(fontSize: 14, color: Colors.grey)),
-        ],
+          ],
+          border: Border.all(color: color.withOpacity(0.2)),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(icon, style: const TextStyle(fontSize: 24)),
+            const SizedBox(height: 8),
+            Text(
+              value,
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: color,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
       ),
     );
   }
