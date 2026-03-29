@@ -1,4 +1,6 @@
 import 'package:dovui/pages/ads/ads_service.dart';
+import 'package:dovui/pages/home/widgets/game_dialog.dart';
+import 'package:dovui/pages/quiz_image/bloc/image_question_bloc.dart';
 import 'package:dovui/resources/color_manager.dart';
 import 'package:dovui/pages/user/bloc/user_bloc.dart';
 import 'package:flutter/material.dart';
@@ -13,7 +15,6 @@ class HomeHeader extends StatefulWidget {
 
 class _HomeHeaderState extends State<HomeHeader>
     with SingleTickerProviderStateMixin {
-
   late AnimationController _waveCtrl;
   late Animation<double> _waveAnim;
 
@@ -26,9 +27,10 @@ class _HomeHeaderState extends State<HomeHeader>
       duration: const Duration(milliseconds: 1200),
     )..repeat(reverse: true);
 
-    _waveAnim = Tween<double>(begin: -6, end: 6).animate(
-      CurvedAnimation(parent: _waveCtrl, curve: Curves.easeInOut),
-    );
+    _waveAnim = Tween<double>(
+      begin: -6,
+      end: 6,
+    ).animate(CurvedAnimation(parent: _waveCtrl, curve: Curves.easeInOut));
   }
 
   @override
@@ -42,7 +44,6 @@ class _HomeHeaderState extends State<HomeHeader>
     return BlocBuilder<UserBloc, UserState>(
       buildWhen: (previous, current) => current is UserRegistered,
       builder: (context, state) {
-
         String name = "Admin";
         int score = 300;
 
@@ -66,16 +67,13 @@ class _HomeHeaderState extends State<HomeHeader>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-
               /// ROW HEADER
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-
                   /// HELLO TEXT
                   Row(
                     children: [
-
                       AnimatedBuilder(
                         animation: _waveAnim,
                         builder: (_, child) {
@@ -84,10 +82,7 @@ class _HomeHeaderState extends State<HomeHeader>
                             child: child,
                           );
                         },
-                        child: const Text(
-                          "👋",
-                          style: TextStyle(fontSize: 18),
-                        ),
+                        child: const Text("👋", style: TextStyle(fontSize: 18)),
                       ),
 
                       const SizedBox(width: 6),
@@ -104,7 +99,21 @@ class _HomeHeaderState extends State<HomeHeader>
 
                   /// SCORE CARD
                   GestureDetector(
-                    onTap: () => _showRewardDialog(context),
+                    onTap:
+                        () => showGameDialog(
+                          context: context,
+                          icon: "🛠️",
+                          iconColor: Colors.orange,
+                          title: "Tính năng đang phát triển",
+                          description:
+                              "Chức năng mở đáp án đang được cập nhật.\nVui lòng quay lại sau nhé!",
+                          costIcon: "⭐",
+                          costText: "Sắp ra mắt",
+                          confirmText: "Đã hiểu",
+                          confirmColor: Colors.orange,
+                          showCancel: false,
+                          onConfirm: () {},
+                        ),
                     child: TweenAnimationBuilder(
                       tween: Tween(begin: 0.9, end: 1.0),
                       duration: const Duration(milliseconds: 500),
@@ -115,10 +124,11 @@ class _HomeHeaderState extends State<HomeHeader>
                       child: Stack(
                         clipBehavior: Clip.none,
                         children: [
-
                           Container(
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 14, vertical: 8),
+                              horizontal: 14,
+                              vertical: 8,
+                            ),
                             decoration: BoxDecoration(
                               gradient: LinearGradient(
                                 colors: [
@@ -132,13 +142,16 @@ class _HomeHeaderState extends State<HomeHeader>
                                   color: Colors.amber.withOpacity(0.35),
                                   blurRadius: 10,
                                   offset: const Offset(0, 4),
-                                )
+                                ),
                               ],
                             ),
                             child: Row(
                               children: [
-                                const Icon(Icons.star,
-                                    color: Colors.amber, size: 20),
+                                const Icon(
+                                  Icons.star,
+                                  color: Colors.amber,
+                                  size: 20,
+                                ),
                                 const SizedBox(width: 4),
                                 Text(
                                   "$score",
@@ -178,12 +191,10 @@ class _HomeHeaderState extends State<HomeHeader>
 
               /// TITLE
               ShaderMask(
-                shaderCallback: (bounds) => const LinearGradient(
-                  colors: [
-                    Color(0xFF6C63FF),
-                    Color(0xFF43C6AC),
-                  ],
-                ).createShader(bounds),
+                shaderCallback:
+                    (bounds) => const LinearGradient(
+                      colors: [Color(0xFF6C63FF), Color(0xFF43C6AC)],
+                    ).createShader(bounds),
                 child: const Text(
                   "Cùng chơi nào!",
                   style: TextStyle(
@@ -199,30 +210,4 @@ class _HomeHeaderState extends State<HomeHeader>
       },
     );
   }
-
-  void _showRewardDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text("Nhận thêm vàng"),
-        content: const Text("Xem quảng cáo để nhận 10 vàng?"),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("Hủy"),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              AdsService.showRewardedAd(() {
-                context.read<UserBloc>().add(AddScoreEvent(10));
-              });
-            },
-            child: const Text("Xem ngay"),
-          ),
-        ],
-      ),
-    );
-  }
 }
-

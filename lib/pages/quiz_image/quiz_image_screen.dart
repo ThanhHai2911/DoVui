@@ -1,4 +1,4 @@
-import 'package:dovui/pages/ads/ads_service.dart';
+import 'package:dovui/pages/home/widgets/game_dialog.dart';
 import 'package:dovui/pages/quiz_image/widgets/quiz_image_input.dart';
 import 'package:dovui/pages/word_answer/widgets/hint_bar.dart';
 import 'package:dovui/resources/color_manager.dart';
@@ -220,7 +220,7 @@ class QuizImageScreen extends StatelessWidget {
                             const SizedBox(height: 20),
                             HintBar(
                               onMagnifier: () {
-                                _showGameDialog(
+                                showGameDialog(
                                   context: context,
                                   icon: "🔍",
                                   iconColor: Colors.amber,
@@ -238,7 +238,7 @@ class QuizImageScreen extends StatelessWidget {
                                 );
                               },
                               onKey: () {
-                                _showGameDialog(
+                                showGameDialog(
                                   context: context,
                                   icon: "🗝️",
                                   iconColor: Colors.deepPurple,
@@ -256,7 +256,7 @@ class QuizImageScreen extends StatelessWidget {
                                 );
                               },
                               onVideo: () {
-                                _showGameDialog(
+                                showGameDialog(
                                   context: context,
                                   icon: "🛠️",
                                   iconColor: Colors.orange,
@@ -267,8 +267,8 @@ class QuizImageScreen extends StatelessWidget {
                                   costText: "Sắp ra mắt",
                                   confirmText: "Đã hiểu",
                                   confirmColor: Colors.orange,
+                                  showCancel: false,
                                   onConfirm: () {
-                                    Navigator.pop(context);
                                   },
                                 );
                               },
@@ -295,155 +295,3 @@ class QuizImageScreen extends StatelessWidget {
   }
 }
 
-void _showGameDialog({
-  required BuildContext context,
-  required String icon,
-  required Color iconColor,
-  required String title,
-  required String description,
-  required String costIcon,
-  required String costText,
-  required String confirmText,
-  required Color confirmColor,
-  required VoidCallback onConfirm,
-}) {
-  showDialog(
-    context: context,
-    barrierColor: Colors.black54,
-    builder:
-        (_) => Dialog(
-          backgroundColor: Colors.transparent,
-          child: Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(28),
-              boxShadow: [
-                BoxShadow(
-                  color: iconColor.withOpacity(0.3),
-                  blurRadius: 20,
-                  spreadRadius: 2,
-                  offset: const Offset(0, 8),
-                ),
-              ],
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 80,
-                  height: 80,
-                  decoration: BoxDecoration(
-                    color: iconColor.withOpacity(0.12),
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: iconColor.withOpacity(0.4),
-                      width: 2,
-                    ),
-                  ),
-                  child: Center(
-                    child: Text(icon, style: const TextStyle(fontSize: 36)),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  title,
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.grey.shade800,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  description,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey.shade600,
-                    height: 1.5,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.amber.shade50,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: Colors.amber.shade200),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(costIcon, style: const TextStyle(fontSize: 16)),
-                      const SizedBox(width: 6),
-                      Text(
-                        costText,
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.amber.shade800,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 24),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextButton(
-                        onPressed: () => Navigator.pop(context),
-                        style: TextButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14),
-                            side: BorderSide(color: Colors.grey.shade300),
-                          ),
-                        ),
-                        child: Text(
-                          "Hủy",
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.grey.shade600,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: () {
-                          Navigator.pop(context);
-                          onConfirm();
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: confirmColor,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                        ),
-                        child: Text(
-                          confirmText,
-                          style: const TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
-  );
-}

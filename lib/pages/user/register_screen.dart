@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:dovui/pages/home/widgets/game_dialog.dart';
 import 'package:dovui/resources/color_manager.dart';
 import 'package:dovui/pages/home/widgets/home_bottom_nav.dart';
 import 'package:dovui/pages/user/bloc/user_bloc.dart';
@@ -16,7 +17,6 @@ class RegisterScreen extends StatefulWidget {
 
 class _RegisterScreenState extends State<RegisterScreen>
     with SingleTickerProviderStateMixin {
-
   final TextEditingController controller = TextEditingController();
   final _formKey = GlobalKey<FormState>();
 
@@ -32,9 +32,10 @@ class _RegisterScreenState extends State<RegisterScreen>
       duration: const Duration(milliseconds: 2000),
     )..repeat(reverse: true);
 
-    _floatAnim = Tween<double>(begin: -8, end: 8).animate(
-      CurvedAnimation(parent: _floatCtrl, curve: Curves.easeInOut),
-    );
+    _floatAnim = Tween<double>(
+      begin: -8,
+      end: 8,
+    ).animate(CurvedAnimation(parent: _floatCtrl, curve: Curves.easeInOut));
   }
 
   @override
@@ -50,22 +51,20 @@ class _RegisterScreenState extends State<RegisterScreen>
   }
 
   void _showErrorDialog(BuildContext context, String message) {
-    showDialog(
+    showGameDialog(
       context: context,
-      barrierDismissible: false,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text("Thông báo"),
-          content: Text(message),
-        );
-      },
+      icon: "👤",
+      iconColor: Colors.orange,
+      title: "Tên đã được sử dụng",
+      description:
+          "Tên người dùng đã tồn tại trong hệ thống.\nVui lòng chọn tên khác để tiếp tục!",
+      costIcon: "✏️",
+      costText: "Thử tên khác",
+      confirmText: "Đồng ý",
+      confirmColor: Colors.orange,
+      showCancel: false,
+      onConfirm: () {},
     );
-
-    Future.delayed(const Duration(seconds: 3), () {
-      if (Navigator.of(context).canPop()) {
-        Navigator.of(context).pop();
-      }
-    });
   }
 
   @override
@@ -73,22 +72,19 @@ class _RegisterScreenState extends State<RegisterScreen>
     return Scaffold(
       body: BlocListener<UserBloc, UserState>(
         listener: (context, state) async {
-
           if (state is UserRegistered) {
             try {
-
               final userCredential =
                   await FirebaseAuth.instance.signInAnonymously();
 
               final uid = userCredential.user!.uid;
 
-              await FirebaseFirestore.instance
-                  .collection('users')
-                  .doc(uid)
-                  .set({
-                'name': state.user.name,
-                'createdAt': FieldValue.serverTimestamp(),
-              });
+              await FirebaseFirestore.instance.collection('users').doc(uid).set(
+                {
+                  'name': state.user.name,
+                  'createdAt': FieldValue.serverTimestamp(),
+                },
+              );
 
               await _saveRegisterFlag();
 
@@ -98,7 +94,6 @@ class _RegisterScreenState extends State<RegisterScreen>
                 context,
                 MaterialPageRoute(builder: (_) => const HomeBottomNav()),
               );
-
             } catch (e) {
               print("ERROR $e");
             }
@@ -112,10 +107,7 @@ class _RegisterScreenState extends State<RegisterScreen>
         child: Container(
           decoration: const BoxDecoration(
             gradient: LinearGradient(
-              colors: [
-                Color(0xFFE6F0FA),
-                Color(0xFFDDE8FF),
-              ],
+              colors: [Color(0xFFE6F0FA), Color(0xFFDDE8FF)],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
@@ -123,7 +115,6 @@ class _RegisterScreenState extends State<RegisterScreen>
 
           child: Stack(
             children: [
-
               /// background blob
               Positioned(
                 top: -40,
@@ -157,7 +148,6 @@ class _RegisterScreenState extends State<RegisterScreen>
                   padding: const EdgeInsets.all(24),
                   child: BlocBuilder<UserBloc, UserState>(
                     builder: (context, state) {
-
                       final isLoading = state is UserLoading;
 
                       return TweenAnimationBuilder(
@@ -174,7 +164,6 @@ class _RegisterScreenState extends State<RegisterScreen>
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-
                               /// ICON FLOAT
                               AnimatedBuilder(
                                 animation: _floatAnim,
@@ -208,7 +197,7 @@ class _RegisterScreenState extends State<RegisterScreen>
                                 decoration: InputDecoration(
                                   filled: true,
                                   fillColor: Colors.white,
-                                  hintText: "Ví dụ: Hải",
+                                  hintText: "Ví dụ: Hải mê vui",
                                   border: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(15),
                                   ),
@@ -239,37 +228,38 @@ class _RegisterScreenState extends State<RegisterScreen>
                                     ),
                                   ),
 
-                                  onPressed: isLoading
-                                      ? null
-                                      : () {
+                                  onPressed:
+                                      isLoading
+                                          ? null
+                                          : () {
+                                            if (_formKey.currentState!
+                                                .validate()) {
+                                              context.read<UserBloc>().add(
+                                                RegisterUserEvent(
+                                                  controller.text.trim(),
+                                                ),
+                                              );
+                                            }
+                                          },
 
-                                          if (_formKey.currentState!
-                                              .validate()) {
-
-                                            context.read<UserBloc>().add(
-                                                  RegisterUserEvent(
-                                                      controller.text.trim()),
-                                                );
-                                          }
-                                        },
-
-                                  child: isLoading
-                                      ? const SizedBox(
-                                          width: 22,
-                                          height: 22,
-                                          child: CircularProgressIndicator(
-                                            strokeWidth: 2.5,
-                                            color: ColorManager.cardColor,
+                                  child:
+                                      isLoading
+                                          ? const SizedBox(
+                                            width: 22,
+                                            height: 22,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2.5,
+                                              color: ColorManager.cardColor,
+                                            ),
+                                          )
+                                          : const Text(
+                                            "Bắt đầu",
+                                            style: TextStyle(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.bold,
+                                              color: ColorManager.cardColor,
+                                            ),
                                           ),
-                                        )
-                                      : const Text(
-                                          "Bắt đầu",
-                                          style: TextStyle(
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.bold,
-                                            color: ColorManager.cardColor,
-                                          ),
-                                        ),
                                 ),
                               ),
                             ],
@@ -287,4 +277,3 @@ class _RegisterScreenState extends State<RegisterScreen>
     );
   }
 }
-

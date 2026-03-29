@@ -215,7 +215,7 @@ class _QuizScreenState extends State<QuizScreen>
                               ),
                             ),
 
-                            const SizedBox(height: 20),
+                            const SizedBox(height: 60),
 
                             /// ===== ANSWERS =====
                             Expanded(
@@ -453,6 +453,7 @@ class _QuizScreenState extends State<QuizScreen>
   Widget _buildQuestionCard(QuizState state) {
     return Container(
       width: double.infinity,
+      constraints: const BoxConstraints(minHeight: 200),
       padding: const EdgeInsets.fromLTRB(20, 22, 20, 22),
       decoration: BoxDecoration(
         color: Colors.white,

@@ -1,3 +1,4 @@
+import 'package:dovui/pages/home/widgets/game_dialog.dart';
 import 'package:dovui/resources/color_manager.dart';
 import 'package:dovui/pages/profile/widgets/profile_shimmer.dart';
 import 'package:dovui/pages/user/bloc/user_bloc.dart';
@@ -57,10 +58,7 @@ class ProfileScreen extends StatelessWidget {
                       height: 220,
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
-                          colors: [
-                            avatarColor,
-                            avatarColor.withOpacity(0.7),
-                          ],
+                          colors: [avatarColor, avatarColor.withOpacity(0.7)],
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                         ),
@@ -178,8 +176,10 @@ class ProfileScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 6),
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 5,
+                  ),
                   decoration: BoxDecoration(
                     color: ColorManager.primaryColor.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(20),
@@ -283,7 +283,22 @@ class ProfileScreen extends StatelessWidget {
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 20),
                     child: GestureDetector(
-                      onTap: () => _showLogoutDialog(context),
+                      onTap:
+                          () => showGameDialog(
+                            context: context,
+                            icon: "👋",
+                            iconColor: Colors.red,
+                            title: "Đăng xuất?",
+                            description:
+                                "Bạn có chắc muốn thoát không?\nTiến trình của bạn sẽ được lưu lại.",
+                            costIcon: "💾",
+                            costText: "Dữ liệu được lưu",
+                            confirmText: "Đăng xuất",
+                            confirmColor: Colors.red,
+                            onConfirm: () {
+                              context.read<UserBloc>().add(LogoutUserEvent());
+                            },
+                          ),
                       child: Container(
                         width: double.infinity,
                         padding: const EdgeInsets.symmetric(vertical: 16),
@@ -305,8 +320,11 @@ class ProfileScreen extends StatelessWidget {
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.logout_rounded,
-                                color: Colors.red.shade400, size: 22),
+                            Icon(
+                              Icons.logout_rounded,
+                              color: Colors.red.shade400,
+                              size: 22,
+                            ),
                             const SizedBox(width: 10),
                             Text(
                               "Đăng xuất",
@@ -327,117 +345,6 @@ class ProfileScreen extends StatelessWidget {
             ),
           );
         },
-      ),
-    );
-  }
-
-  void _showLogoutDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      barrierColor: Colors.black54,
-      builder: (_) => Dialog(
-        backgroundColor: Colors.transparent,
-        child: Container(
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(28),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.red.withOpacity(0.15),
-                blurRadius: 20,
-                spreadRadius: 2,
-                offset: const Offset(0, 8),
-              ),
-            ],
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 72,
-                height: 72,
-                decoration: BoxDecoration(
-                  color: Colors.red.shade50,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.red.shade200, width: 2),
-                ),
-                child: const Center(
-                  child: Text("👋", style: TextStyle(fontSize: 32)),
-                ),
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                "Đăng xuất?",
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF1E1B4B),
-                ),
-              ),
-              const SizedBox(height: 10),
-              Text(
-                "Bạn có chắc muốn thoát không?\nTiến trình của bạn sẽ được lưu lại.",
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey.shade600,
-                  height: 1.5,
-                ),
-              ),
-              const SizedBox(height: 24),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      style: TextButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
-                          side: BorderSide(color: Colors.grey.shade300),
-                        ),
-                      ),
-                      child: Text(
-                        "Ở lại",
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.grey.shade600,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () {
-                        Navigator.pop(context);
-                        context.read<UserBloc>().add(LogoutUserEvent());
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.red.shade400,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                      ),
-                      child: const Text(
-                        "Đăng xuất",
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }
