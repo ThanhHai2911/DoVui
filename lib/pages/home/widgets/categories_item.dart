@@ -40,24 +40,21 @@ class CategoriesItem extends StatelessWidget {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (_) =>
-                  Levelscreen(categoryId: categoryId, type: type),
+              builder: (_) => Levelscreen(categoryId: categoryId, type: type),
             ),
           );
         } else if (type == "level") {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (_) =>
-                  Levelscreen(categoryId: categoryId, type: type),
+              builder: (_) => Levelscreen(categoryId: categoryId, type: type),
             ),
           );
         } else {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (_) =>
-                  QuizScreen(categoryId: categoryId, type: type),
+              builder: (_) => QuizScreen(categoryId: categoryId, type: type),
             ),
           );
         }
@@ -145,8 +142,10 @@ class CategoriesItem extends StatelessWidget {
                 flex: 4,
                 child: Container(
                   width: double.infinity,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
                   decoration: const BoxDecoration(color: Colors.white),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -166,17 +165,17 @@ class CategoriesItem extends StatelessWidget {
                       // Pill type tag
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 2),
+                          horizontal: 8,
+                          vertical: 2,
+                        ),
                         decoration: BoxDecoration(
                           color: gradient[0].withOpacity(0.12),
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Text(
-                          type == "kythuat"
-                              ? "Kỹ thuật"
-                              : type == "level"
-                                  ? "Theo cấp độ"
-                                  : "Câu hỏi",
+                          (type == "imagequiz" || type == "level")
+                              ? "Theo cấp độ"
+                              : "Câu hỏi",
                           style: TextStyle(
                             fontSize: 10,
                             fontWeight: FontWeight.w600,

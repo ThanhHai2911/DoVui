@@ -58,12 +58,15 @@ class _WordAnswerScreenState extends State<WordAnswerScreen>
       duration: const Duration(milliseconds: 600),
     );
     _fadeAnim = CurvedAnimation(
-        parent: _entryController, curve: Curves.easeOut);
+      parent: _entryController,
+      curve: Curves.easeOut,
+    );
     _slideAnim = Tween<Offset>(
       begin: const Offset(0, 0.08),
       end: Offset.zero,
-    ).animate(CurvedAnimation(
-        parent: _entryController, curve: Curves.easeOutCubic));
+    ).animate(
+      CurvedAnimation(parent: _entryController, curve: Curves.easeOutCubic),
+    );
 
     // Question card flip/scale khi đổi câu
     _questionController = AnimationController(
@@ -71,13 +74,13 @@ class _WordAnswerScreenState extends State<WordAnswerScreen>
       duration: const Duration(milliseconds: 450),
     );
     _questionScaleAnim = Tween<double>(begin: 0.85, end: 1.0).animate(
-      CurvedAnimation(
-          parent: _questionController, curve: Curves.elasticOut),
+      CurvedAnimation(parent: _questionController, curve: Curves.elasticOut),
     );
     _questionFadeAnim = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
-          parent: _questionController,
-          curve: const Interval(0.0, 0.5, curve: Curves.easeIn)),
+        parent: _questionController,
+        curve: const Interval(0.0, 0.5, curve: Curves.easeIn),
+      ),
     );
 
     // Pulse animation cho badge tiêu đề
@@ -113,8 +116,7 @@ class _WordAnswerScreenState extends State<WordAnswerScreen>
   Future<void> _saveResult({required int score, required int total}) async {
     if (widget.levelId == null) return;
     final percent = total > 0 ? ((score / total) * 100).round() : 0;
-    await _userLevelRepo.saveLevel(
-        levelId: widget.levelId!, score: percent);
+    await _userLevelRepo.saveLevel(levelId: widget.levelId!, score: percent);
   }
 
   void _triggerQuestionAnim(String questionId) {
@@ -127,11 +129,12 @@ class _WordAnswerScreenState extends State<WordAnswerScreen>
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (_) => WordAnswerBloc(
-        categoryId: widget.categoryId,
-        levelId: widget.levelId,
-        type: widget.type,
-      )..add(LoadQuestions()),
+      create:
+          (_) => WordAnswerBloc(
+            categoryId: widget.categoryId,
+            levelId: widget.levelId,
+            type: widget.type,
+          )..add(LoadQuestions()),
       child: BlocConsumer<WordAnswerBloc, WordAnswerState>(
         listener: (context, state) async {
           if (state is WordAnswerCompleted) {
@@ -139,14 +142,15 @@ class _WordAnswerScreenState extends State<WordAnswerScreen>
             Navigator.pushReplacement(
               context,
               MaterialPageRoute(
-                builder: (_) => GameCompleteScreen(
-                  score: state.score,
-                  totalQuestions: state.total,
-                  isWin: state.score == state.total,
-                  categoryId: widget.categoryId,
-                  levelId: widget.levelId,
-                  type: widget.type,
-                ),
+                builder:
+                    (_) => GameCompleteScreen(
+                      score: state.score,
+                      totalQuestions: state.total,
+                      isWin: state.score > 90,
+                      categoryId: widget.categoryId,
+                      levelId: widget.levelId,
+                      type: widget.type,
+                    ),
               ),
             );
           }
@@ -155,14 +159,15 @@ class _WordAnswerScreenState extends State<WordAnswerScreen>
             Navigator.pushReplacement(
               context,
               MaterialPageRoute(
-                builder: (_) => GameCompleteScreen(
-                  score: state.score,
-                  totalQuestions: state.total,
-                  isWin: state.score > 60,
-                  categoryId: widget.categoryId,
-                  levelId: widget.levelId,
-                  type: widget.type,
-                ),
+                builder:
+                    (_) => GameCompleteScreen(
+                      score: state.score,
+                      totalQuestions: state.total,
+                      isWin: state.score > 90,
+                      categoryId: widget.categoryId,
+                      levelId: widget.levelId,
+                      type: widget.type,
+                    ),
               ),
             );
           }
@@ -193,7 +198,8 @@ class _WordAnswerScreenState extends State<WordAnswerScreen>
 
                             Padding(
                               padding: const EdgeInsets.symmetric(
-                                  horizontal: 16),
+                                horizontal: 16,
+                              ),
                               child: WordAnswerHeader(
                                 lives: controller.lives,
                                 timeLeft: controller.timeLeft,
@@ -207,7 +213,8 @@ class _WordAnswerScreenState extends State<WordAnswerScreen>
                             Expanded(
                               child: Padding(
                                 padding: const EdgeInsets.symmetric(
-                                    horizontal: 16),
+                                  horizontal: 16,
+                                ),
                                 child: Column(
                                   children: [
                                     /// Card câu hỏi — scale + fade khi đổi
@@ -356,11 +363,11 @@ class _WordAnswerScreenState extends State<WordAnswerScreen>
                 right: -10,
                 child: AnimatedBuilder(
                   animation: _floatAnim,
-                  builder: (_, __) => Transform.translate(
-                    offset: Offset(0, _floatAnim.value * 0.4),
-                    child: const Text("🎵",
-                        style: TextStyle(fontSize: 32)),
-                  ),
+                  builder:
+                      (_, __) => Transform.translate(
+                        offset: Offset(0, _floatAnim.value * 0.4),
+                        child: const Text("🎵", style: TextStyle(fontSize: 32)),
+                      ),
                 ),
               ),
               // Emoji nổi góc trái
@@ -369,11 +376,11 @@ class _WordAnswerScreenState extends State<WordAnswerScreen>
                 left: -8,
                 child: AnimatedBuilder(
                   animation: _floatAnim,
-                  builder: (_, __) => Transform.translate(
-                    offset: Offset(0, -_floatAnim.value * 0.4),
-                    child: const Text("🎶",
-                        style: TextStyle(fontSize: 22)),
-                  ),
+                  builder:
+                      (_, __) => Transform.translate(
+                        offset: Offset(0, -_floatAnim.value * 0.4),
+                        child: const Text("🎶", style: TextStyle(fontSize: 22)),
+                      ),
                 ),
               ),
 
@@ -385,19 +392,17 @@ class _WordAnswerScreenState extends State<WordAnswerScreen>
                     scale: _pulseAnim,
                     child: Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 7),
+                        horizontal: 16,
+                        vertical: 7,
+                      ),
                       decoration: BoxDecoration(
                         gradient: const LinearGradient(
-                          colors: [
-                            Color(0xFF6C63FF),
-                            Color(0xFF9B8FFF)
-                          ],
+                          colors: [Color(0xFF6C63FF), Color(0xFF9B8FFF)],
                         ),
                         borderRadius: BorderRadius.circular(20),
                         boxShadow: [
                           BoxShadow(
-                            color:
-                                const Color(0xFF6C63FF).withOpacity(0.3),
+                            color: const Color(0xFF6C63FF).withOpacity(0.3),
                             blurRadius: 8,
                             offset: const Offset(0, 3),
                           ),
@@ -450,8 +455,7 @@ class _WordAnswerScreenState extends State<WordAnswerScreen>
           costText: "Tốn 50 sao",
           confirmText: "Dùng ngay!",
           confirmColor: Colors.amber,
-          onConfirm: () =>
-              context.read<WordAnswerBloc>().add(UseHintLetter()),
+          onConfirm: () => context.read<WordAnswerBloc>().add(UseHintLetter()),
         );
       },
       onKey: () {
@@ -465,14 +469,25 @@ class _WordAnswerScreenState extends State<WordAnswerScreen>
           costText: "Tốn 100 sao",
           confirmText: "Mở thôi!",
           confirmColor: Colors.deepPurple,
-          onConfirm: () =>
-              context.read<WordAnswerBloc>().add(UseSkip()),
+          onConfirm: () => context.read<WordAnswerBloc>().add(UseSkip()),
         );
       },
       onVideo: () {
-        AdsService.showRewardedAd(() {
-          context.read<WordAnswerBloc>().add(UseHintLetterFree());
-        });
+        _showGameDialog(
+          context: context,
+          icon: "🛠️",
+          iconColor: Colors.orange,
+          title: "Tính năng đang phát triển",
+          description:
+              "Chức năng mở đáp án đang được cập nhật.\nVui lòng quay lại sau nhé!",
+          costIcon: "⭐",
+          costText: "Sắp ra mắt",
+          confirmText: "Đã hiểu",
+          confirmColor: Colors.orange,
+          onConfirm: () {
+            Navigator.pop(context);
+          },
+        );
       },
     );
   }
@@ -496,17 +511,18 @@ void _showGameDialog({
   showDialog(
     context: context,
     barrierColor: Colors.black54,
-    builder: (_) => _GameDialog(
-      icon: icon,
-      iconColor: iconColor,
-      title: title,
-      description: description,
-      costIcon: costIcon,
-      costText: costText,
-      confirmText: confirmText,
-      confirmColor: confirmColor,
-      onConfirm: onConfirm,
-    ),
+    builder:
+        (_) => _GameDialog(
+          icon: icon,
+          iconColor: iconColor,
+          title: title,
+          description: description,
+          costIcon: costIcon,
+          costText: costText,
+          confirmText: confirmText,
+          confirmColor: confirmColor,
+          onConfirm: onConfirm,
+        ),
   );
 }
 
@@ -547,14 +563,18 @@ class _GameDialogState extends State<_GameDialog>
   void initState() {
     super.initState();
     _ctrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 400));
-    _scaleAnim = Tween<double>(begin: 0.7, end: 1.0).animate(
-      CurvedAnimation(parent: _ctrl, curve: Curves.elasticOut),
+      vsync: this,
+      duration: const Duration(milliseconds: 400),
     );
+    _scaleAnim = Tween<double>(
+      begin: 0.7,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _ctrl, curve: Curves.elasticOut));
     _fadeAnim = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
-          parent: _ctrl,
-          curve: const Interval(0.0, 0.5, curve: Curves.easeIn)),
+        parent: _ctrl,
+        curve: const Interval(0.0, 0.5, curve: Curves.easeIn),
+      ),
     );
     _ctrl.forward();
   }
@@ -604,12 +624,15 @@ class _GameDialogState extends State<_GameDialog>
                       end: Alignment.bottomRight,
                     ),
                     border: Border.all(
-                        color: widget.iconColor.withOpacity(0.35),
-                        width: 2),
+                      color: widget.iconColor.withOpacity(0.35),
+                      width: 2,
+                    ),
                   ),
                   child: Center(
-                    child: Text(widget.icon,
-                        style: const TextStyle(fontSize: 38)),
+                    child: Text(
+                      widget.icon,
+                      style: const TextStyle(fontSize: 38),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -626,25 +649,32 @@ class _GameDialogState extends State<_GameDialog>
                   widget.description,
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey.shade500,
-                      height: 1.6),
+                    fontSize: 14,
+                    color: Colors.grey.shade500,
+                    height: 1.6,
+                  ),
                 ),
                 const SizedBox(height: 16),
                 Container(
                   padding: const EdgeInsets.symmetric(
-                      horizontal: 18, vertical: 9),
+                    horizontal: 18,
+                    vertical: 9,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.amber.shade50,
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
-                        color: Colors.amber.shade200, width: 1.5),
+                      color: Colors.amber.shade200,
+                      width: 1.5,
+                    ),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(widget.costIcon,
-                          style: const TextStyle(fontSize: 16)),
+                      Text(
+                        widget.costIcon,
+                        style: const TextStyle(fontSize: 16),
+                      ),
                       const SizedBox(width: 6),
                       Text(
                         widget.costText,
@@ -664,18 +694,20 @@ class _GameDialogState extends State<_GameDialog>
                       child: TextButton(
                         onPressed: () => Navigator.pop(context),
                         style: TextButton.styleFrom(
-                          padding:
-                              const EdgeInsets.symmetric(vertical: 14),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(14),
                             side: BorderSide(color: Colors.grey.shade300),
                           ),
                         ),
-                        child: Text("Hủy",
-                            style: TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.grey.shade500)),
+                        child: Text(
+                          "Hủy",
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.grey.shade500,
+                          ),
+                        ),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -687,8 +719,7 @@ class _GameDialogState extends State<_GameDialog>
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: widget.confirmColor,
-                          padding:
-                              const EdgeInsets.symmetric(vertical: 14),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
                           elevation: 0,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(14),
@@ -697,9 +728,10 @@ class _GameDialogState extends State<_GameDialog>
                         child: Text(
                           widget.confirmText,
                           style: const TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white),
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
                         ),
                       ),
                     ),

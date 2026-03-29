@@ -56,7 +56,7 @@ class _StreakCardState extends State<StreakCard>
         return Transform.scale(scale: value, child: child);
       },
       child: Container(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.only(top: 15,left: 15,right: 15,bottom: 25),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(22),
           gradient: LinearGradient(
@@ -80,8 +80,8 @@ class _StreakCardState extends State<StreakCard>
 
             /// blob decoration
             Positioned(
-              right: -20,
-              top: -20,
+              right: -10,
+              top: -10,
               child: Container(
                 width: 90,
                 height: 90,
@@ -128,16 +128,15 @@ class _StreakCardState extends State<StreakCard>
                     ),
                   ],
                 ),
-
-                const SizedBox(height: 10),
-
-                /// SCORE
-                Text(
-                  "⭐ Số sao của bạn: ${widget.score}",
-                  style: TextStyle(color: ColorManager.textWhite),
-                ),
-
                 const SizedBox(height: 18),
+                Text(
+                  "🚀 Hành trình của bạn đã hoàn thành ${(progress * 100).toStringAsFixed(0)}%! Tiếp tục nhé!",
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.7),
+                    fontSize: 11,
+                  ),
+                ),
+                const SizedBox(height: 6),
 
                 /// PROGRESS
                 ClipRRect(
@@ -158,16 +157,7 @@ class _StreakCardState extends State<StreakCard>
                     },
                   ),
                 ),
-
-                const SizedBox(height: 6),
-
-                Text(
-                  "${(progress * 100).toStringAsFixed(0)}% hành trình năm",
-                  style: TextStyle(
-                    color: Colors.white.withOpacity(0.7),
-                    fontSize: 11,
-                  ),
-                ),
+                
               ],
             ),
           ],

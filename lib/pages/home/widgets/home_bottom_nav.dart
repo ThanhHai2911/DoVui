@@ -76,6 +76,8 @@ class _HomeBottomNavState extends State<HomeBottomNav> {
             _currentIndex = index;
             //await FoodDataSetup.setup();
             //VietnamLandmarkSetup.setupVietnamLandmarks();
+            //VietnamLandmarkSetupExtra.setupLevels5to50();
+            //VietnamMixedSetup.setupLevels5to50();
           });
         },
         child: Center(
