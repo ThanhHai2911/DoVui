@@ -32,7 +32,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     await _sub?.cancel();
 
     _sub = _userRepo.streamUserById(userId).listen((user) {
-      if (user != null) {
+      if (user != null && !isClosed) {
         add(UpdateHome(user));
       }
     });
@@ -60,7 +60,10 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     final durationUntilMidnight = nextMidnight.difference(now);
 
     _midnightTimer = Timer(durationUntilMidnight, () {
-      add(RefreshExpDays());
+      if (!isClosed) {
+        // ← thêm !isClosed
+        add(RefreshExpDays());
+      }
     });
   }
 

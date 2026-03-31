@@ -35,7 +35,7 @@ class UserLevelRepository {
       return;
     }
 
-    final status = score >= 60 ? 'completed' : 'failed';
+    final status = score >= 6 ? 'completed' : 'failed';
 
 
     try {

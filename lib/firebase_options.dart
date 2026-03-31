@@ -51,7 +51,7 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions android = FirebaseOptions(
     apiKey: 'AIzaSyD4kk5U6D8HkP1Iryx8VUpSnkPPeHhboXY',
-    appId: '1:460307639969:android:d9620415e1cfdc18b24ae0',
+    appId: '1:460307639969:android:2aa6d3e9b305ee4cb24ae0',
     messagingSenderId: '460307639969',
     projectId: 'dovui-53c35',
     storageBucket: 'dovui-53c35.firebasestorage.app',
@@ -59,10 +59,10 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'AIzaSyCz6eP3xRp2cpS2PM88g8ka2EK3TAeiWJk',
-    appId: '1:460307639969:ios:b2ca42176a0b8c28b24ae0',
+    appId: '1:460307639969:ios:335fa8dade67bfadb24ae0',
     messagingSenderId: '460307639969',
     projectId: 'dovui-53c35',
     storageBucket: 'dovui-53c35.firebasestorage.app',
-    iosBundleId: 'com.example.dovui',
+    iosBundleId: 'com.thanhhai.dovui',
   );
 }

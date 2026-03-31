@@ -12,7 +12,12 @@
           "package_name": "com.example.dovui"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "460307639969-jct8p3dp4e4hf0anl0279m36hee51juh.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyD4kk5U6D8HkP1Iryx8VUpSnkPPeHhboXY"
@@ -20,7 +25,55 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "460307639969-jct8p3dp4e4hf0anl0279m36hee51juh.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "460307639969-43csqpu1n9k2h7567d68uqeaa1tl1u0o.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.dovui"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:460307639969:android:2aa6d3e9b305ee4cb24ae0",
+        "android_client_info": {
+          "package_name": "com.thanhhai.dovui"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "460307639969-jct8p3dp4e4hf0anl0279m36hee51juh.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD4kk5U6D8HkP1Iryx8VUpSnkPPeHhboXY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "460307639969-jct8p3dp4e4hf0anl0279m36hee51juh.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "460307639969-43csqpu1n9k2h7567d68uqeaa1tl1u0o.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.dovui"
+              }
+            }
+          ]
         }
       }
     }

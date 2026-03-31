@@ -26,10 +26,11 @@ class QuizImageScreen extends StatelessWidget {
   });
 
   Future<void> _saveResult({required int score, required int total}) async {
-    if (levelId == null) return;
-    final percent = total > 0 ? ((score / total) * 100).round() : 0;
-    await _userLevelRepo.saveLevel(levelId: levelId!, score: percent);
-  }
+  if (levelId == null) return;
+  final maxScore = total * 10;
+  final percent = maxScore > 0 ? ((score / maxScore) * 10).round() : 0;
+  await _userLevelRepo.saveLevel(levelId: levelId!, score: percent);
+}
 
   @override
   Widget build(BuildContext context) {
@@ -51,7 +52,7 @@ class QuizImageScreen extends StatelessWidget {
                     (_) => GameCompleteScreen(
                       score: state.score,
                       totalQuestions: state.total,
-                      isWin: state.score > 60,
+                      isWin: state.total > 0 && (state.score / (state.total * 10)) >= 0.6,
                       categoryId: categoryId,
                       levelId: levelId,
                       type: type,
@@ -69,7 +70,7 @@ class QuizImageScreen extends StatelessWidget {
                     (_) => GameCompleteScreen(
                       score: state.score,
                       totalQuestions: state.total,
-                      isWin: state.score > 60,
+                      isWin: state.total > 0 && (state.score / (state.total * 10)) >= 0.6,
                       categoryId: categoryId,
                       levelId: levelId,
                       type: type,
@@ -109,7 +110,7 @@ class QuizImageScreen extends StatelessWidget {
                               builder: (context, constraints) {
                                 final screenWidth = constraints.maxWidth;
                                 final horizontalPadding = screenWidth * 0.08;
-                                final verticalPadding = screenWidth * 0.12;
+                                final verticalPadding = screenWidth * 0.05;
                                 final titleFont = (screenWidth * 0.045).clamp(
                                   14.0,
                                   22.0,
@@ -152,11 +153,11 @@ class QuizImageScreen extends StatelessWidget {
                                       ClipRRect(
                                         borderRadius: BorderRadius.circular(12),
                                         child: SizedBox(
-                                          height: 180,
+                                          height: 150,
                                           width: double.infinity,
                                           child: Image.network(
                                             question.image,
-                                            height: 180,
+                                            height: 150,
                                             width: double.infinity,
                                             fit: BoxFit.cover,
                                             loadingBuilder: (
