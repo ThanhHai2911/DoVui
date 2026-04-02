@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:math';
+import 'package:dovui/pages/user/login_screen.dart';
 import 'package:dovui/resources/color_manager.dart';
 import 'package:dovui/pages/home/widgets/home_bottom_nav.dart';
 import 'package:dovui/pages/user/bloc/user_bloc.dart';
@@ -97,7 +98,7 @@ class _SplashScreenState extends State<SplashScreen>
           if (state is UserNotRegistered) {
             Navigator.pushReplacement(
               context,
-              MaterialPageRoute(builder: (_) => const RegisterScreen()),
+              MaterialPageRoute(builder: (_) => const LoginScreen()),
             );
           }
         },

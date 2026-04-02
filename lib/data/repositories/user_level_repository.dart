@@ -15,8 +15,7 @@ class UserLevelRepository {
       return null;
     }
 
-    final doc =
-        await _firestore.collection('users').doc(user.uid).get();
+    final doc = await _firestore.collection('users').doc(user.uid).get();
 
     return doc.data()?['name'];
   }
@@ -27,43 +26,32 @@ class UserLevelRepository {
   Future<void> saveLevel({
     required String levelId,
     required int score,
+    required String userId,
   }) async {
-    final username = await _getUsername();
+    final uid = FirebaseAuth.instance.currentUser!.uid;
 
-    if (username == null) {
-      print("❌ USERNAME NULL");
-      return;
-    }
+    final docRef = FirebaseFirestore.instance
+        .collection('level_user')
+        .doc("${userId}");
 
-    final status = score >= 6 ? 'completed' : 'failed';
-
-
-    try {
-      await _firestore.collection('level_user').doc(username).set({
-        'levels': {
-          levelId: {
-            'score': score,
-            'status': status,
-          },
+    await docRef.set({
+      'levels': {
+        levelId: {
+          'score': score,
+          'status': score >= 6 ? 'completed' : 'failed',
         },
-      }, SetOptions(merge: true));
-
-      print("✅ SAVE OK: $username - $levelId");
-    } catch (e) {
-      print("❌ SAVE ERROR: $e");
-    }
+      },
+    }, SetOptions(merge: true)); // 🔥 giữ lại các level khác
   }
 
   // =========================================================
   // ✅ LOAD 1 LẦN
   // =========================================================
   Future<Map<String, UserLevelModel>> getLevelStatuses() async {
-    final username = await _getUsername();
+    final user = _auth.currentUser;
+    if (user == null) return {};
 
-    if (username == null) return {};
-
-    final doc =
-        await _firestore.collection('level_user').doc(username).get();
+    final doc = await _firestore.collection('level_user').doc(user.uid).get();
 
     if (!doc.exists) return {};
 
@@ -72,39 +60,30 @@ class UserLevelRepository {
     if (data == null) return {};
 
     return data.map(
-      (key, value) => MapEntry(
-        key, 
-        UserLevelModel.fromMap(value),
-      ),
+      (key, value) => MapEntry(key, UserLevelModel.fromMap(value)),
     );
   }
 
   // =========================================================
   // 🚀 REALTIME (TỰ UPDATE UI)
   // =========================================================
-  Stream<Map<String, UserLevelModel>> getLevelStatusesStream() async* {
-    final username = await _getUsername();
+  Stream<Map<String, UserLevelModel>> getLevelStatusesStream() {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
 
-    if (username == null) {
-      yield {};
-      return;
-    }
-
-    yield* _firestore
+    return FirebaseFirestore.instance
         .collection('level_user')
-        .doc(username)
+        .doc(uid)
         .snapshots()
-        .map((snapshot) {
-      final data = snapshot.data()?['levels'] as Map<String, dynamic>?;
+        .map((doc) {
+          if (!doc.exists || doc.data() == null) return {};
 
-      if (data == null) return {};
+          final levels = doc.data()!['levels'] as Map<String, dynamic>?;
 
-      return data.map(
-        (key, value) => MapEntry(
-          key,
-          UserLevelModel.fromMap(value),
-        ),
-      );
-    });
+          if (levels == null) return {};
+
+          return levels.map((key, value) {
+            return MapEntry(key, UserLevelModel.fromMap(value));
+          });
+        });
   }
 }

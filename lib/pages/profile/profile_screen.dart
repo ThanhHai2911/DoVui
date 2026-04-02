@@ -1,4 +1,6 @@
 import 'package:dovui/pages/home/widgets/game_dialog.dart';
+import 'package:dovui/pages/user/login_screen.dart';
+import 'package:dovui/pages/user/register_screen.dart';
 import 'package:dovui/resources/color_manager.dart';
 import 'package:dovui/pages/profile/widgets/profile_shimmer.dart';
 import 'package:dovui/pages/user/bloc/user_bloc.dart';
@@ -17,6 +19,7 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   bool _canCheckIn = true;
   bool _videoWatched = false;
+  bool _isAdmin = false;
 
   @override
   void initState() {
@@ -26,6 +29,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _loadCheckInStatus() async {
     final prefs = await SharedPreferences.getInstance();
+
+    // Admin
+    _isAdmin = prefs.getBool("isAdmin") ?? false;
 
     // Check in
     final lastCheckIn = prefs.getString('last_check_in');
@@ -534,6 +540,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             confirmColor: Colors.red,
                             onConfirm: () {
                               context.read<UserBloc>().add(LogoutUserEvent());
+                              Navigator.pushAndRemoveUntil(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const LoginScreen(),
+                                ),
+                                (route) => false,
+                              );
                             },
                           ),
                       child: Container(

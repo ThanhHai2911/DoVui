@@ -13,6 +13,7 @@
   import 'package:dovui/pages/word_answer/widgets/word_answer_shimmer.dart';
   import 'package:flutter/material.dart';
   import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
   class WordAnswerScreen extends StatefulWidget {
     final String categoryId;
@@ -116,9 +117,20 @@
 
   Future<void> _saveResult({required int score, required int total}) async {
   if (widget.levelId == null) return;
+
+  final prefs = await SharedPreferences.getInstance();
+  final userId = prefs.getString("userId");
+
+  if (userId == null) return;
+
   final maxScore = total * 10;
   final percent = maxScore > 0 ? ((score / maxScore) * 10).round() : 0;
-  await _userLevelRepo.saveLevel(levelId: widget.levelId!, score: percent);
+
+  await _userLevelRepo.saveLevel(
+    userId: userId, 
+    levelId: widget.levelId!,
+    score: percent,
+  );
 }
 
     void _triggerQuestionAnim(String questionId) {

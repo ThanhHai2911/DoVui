@@ -6,7 +6,9 @@ class CheckUserEvent extends UserEvent {}
 
 class RegisterUserEvent extends UserEvent {
   final String name;
-  RegisterUserEvent(this.name);
+  final String password; // ← thêm mật khẩu
+  final String email;
+  RegisterUserEvent(this.name, this.password, this.email);
 }
 
 class UpdateScoreEvent extends UserEvent {
@@ -28,6 +30,7 @@ class _LeaderboardUpdatedEvent extends UserEvent {
   final List<AppUser> users;
   _LeaderboardUpdatedEvent(this.users);
 }
+
 class AddScoreEvent extends UserEvent {
   final int amount;
   AddScoreEvent(this.amount);

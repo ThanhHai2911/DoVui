@@ -10,26 +10,39 @@ import 'package:dovui/pages/word_answer/widgets/word_answer_shimmer.dart';
 import 'package:dovui/pages/word_answer/widgets/%20word_answer_header.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class QuizImageScreen extends StatelessWidget {
   final String categoryId;
   final String? levelId;
   final String type;
+  
 
   final _userLevelRepo = UserLevelRepository();
 
   QuizImageScreen({
     super.key,
-    required this.categoryId,
+    required this.categoryId, 
     required this.type,
     this.levelId,
   });
 
   Future<void> _saveResult({required int score, required int total}) async {
   if (levelId == null) return;
+
+  final prefs = await SharedPreferences.getInstance();
+  final userId = prefs.getString("userId");
+
+  if (userId == null) return;
+
   final maxScore = total * 10;
   final percent = maxScore > 0 ? ((score / maxScore) * 10).round() : 0;
-  await _userLevelRepo.saveLevel(levelId: levelId!, score: percent);
+
+  await _userLevelRepo.saveLevel(
+    userId: userId, // ✅ THÊM DÒNG NÀY
+    levelId: levelId!,
+    score: percent,
+  );
 }
 
   @override

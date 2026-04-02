@@ -1,3 +1,6 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'dart:async';
 import 'package:dovui/data/repositories/user_repository.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -21,15 +24,12 @@ class UserBloc extends Bloc<UserEvent, UserState> {
     on<_UserUpdatedEvent>(_onUserUpdated);
     on<_LeaderboardUpdatedEvent>(_onLeaderboardUpdated);
     on<LogoutUserEvent>(_onLogoutUser);
+
     on<AddScoreEvent>((event, emit) async {
       if (state is UserRegistered) {
         final currentUser = (state as UserRegistered).user;
         final newScore = currentUser.score + event.amount;
-
-        // Cập nhật Firestore
         await repository.updateScore(currentUser.id, newScore);
-
-        // Emit state mới để UI tự cập nhật
         emit(UserRegistered(currentUser.copyWith(score: newScore)));
       }
     });
@@ -40,7 +40,6 @@ class UserBloc extends Bloc<UserEvent, UserState> {
     CheckUserEvent event,
     Emitter<UserState> emit,
   ) async {
-    // Nếu đã có user rồi thì không load lại
     if (state is UserRegistered) return;
 
     emit(UserLoading());
@@ -53,14 +52,21 @@ class UserBloc extends Bloc<UserEvent, UserState> {
       return;
     }
 
-    _userSubscription?.cancel();
+    await _userSubscription?.cancel();
 
-    _userSubscription = repository.streamUserById(userId).listen((user) {
-      add(_UserUpdatedEvent(user));
-    });
+    _userSubscription = repository
+        .streamUserById(userId)
+        .listen(
+          (user) {
+            if (!isClosed) add(_UserUpdatedEvent(user));
+          },
+          onError: (_) {
+            if (!isClosed) add(_UserUpdatedEvent(null));
+          },
+        );
   }
 
-  /// ================= REGISTER =================
+  /// ================= REGISTER (UPDATED) =================
   Future<void> _onRegisterUser(
     RegisterUserEvent event,
     Emitter<UserState> emit,
@@ -68,17 +74,33 @@ class UserBloc extends Bloc<UserEvent, UserState> {
     emit(UserLoading());
 
     try {
-      final user = await repository.registerUser(event.name);
+      // ✅ GỌI THÊM EMAIL
+      final user = await repository.registerUser(
+        event.name,
+        event.password,
+        event.email,
+      );
 
       final prefs = await SharedPreferences.getInstance();
+
       await prefs.setString("userId", user.id);
 
+      // ✅ THÊM DÒNG NÀY
+      emit(UserRegistered(user));
+
+      // rồi mới stream lại
       add(CheckUserEvent());
     } catch (e) {
       final error = e.toString();
 
       if (error.contains("USERNAME_EXISTS")) {
         emit(UserError("Tên này đã tồn tại"));
+      } else if (error.contains("email-already-in-use")) {
+        emit(UserError("Email đã được sử dụng"));
+      } else if (error.contains("invalid-email")) {
+        emit(UserError("Email không hợp lệ"));
+      } else if (error.contains("weak-password")) {
+        emit(UserError("Mật khẩu quá yếu"));
       } else {
         emit(UserError("Đã xảy ra lỗi, vui lòng thử lại"));
       }
@@ -93,7 +115,6 @@ class UserBloc extends Bloc<UserEvent, UserState> {
     if (state is UserRegistered) {
       final currentUser = (state as UserRegistered).user;
       final newScore = currentUser.score + event.score;
-
       await repository.updateScore(currentUser.id, newScore);
     }
   }
@@ -106,7 +127,7 @@ class UserBloc extends Bloc<UserEvent, UserState> {
     _leaderboardSubscription?.cancel();
 
     _leaderboardSubscription = repository.streamTopUsers().listen((users) {
-      add(_LeaderboardUpdatedEvent(users));
+      if (!isClosed) add(_LeaderboardUpdatedEvent(users));
     }, onError: (_) {});
   }
 
@@ -134,10 +155,30 @@ class UserBloc extends Bloc<UserEvent, UserState> {
     LogoutUserEvent event,
     Emitter<UserState> emit,
   ) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove("userId");
+    await _userSubscription?.cancel();
+      await _leaderboardSubscription?.cancel(); // ✅ thêm
 
-    _userSubscription?.cancel();
+  await FirebaseAuth.instance.signOut(); // ✅ thêm
+
+    final prefs = await SharedPreferences.getInstance();
+    final isAdmin = prefs.getBool("isAdmin") ?? false;
+    final userId = prefs.getString("userId");
+
+    if (isAdmin && userId != null) {
+      try {
+        await FirebaseFirestore.instance.collection('users').doc(userId).update(
+          {'isAdmin': false},
+        );
+      } catch (e) {
+        debugPrint("Logout admin update error: $e");
+      }
+    }
+
+    await prefs.remove("userId");
+    await prefs.remove("isRegistered");
+    await prefs.remove("isAdmin");
+
+    await prefs.clear();
 
     emit(UserNotRegistered());
   }
@@ -149,4 +190,3 @@ class UserBloc extends Bloc<UserEvent, UserState> {
     return super.close();
   }
 }
-  
