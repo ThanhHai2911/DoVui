@@ -159,7 +159,7 @@ class QuizImageScreen extends StatelessWidget {
                                             question.image,
                                             height: 150,
                                             width: double.infinity,
-                                            fit: BoxFit.cover,
+                                            fit: BoxFit.contain,
                                             loadingBuilder: (
                                               context,
                                               child,

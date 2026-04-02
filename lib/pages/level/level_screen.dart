@@ -8,23 +8,74 @@ import 'package:dovui/pages/word_answer/word_answer_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-class Levelscreen extends StatelessWidget {
+class Levelscreen extends StatefulWidget {
   final String categoryId;
   final String type;
 
   const Levelscreen({super.key, required this.categoryId, required this.type});
 
   @override
+  State<Levelscreen> createState() => _LevelscreenState();
+}
+
+class _LevelscreenState extends State<Levelscreen> {
+  final ScrollController _scrollController = ScrollController();
+  bool _hasScrolled = false; // ← chỉ cuộn đúng 1 lần
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _scrollToNextLevel(int nextIndex) {
+    if (_hasScrolled) return; // đã cuộn rồi → bỏ qua
+    if (nextIndex == 0) {
+      _hasScrolled = true;
+      return; // màn 1 → không cần cuộn
+    }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (!_scrollController.hasClients) return;
+      if (!_scrollController.position.hasContentDimensions) return;
+
+      const int crossAxisCount = 2;
+      const double spacing = 16.0;
+      const double topPadding = 8.0;
+      const double aspectRatio = 0.88;
+
+      final double gridWidth =
+          MediaQuery.of(context).size.width - 32; // padding 16*2
+      final double itemWidth = (gridWidth - spacing) / crossAxisCount;
+      final double itemHeight = itemWidth / aspectRatio;
+
+      final int row = nextIndex ~/ crossAxisCount;
+      // Cuộn sao cho màn tiếp theo nằm ở giữa màn hình
+      final double targetOffset =
+          topPadding +
+          row * (itemHeight + spacing) -
+          (MediaQuery.of(context).size.height / 3);
+
+      _scrollController.animateTo(
+        targetOffset.clamp(0.0, _scrollController.position.maxScrollExtent),
+        duration: const Duration(milliseconds: 700),
+        curve: Curves.easeInOut,
+      );
+
+      _hasScrolled = true; // đánh dấu đã cuộn
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (_) => LevelBloc()..add(LoadLevels(categoryId)),
+      create: (_) => LevelBloc()..add(LoadLevels(widget.categoryId)),
       child: Scaffold(
         backgroundColor: const Color(0xFFF4F6FF),
         body: Stack(
           children: [
-            /// ===== NỀN TRANG TRÍ =====
             _buildBackground(),
-
             SafeArea(
               child: Column(
                 children: [
@@ -34,7 +85,25 @@ class Levelscreen extends StatelessWidget {
                   Expanded(
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: BlocBuilder<LevelBloc, LevelState>(
+                      child: BlocConsumer<LevelBloc, LevelState>(
+                        listener: (context, state) {
+                          if (state is LevelLoaded && !_hasScrolled) {
+                            final levels = state.levels;
+                            final statuses = state.levelStatuses;
+
+                            // Tìm màn tiếp theo chưa completed
+                            int nextIndex = levels.length - 1;
+                            for (int i = 0; i < levels.length; i++) {
+                              final status = statuses[levels[i].id]?.status;
+                              if (status != 'completed') {
+                                nextIndex = i;
+                                break;
+                              }
+                            }
+
+                            _scrollToNextLevel(nextIndex);
+                          }
+                        },
                         builder: (context, state) {
                           if (state is LevelLoading) {
                             return const CategoryShimmer();
@@ -45,6 +114,7 @@ class Levelscreen extends StatelessWidget {
                             final statuses = state.levelStatuses;
 
                             return GridView.builder(
+                              controller: _scrollController,
                               itemCount: levels.length,
                               padding: const EdgeInsets.only(
                                 top: 8,
@@ -82,30 +152,26 @@ class Levelscreen extends StatelessWidget {
                                       isUnlocked
                                           ? () {
                                             Widget screen;
-
-                                            switch (type) {
+                                            switch (widget.type) {
                                               case "level":
                                                 screen = WordAnswerScreen(
-                                                  categoryId: categoryId,
+                                                  categoryId: widget.categoryId,
                                                   levelId: level.id,
-                                                  type: type,
+                                                  type: widget.type,
                                                 );
-                                                
                                                 break;
-
                                               case "imagequiz":
                                                 screen = QuizImageScreen(
-                                                  categoryId: categoryId,
+                                                  categoryId: widget.categoryId,
                                                   levelId: level.id,
-                                                  type: type,
+                                                  type: widget.type,
                                                 );
                                                 break;
-
                                               default:
                                                 screen = WordAnswerScreen(
-                                                  categoryId: categoryId,
+                                                  categoryId: widget.categoryId,
                                                   levelId: level.id,
-                                                  type: type,
+                                                  type: widget.type,
                                                 );
                                             }
 
@@ -116,7 +182,7 @@ class Levelscreen extends StatelessWidget {
                                               ),
                                             ).then((_) {
                                               context.read<LevelBloc>().add(
-                                                LoadLevels(categoryId),
+                                                LoadLevels(widget.categoryId),
                                               );
                                             });
                                           }
@@ -216,7 +282,6 @@ class Levelscreen extends StatelessWidget {
       ),
       child: Stack(
         children: [
-          // Trang trí trong header
           Positioned(
             top: -10,
             right: 20,
@@ -239,7 +304,6 @@ class Levelscreen extends StatelessWidget {
               ),
             ),
           ),
-
           Column(
             children: [
               Row(
@@ -348,10 +412,10 @@ class Levelscreen extends StatelessWidget {
   }
 }
 
-// =============================================
-//  LEVEL CARD với animation
-// =============================================
-class _LevelCard extends StatefulWidget {
+// // =============================================
+// //  LEVEL CARD với animation
+// // =============================================
+class _LevelCard extends StatelessWidget {
   final int index;
   final String status;
   final bool isUnlocked;
@@ -364,53 +428,11 @@ class _LevelCard extends StatefulWidget {
     required this.onTap,
   });
 
-  @override
-  State<_LevelCard> createState() => _LevelCardState();
-}
-
-class _LevelCardState extends State<_LevelCard>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _scaleAnim;
-  late Animation<double> _fadeAnim;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 500),
-    );
-
-    _scaleAnim = Tween<double>(
-      begin: 0.7,
-      end: 1.0,
-    ).animate(CurvedAnimation(parent: _controller, curve: Curves.elasticOut));
-
-    _fadeAnim = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _controller,
-        curve: const Interval(0.0, 0.6, curve: Curves.easeOut),
-      ),
-    );
-
-    // Stagger delay theo index
-    Future.delayed(Duration(milliseconds: 80 * widget.index), () {
-      if (mounted) _controller.forward();
-    });
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
   List<Color> _getGradient() {
-    if (!widget.isUnlocked) {
+    if (!isUnlocked) {
       return [Colors.grey.shade300, Colors.grey.shade400];
     }
-    switch (widget.status) {
+    switch (status) {
       case 'completed':
         return [const Color(0xFF43C6AC), const Color(0xFF2BB89A)];
       case 'failed':
@@ -421,8 +443,8 @@ class _LevelCardState extends State<_LevelCard>
   }
 
   String _getEmoji() {
-    if (!widget.isUnlocked) return "🔒";
-    switch (widget.status) {
+    if (!isUnlocked) return "🔒";
+    switch (status) {
       case 'completed':
         return "⭐";
       case 'failed':
@@ -433,8 +455,8 @@ class _LevelCardState extends State<_LevelCard>
   }
 
   String _getStatusText() {
-    if (!widget.isUnlocked) return "Chưa mở";
-    switch (widget.status) {
+    if (!isUnlocked) return "Chưa mở";
+    switch (status) {
       case 'completed':
         return "Hoàn thành";
       case 'failed':
@@ -448,136 +470,329 @@ class _LevelCardState extends State<_LevelCard>
   Widget build(BuildContext context) {
     final gradient = _getGradient();
 
-    return FadeTransition(
-      opacity: _fadeAnim,
-      child: ScaleTransition(
-        scale: _scaleAnim,
-        child: GestureDetector(
-          onTap: widget.onTap,
-          child: Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: gradient,
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(24),
-              boxShadow: [
-                BoxShadow(
-                  color: gradient[0].withOpacity(
-                    widget.isUnlocked ? 0.4 : 0.15,
-                  ),
-                  blurRadius: 14,
-                  offset: const Offset(0, 6),
-                ),
-              ],
-            ),
-            child: Stack(
-              children: [
-                // Trang trí vòng tròn nền
-                Positioned(
-                  top: -18,
-                  right: -18,
-                  child: Container(
-                    width: 70,
-                    height: 70,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Colors.white.withOpacity(0.1),
-                    ),
-                  ),
-                ),
-                Positioned(
-                  bottom: -10,
-                  left: -10,
-                  child: Container(
-                    width: 50,
-                    height: 50,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Colors.white.withOpacity(0.07),
-                    ),
-                  ),
-                ),
-
-                // Số màn mờ làm nền
-                Positioned(
-                  top: 6,
-                  right: 10,
-                  child: Text(
-                    "${widget.index + 1}",
-                    style: TextStyle(
-                      fontSize: 52,
-                      fontWeight: FontWeight.w900,
-                      color: Colors.white.withOpacity(1),
-                      height: 1,
-                    ),
-                  ),
-                ),
-
-                // Nội dung chính
-                Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Emoji to
-                      Text(_getEmoji(), style: const TextStyle(fontSize: 32)),
-
-                      const Spacer(),
-
-                      // Tên màn
-                      Text(
-                        "Màn ${widget.index + 1}",
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-
-                      const SizedBox(height: 5),
-
-                      // Badge trạng thái
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.22),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: Colors.white.withOpacity(0.3),
-                            width: 1,
-                          ),
-                        ),
-                        child: Text(
-                          _getStatusText(),
-                          style: const TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                // Overlay mờ nếu bị khóa
-                if (!widget.isUnlocked)
-                  Container(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(24),
-                      color: Colors.black.withOpacity(0.15),
-                    ),
-                  ),
-              ],
-            ),
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: gradient,
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
           ),
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(
+              color: gradient[0].withOpacity(isUnlocked ? 0.4 : 0.15),
+              blurRadius: 14,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: Stack(
+          children: [
+            Positioned(
+              top: -18,
+              right: -18,
+              child: Container(
+                width: 70,
+                height: 70,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.white.withOpacity(0.1),
+                ),
+              ),
+            ),
+            Positioned(
+              bottom: -10,
+              left: -10,
+              child: Container(
+                width: 50,
+                height: 50,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.white.withOpacity(0.07),
+                ),
+              ),
+            ),
+            Positioned(
+              top: 6,
+              right: 10,
+              child: Text(
+                "${index + 1}",
+                style: TextStyle(
+                  fontSize: 52,
+                  fontWeight: FontWeight.w900,
+                  color: Colors.white.withOpacity(1),
+                  height: 1,
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(_getEmoji(), style: const TextStyle(fontSize: 32)),
+                  const Spacer(),
+                  Text(
+                    "Màn ${index + 1}",
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 5),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.22),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: Colors.white.withOpacity(0.3),
+                        width: 1,
+                      ),
+                    ),
+                    child: Text(
+                      _getStatusText(),
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (!isUnlocked)
+              Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(24),
+                  color: Colors.black.withOpacity(0.15),
+                ),
+              ),
+          ],
         ),
       ),
     );
   }
 }
+// class _LevelCard extends StatefulWidget {
+//   final int index;
+//   final String status;
+//   final bool isUnlocked;
+//   final VoidCallback? onTap;
+
+//   const _LevelCard({
+//     required this.index,
+//     required this.status,
+//     required this.isUnlocked,
+//     required this.onTap,
+//   });
+
+//   @override
+//   State<_LevelCard> createState() => _LevelCardState();
+// }
+
+// class _LevelCardState extends State<_LevelCard>
+//   with SingleTickerProviderStateMixin {
+//   late AnimationController _controller;
+//   late Animation<double> _scaleAnim;
+//   late Animation<double> _fadeAnim;
+
+//   @override
+//   void initState() {
+//     super.initState();
+//     _controller = AnimationController(
+//       vsync: this,
+//       duration: const Duration(milliseconds: 500),
+//     );
+
+//     _scaleAnim = Tween<double>(
+//       begin: 0.7,
+//       end: 1.0,
+//     ).animate(CurvedAnimation(parent: _controller, curve: Curves.elasticOut));
+
+//     _fadeAnim = Tween<double>(begin: 0.0, end: 1.0).animate(
+//       CurvedAnimation(
+//         parent: _controller,
+//         curve: const Interval(0.0, 0.6, curve: Curves.easeOut),
+//       ),
+//     );
+
+//     Future.delayed(Duration(milliseconds: 80 * widget.index), () {
+//       if (mounted) _controller.forward();
+//     });
+//   }
+
+//   @override
+//   void dispose() {
+//     _controller.dispose();
+//     super.dispose();
+//   }
+
+//   List<Color> _getGradient() {
+//     if (!widget.isUnlocked) {
+//       return [Colors.grey.shade300, Colors.grey.shade400];
+//     }
+//     switch (widget.status) {
+//       case 'completed':
+//         return [const Color(0xFF43C6AC), const Color(0xFF2BB89A)];
+//       case 'failed':
+//         return [const Color(0xFFFF6584), const Color(0xFFE8435A)];
+//       default:
+//         return [const Color(0xFF6C63FF), const Color(0xFF9B8FFF)];
+//     }
+//   }
+
+//   String _getEmoji() {
+//     if (!widget.isUnlocked) return "🔒";
+//     switch (widget.status) {
+//       case 'completed':
+//         return "⭐";
+//       case 'failed':
+//         return "💪";
+//       default:
+//         return "🎯";
+//     }
+//   }
+
+//   String _getStatusText() {
+//     if (!widget.isUnlocked) return "Chưa mở";
+//     switch (widget.status) {
+//       case 'completed':
+//         return "Hoàn thành";
+//       case 'failed':
+//         return "Thử lại";
+//       default:
+//         return "Bắt đầu";
+//     }
+//   }
+
+//   @override
+//   Widget build(BuildContext context) {
+//     final gradient = _getGradient();
+
+//     return FadeTransition(
+//       opacity: _fadeAnim,
+//       child: ScaleTransition(
+//         scale: _scaleAnim,
+//         child: GestureDetector(
+//           onTap: widget.onTap,
+//           child: Container(
+//             decoration: BoxDecoration(
+//               gradient: LinearGradient(
+//                 colors: gradient,
+//                 begin: Alignment.topLeft,
+//                 end: Alignment.bottomRight,
+//               ),
+//               borderRadius: BorderRadius.circular(24),
+//               boxShadow: [
+//                 BoxShadow(
+//                   color: gradient[0].withOpacity(
+//                     widget.isUnlocked ? 0.4 : 0.15,
+//                   ),
+//                   blurRadius: 14,
+//                   offset: const Offset(0, 6),
+//                 ),
+//               ],
+//             ),
+//             child: Stack(
+//               children: [
+//                 Positioned(
+//                   top: -18,
+//                   right: -18,
+//                   child: Container(
+//                     width: 70,
+//                     height: 70,
+//                     decoration: BoxDecoration(
+//                       shape: BoxShape.circle,
+//                       color: Colors.white.withOpacity(0.1),
+//                     ),
+//                   ),
+//                 ),
+//                 Positioned(
+//                   bottom: -10,
+//                   left: -10,
+//                   child: Container(
+//                     width: 50,
+//                     height: 50,
+//                     decoration: BoxDecoration(
+//                       shape: BoxShape.circle,
+//                       color: Colors.white.withOpacity(0.07),
+//                     ),
+//                   ),
+//                 ),
+//                 Positioned(
+//                   top: 6,
+//                   right: 10,
+//                   child: Text(
+//                     "${widget.index + 1}",
+//                     style: TextStyle(
+//                       fontSize: 52,
+//                       fontWeight: FontWeight.w900,
+//                       color: Colors.white.withOpacity(1),
+//                       height: 1,
+//                     ),
+//                   ),
+//                 ),
+//                 Padding(
+//                   padding: const EdgeInsets.all(16),
+//                   child: Column(
+//                     crossAxisAlignment: CrossAxisAlignment.start,
+//                     children: [
+//                       Text(_getEmoji(), style: const TextStyle(fontSize: 32)),
+//                       const Spacer(),
+//                       Text(
+//                         "Màn ${widget.index + 1}",
+//                         style: const TextStyle(
+//                           fontSize: 18,
+//                           fontWeight: FontWeight.bold,
+//                           color: Colors.white,
+//                         ),
+//                       ),
+//                       const SizedBox(height: 5),
+//                       Container(
+//                         padding: const EdgeInsets.symmetric(
+//                           horizontal: 10,
+//                           vertical: 4,
+//                         ),
+//                         decoration: BoxDecoration(
+//                           color: Colors.white.withOpacity(0.22),
+//                           borderRadius: BorderRadius.circular(12),
+//                           border: Border.all(
+//                             color: Colors.white.withOpacity(0.3),
+//                             width: 1,
+//                           ),
+//                         ),
+//                         child: Text(
+//                           _getStatusText(),
+//                           style: const TextStyle(
+//                             fontSize: 11,
+//                             fontWeight: FontWeight.bold,
+//                             color: Colors.white,
+//                           ),
+//                         ),
+//                       ),
+//                     ],
+//                   ),
+//                 ),
+//                 if (!widget.isUnlocked)
+//                   Container(
+//                     decoration: BoxDecoration(
+//                       borderRadius: BorderRadius.circular(24),
+//                       color: Colors.black.withOpacity(0.15),
+//                     ),
+//                   ),
+//               ],
+//             ),
+//           ),
+//         ),
+//       ),
+//     );
+//   }
+// }
