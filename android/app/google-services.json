@@ -50,6 +50,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "460307639969-1t5s4pfc4iqrjvnsgo06tfifg1mknlum.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.thanhhai.dovui",
+            "certificate_hash": "d1c01c74dc93ef65416bd4a9efe5868ffe76eb7c"
+          }
+        },
+        {
           "client_id": "460307639969-jct8p3dp4e4hf0anl0279m36hee51juh.apps.googleusercontent.com",
           "client_type": 3
         }

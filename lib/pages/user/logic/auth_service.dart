@@ -1,10 +1,12 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class AuthService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final GoogleSignIn _googleSignIn = GoogleSignIn();
 
   Future<void> loginAdmin(String adminName) async {
   final existing = await _firestore
@@ -91,6 +93,55 @@ class AuthService {
     return {
       "type": "user",
       "userDoc": userDoc,
+    };
+  }
+  // ================= GOOGLE SIGN IN =================
+  Future<Map<String, dynamic>> loginWithGoogle() async {
+    // Đăng xuất Google cũ để luôn hiện màn chọn tài khoản
+    await _googleSignIn.signOut();
+ 
+    final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+    if (googleUser == null) throw Exception("GOOGLE_CANCELLED");
+ 
+    final GoogleSignInAuthentication googleAuth =
+        await googleUser.authentication;
+ 
+    final credential = GoogleAuthProvider.credential(
+      accessToken: googleAuth.accessToken,
+      idToken: googleAuth.idToken,
+    );
+ 
+    final userCredential = await _auth.signInWithCredential(credential);
+    final firebaseUser = userCredential.user!;
+ 
+    // Kiểm tra user đã tồn tại trong Firestore chưa
+    final docRef = _firestore.collection('users').doc(firebaseUser.uid);
+    final docSnapshot = await docRef.get();
+ 
+    if (!docSnapshot.exists) {
+      // Tạo user mới
+      final displayName = firebaseUser.displayName ?? googleUser.email.split('@')[0];
+      await docRef.set({
+        'name': displayName,
+        'email': firebaseUser.email ?? '',
+        'score': 300,
+        'rank': 0,
+        'createdAt': FieldValue.serverTimestamp(),
+        'isAdmin': false,
+        'loginType': 'google',
+        'avatar': firebaseUser.photoURL ?? '',
+      });
+    }
+ 
+    // Lưu SharedPreferences
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString("userId", firebaseUser.uid);
+    await prefs.setBool("isRegistered", true);
+ 
+    return {
+      "type": "google",
+      "userId": firebaseUser.uid,
+      "name": firebaseUser.displayName ?? '',
     };
   }
 }

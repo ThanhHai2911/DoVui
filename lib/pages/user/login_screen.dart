@@ -1,12 +1,9 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:dovui/pages/home/widgets/game_dialog.dart';
 import 'package:dovui/pages/home/widgets/home_bottom_nav.dart';
 import 'package:dovui/pages/user/bloc/user_bloc.dart';
 import 'package:dovui/pages/user/logic/auth_service.dart';
 import 'package:dovui/pages/user/register_screen.dart';
 import 'package:dovui/pages/user/forgot_password_screen.dart';
 import 'package:dovui/resources/color_manager.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -29,6 +26,7 @@ class _LoginScreenState extends State<LoginScreen>
 
   bool _isPasswordVisible = false;
   bool _isLoading = false;
+  bool _isGoogleLoading = false;
 
   String? _nameError;
   String? _passwordError;
@@ -40,10 +38,9 @@ class _LoginScreenState extends State<LoginScreen>
       vsync: this,
       duration: const Duration(milliseconds: 2000),
     )..repeat(reverse: true);
-    _floatAnim = Tween<double>(
-      begin: -8,
-      end: 8,
-    ).animate(CurvedAnimation(parent: _floatCtrl, curve: Curves.easeInOut));
+    _floatAnim = Tween<double>(begin: -8, end: 8).animate(
+      CurvedAnimation(parent: _floatCtrl, curve: Curves.easeInOut),
+    );
   }
 
   @override
@@ -54,6 +51,7 @@ class _LoginScreenState extends State<LoginScreen>
     super.dispose();
   }
 
+  // ================= LOGIN THƯỜNG =================
   Future<void> _onLogin() async {
     setState(() {
       _nameError = null;
@@ -67,7 +65,6 @@ class _LoginScreenState extends State<LoginScreen>
       setState(() => _nameError = "Vui lòng nhập tên người dùng");
       return;
     }
-
     if (password.isEmpty) {
       setState(() => _passwordError = "Vui lòng nhập mật khẩu");
       return;
@@ -78,31 +75,25 @@ class _LoginScreenState extends State<LoginScreen>
     try {
       final result = await _authService.login(name, password);
 
-      // 🔥 ADMIN
       if (result["type"] == "admin") {
         await _authService.loginAdmin(name);
-
         if (!mounted) return;
-
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text("Đăng nhập Admin thành công 👑"),
             backgroundColor: Colors.blue,
           ),
         );
-
         context.read<UserBloc>().add(CheckUserEvent());
         return;
       }
 
-      // 🔥 USER
       final userDoc = result["userDoc"];
-
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString("userId", userDoc.id);
       await prefs.setBool("isRegistered", true);
-      if (!mounted) return;
 
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text("Đăng nhập thành công 🎉"),
@@ -111,17 +102,13 @@ class _LoginScreenState extends State<LoginScreen>
         ),
       );
 
-      if (!mounted) return;
       context.read<UserBloc>().add(CheckUserEvent());
-      if (!mounted) return;
-
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (_) => const HomeBottomNav()),
       );
     } catch (e) {
       final error = e.toString();
-
       if (error.contains("USER_NOT_FOUND")) {
         setState(() => _nameError = "Tên người dùng không tồn tại");
       } else if (error.contains("WRONG_PASSWORD")) {
@@ -133,6 +120,46 @@ class _LoginScreenState extends State<LoginScreen>
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  // ================= GOOGLE SIGN IN =================
+  Future<void> _onGoogleLogin() async {
+    setState(() => _isGoogleLoading = true);
+
+    try {
+      final result = await _authService.loginWithGoogle();
+
+      if (!mounted) return;
+
+      context.read<UserBloc>().add(CheckUserEvent());
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Chào mừng ${result['name']} 🎉"),
+          backgroundColor: Colors.green,
+          duration: const Duration(seconds: 1),
+        ),
+      );
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const HomeBottomNav()),
+      );
+    } catch (e) {
+      final error = e.toString();
+      if (!mounted) return;
+
+      if (!error.contains("GOOGLE_CANCELLED")) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Đăng nhập Google thất bại"),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isGoogleLoading = false);
     }
   }
 
@@ -187,29 +214,26 @@ class _LoginScreenState extends State<LoginScreen>
                     tween: Tween(begin: 0.95, end: 1.0),
                     duration: const Duration(milliseconds: 400),
                     curve: Curves.easeOutBack,
-                    builder:
-                        (context, value, child) =>
-                            Transform.scale(scale: value, child: child),
+                    builder: (context, value, child) =>
+                        Transform.scale(scale: value, child: child),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        // Logo
                         Center(
                           child: AnimatedBuilder(
                             animation: _floatAnim,
-                            builder:
-                                (_, child) => Transform.translate(
-                                  offset: Offset(0, _floatAnim.value),
-                                  child: child,
-                                ),
+                            builder: (_, child) => Transform.translate(
+                              offset: Offset(0, _floatAnim.value),
+                              child: child,
+                            ),
                             child: Container(
                               padding: const EdgeInsets.all(18),
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
                                 color: const Color(0xFF43C6AC).withOpacity(0.1),
                                 border: Border.all(
-                                  color: const Color(
-                                    0xFF43C6AC,
-                                  ).withOpacity(0.25),
+                                  color: const Color(0xFF43C6AC).withOpacity(0.25),
                                 ),
                               ),
                               child: const Text(
@@ -238,8 +262,10 @@ class _LoginScreenState extends State<LoginScreen>
                           ),
                         ),
 
-                        const SizedBox(height: 32),
+                        const SizedBox(height: 20),
 
+
+                        // ===== FORM =====
                         _fieldLabel("Tên người dùng"),
                         const SizedBox(height: 8),
                         _buildField(
@@ -260,8 +286,8 @@ class _LoginScreenState extends State<LoginScreen>
                           icon: Icons.lock_outline_rounded,
                           obscure: !_isPasswordVisible,
                           errorText: _passwordError,
-                          onChanged:
-                              (_) => setState(() => _passwordError = null),
+                          onChanged: (_) =>
+                              setState(() => _passwordError = null),
                           suffix: IconButton(
                             icon: Icon(
                               _isPasswordVisible
@@ -270,25 +296,21 @@ class _LoginScreenState extends State<LoginScreen>
                               size: 20,
                               color: Colors.grey.shade400,
                             ),
-                            onPressed:
-                                () => setState(
-                                  () =>
-                                      _isPasswordVisible = !_isPasswordVisible,
-                                ),
+                            onPressed: () => setState(
+                              () => _isPasswordVisible = !_isPasswordVisible,
+                            ),
                           ),
                         ),
-
+                        
                         Align(
                           alignment: Alignment.centerRight,
                           child: TextButton(
-                            onPressed:
-                                () => Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder:
-                                        (_) => const ForgotPasswordScreen(),
-                                  ),
-                                ),
+                            onPressed: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const ForgotPasswordScreen(),
+                              ),
+                            ),
                             style: TextButton.styleFrom(
                               padding: const EdgeInsets.symmetric(
                                 vertical: 6,
@@ -306,7 +328,8 @@ class _LoginScreenState extends State<LoginScreen>
                         ),
 
                         const SizedBox(height: 4),
-
+                      
+                        // ===== LOGIN BUTTON =====
                         SizedBox(
                           width: double.infinity,
                           height: 56,
@@ -319,28 +342,113 @@ class _LoginScreenState extends State<LoginScreen>
                                 borderRadius: BorderRadius.circular(16),
                               ),
                             ),
-                            onPressed: _isLoading ? null : _onLogin,
-                            child:
-                                _isLoading
-                                    ? const SizedBox(
-                                      width: 22,
-                                      height: 22,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2.5,
-                                        color: Colors.white,
-                                      ),
-                                    )
-                                    : const Text(
-                                      "Đăng nhập",
-                                      style: TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.white,
-                                      ),
+                            onPressed:
+                                (_isLoading || _isGoogleLoading)
+                                    ? null
+                                    : _onLogin,
+                            child: _isLoading
+                                ? const SizedBox(
+                                    width: 22,
+                                    height: 22,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2.5,
+                                      color: Colors.white,
                                     ),
+                                  )
+                                : const Text(
+                                    "Đăng nhập",
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                    ),
+                                  ),
                           ),
                         ),
 
+                        const SizedBox(height: 20),
+                        // ===== DIVIDER =====
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Divider(color: Colors.grey.shade200),
+                            ),
+                            Padding(
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 12),
+                              child: Text(
+                                "hoặc",
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: Colors.grey.shade400,
+                                ),
+                              ),
+                            ),
+                            Expanded(
+                              child: Divider(color: Colors.grey.shade200),
+                            ),
+                          ],
+                        ),
+
+                        const SizedBox(height: 20),
+
+                        // ===== GOOGLE BUTTON =====
+                        SizedBox(
+                          width: double.infinity,
+                          height: 56,
+                          child: OutlinedButton(
+                            onPressed:
+                                (_isLoading || _isGoogleLoading)
+                                    ? null
+                                    : _onGoogleLogin,
+                            style: OutlinedButton.styleFrom(
+                              side: BorderSide(
+                                color: Colors.grey.shade300,
+                                width: 1.5,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              backgroundColor: Colors.white,
+                            ),
+                            child: _isGoogleLoading
+                                ? const SizedBox(
+                                    width: 22,
+                                    height: 22,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2.5,
+                                      color: Colors.grey,
+                                    ),
+                                  )
+                                : Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      // Google logo SVG-like bằng Text
+                                      Image.network(
+                                        'https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg',
+                                        width: 22,
+                                        height: 22,
+                                        errorBuilder: (_, __, ___) =>
+                                            const Text("G",
+                                                style: TextStyle(
+                                                  fontSize: 18,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: Color(0xFF4285F4),
+                                                )),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Text(
+                                        "Đăng nhập với Google",
+                                        style: TextStyle(
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.grey.shade700,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                          ),
+                        ),
                         const SizedBox(height: 20),
 
                         Center(
@@ -355,13 +463,12 @@ class _LoginScreenState extends State<LoginScreen>
                                 ),
                               ),
                               GestureDetector(
-                                onTap:
-                                    () => Navigator.pushReplacement(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (_) => const RegisterScreen(),
-                                      ),
-                                    ),
+                                onTap: () => Navigator.pushReplacement(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => const RegisterScreen(),
+                                  ),
+                                ),
                                 child: const Text(
                                   "Tạo tài khoản",
                                   style: TextStyle(
@@ -387,13 +494,13 @@ class _LoginScreenState extends State<LoginScreen>
   }
 
   Widget _fieldLabel(String text) => Text(
-    text,
-    style: const TextStyle(
-      fontSize: 13,
-      fontWeight: FontWeight.w600,
-      color: Color(0xFF1E1B4B),
-    ),
-  );
+        text,
+        style: const TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.w600,
+          color: Color(0xFF1E1B4B),
+        ),
+      );
 
   Widget _buildField({
     required TextEditingController controller,
@@ -412,22 +519,21 @@ class _LoginScreenState extends State<LoginScreen>
           duration: const Duration(milliseconds: 200),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(14),
-            boxShadow:
-                hasError
-                    ? [
-                      BoxShadow(
-                        color: const Color(0xFFFF6584).withOpacity(0.15),
-                        blurRadius: 10,
-                        spreadRadius: 1,
-                      ),
-                    ]
-                    : [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
+            boxShadow: hasError
+                ? [
+                    BoxShadow(
+                      color: const Color(0xFFFF6584).withOpacity(0.15),
+                      blurRadius: 10,
+                      spreadRadius: 1,
+                    ),
+                  ]
+                : [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
           ),
           child: TextField(
             controller: controller,
@@ -436,21 +542,20 @@ class _LoginScreenState extends State<LoginScreen>
             style: const TextStyle(color: Color(0xFF1E1B4B), fontSize: 15),
             decoration: InputDecoration(
               hintText: hint,
-              hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14),
+              hintStyle:
+                  TextStyle(color: Colors.grey.shade400, fontSize: 14),
               prefixIcon: Icon(
                 icon,
-                color:
-                    hasError
-                        ? const Color(0xFFFF6584)
-                        : const Color(0xFF43C6AC).withOpacity(0.7),
+                color: hasError
+                    ? const Color(0xFFFF6584)
+                    : const Color(0xFF43C6AC).withOpacity(0.7),
                 size: 20,
               ),
               suffixIcon: suffix,
               filled: true,
-              fillColor:
-                  hasError
-                      ? const Color(0xFFFF6584).withOpacity(0.04)
-                      : Colors.grey.shade50,
+              fillColor: hasError
+                  ? const Color(0xFFFF6584).withOpacity(0.04)
+                  : Colors.grey.shade50,
               contentPadding: const EdgeInsets.symmetric(
                 vertical: 18,
                 horizontal: 16,
@@ -458,26 +563,27 @@ class _LoginScreenState extends State<LoginScreen>
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(14),
                 borderSide: BorderSide(
-                  color:
-                      hasError ? const Color(0xFFFF6584) : Colors.grey.shade200,
+                  color: hasError
+                      ? const Color(0xFFFF6584)
+                      : Colors.grey.shade200,
                   width: hasError ? 1.5 : 1,
                 ),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(14),
                 borderSide: BorderSide(
-                  color:
-                      hasError ? const Color(0xFFFF6584) : Colors.grey.shade200,
+                  color: hasError
+                      ? const Color(0xFFFF6584)
+                      : Colors.grey.shade200,
                   width: hasError ? 1.5 : 1,
                 ),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(14),
                 borderSide: BorderSide(
-                  color:
-                      hasError
-                          ? const Color(0xFFFF6584)
-                          : const Color(0xFF43C6AC),
+                  color: hasError
+                      ? const Color(0xFFFF6584)
+                      : const Color(0xFF43C6AC),
                   width: 1.5,
                 ),
               ),
