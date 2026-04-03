@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:bloc/bloc.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import 'package:dovui/data/models/image_question_model.dart';
 import 'package:dovui/data/repositories/image_question_repository.dart';
 import 'package:dovui/data/repositories/user_repository.dart';
@@ -19,7 +20,13 @@ class QuizImageBloc extends Bloc<QuizImageEvent, QuizImageState> {
 
   List<ImageQuestion> _questions = [];
   int _currentIndex = 0;
-  int _score = 0;
+  int _gameEarned = 0;
+
+  /// Điểm thực tế trên Firebase — dùng để check đủ tiền mua hint
+  int _firebaseScore = 0;
+
+  /// Màn hình đọc điểm này để kiểm tra trước khi show dialog hint
+  int get currentScore => _firebaseScore;
 
   String? _userId;
   QuizImageController? _controller;
@@ -38,23 +45,27 @@ class QuizImageBloc extends Bloc<QuizImageEvent, QuizImageState> {
     on<QuizImageUseSkip>(_onUseSkip);
   }
 
-  // ================= USER SCORE SYNC =================
-
-  Future<void> _syncScoreDelta(int delta) async {
+  // Trừ Firebase + cập nhật _firebaseScore local luôn (không fetch lại)
+  Future<void> _syncHintCost(int cost) async {
     if (_userId == null) return;
-
-    final snapshot = await FirebaseFirestore.instance
-        .collection('users')
-        .doc(_userId)
-        .get();
-
-    final currentScore = snapshot.data()?['score'] ?? 0;
-    final newScore = (currentScore + delta).clamp(0, 99999);
-
-    await userRepository.updateScore(_userId!, newScore);
+    try {
+      _firebaseScore = (_firebaseScore - cost).clamp(0, 99999);
+      await userRepository.updateScore(_userId!, _firebaseScore);
+    } catch (e) {
+      debugPrint('Sync hint cost error: $e');
+    }
   }
 
-  // ================= SETUP =================
+  // Cộng điểm đúng vào Firebase khi kết thúc
+  Future<void> _syncFinalEarned() async {
+    if (_userId == null || _gameEarned <= 0) return;
+    try {
+      _firebaseScore = (_firebaseScore + _gameEarned).clamp(0, 99999);
+      await userRepository.updateScore(_userId!, _firebaseScore);
+    } catch (e) {
+      debugPrint('Sync final score error: $e');
+    }
+  }
 
   void _setupController(ImageQuestion question) {
     _controller?.dispose();
@@ -65,14 +76,14 @@ class QuizImageBloc extends Bloc<QuizImageEvent, QuizImageState> {
     };
 
     _controller!.onCorrect = () {
-      _score += 10;
-      _syncScoreDelta(10); // cộng điểm user
+      _gameEarned += 10;
       _nextQuestion();
     };
 
     _controller!.onTimeUp = () {
       if (!isClosed) {
-        emit(QuizImageTimeUp(score: _score, total: _questions.length));
+        _syncFinalEarned();
+        emit(QuizImageTimeUp(score: _gameEarned, total: _questions.length));
       }
     };
 
@@ -83,7 +94,8 @@ class QuizImageBloc extends Bloc<QuizImageEvent, QuizImageState> {
     _controller?.stopTimer();
 
     if (_currentIndex + 1 >= _questions.length) {
-      emit(QuizImageCompleted(score: _score, total: _questions.length));
+      _syncFinalEarned();
+      emit(QuizImageCompleted(score: _gameEarned, total: _questions.length));
       return;
     }
 
@@ -94,25 +106,30 @@ class QuizImageBloc extends Bloc<QuizImageEvent, QuizImageState> {
 
   void _emitLoaded() {
     if (_controller == null) return;
-
     emit(QuizImageLoaded(
       controller: _controller!,
       questions: _questions,
       currentIndex: _currentIndex,
-      score: _score, // nhớ truyền score ra UI
+      score: _gameEarned,
     ));
   }
-
-  // ================= LOAD =================
 
   Future<void> _onLoad(
     QuizImageLoadQuestions event,
     Emitter<QuizImageState> emit,
   ) async {
     emit(QuizImageLoading());
-
     try {
       _userId = await userRepository.getCurrentUserId();
+
+      // ✅ Load điểm Firebase thực tế để check hint
+      if (_userId != null) {
+        final snapshot = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(_userId)
+            .get();
+        _firebaseScore = snapshot.data()?['score'] ?? 0;
+      }
 
       _questions = await _repo.fetchQuestions(
         categoryId: categoryId,
@@ -126,7 +143,7 @@ class QuizImageBloc extends Bloc<QuizImageEvent, QuizImageState> {
       }
 
       _currentIndex = 0;
-      _score = 0;
+      _gameEarned = 0;
 
       _setupController(_questions[_currentIndex]);
       _emitLoaded();
@@ -135,65 +152,36 @@ class QuizImageBloc extends Bloc<QuizImageEvent, QuizImageState> {
     }
   }
 
-  // ================= ACTION =================
-
-  void _onSelectLetter(
-    QuizImageSelectLetter event,
-    Emitter<QuizImageState> emit,
-  ) {
+  void _onSelectLetter(QuizImageSelectLetter event, Emitter<QuizImageState> emit) {
     _controller?.selectLetter(event.index);
   }
 
-  void _onRemoveLetter(
-    QuizImageRemoveLetter event,
-    Emitter<QuizImageState> emit,
-  ) {
+  void _onRemoveLetter(QuizImageRemoveLetter event, Emitter<QuizImageState> emit) {
     _controller?.removeLetter(event.index);
   }
 
-  void _onTimerTick(
-    QuizImageTimerTick event,
-    Emitter<QuizImageState> emit,
-  ) {
+  void _onTimerTick(QuizImageTimerTick event, Emitter<QuizImageState> emit) {
     _emitLoaded();
   }
 
-  // ================= HINT =================
-
-  void _onUseHintLetter(
-    QuizImageUseHintLetter event,
-    Emitter<QuizImageState> emit,
-  ) {
+  void _onUseHintLetter(QuizImageUseHintLetter event, Emitter<QuizImageState> emit) {
     if (_controller == null) return;
-
-    _score = (_score - 50).clamp(0, 99999);
-    _syncScoreDelta(-50);
+    _syncHintCost(50);
     _controller!.revealOneWord();
     _emitLoaded();
   }
 
-  void _onUseHintLetterFree(
-    QuizImageUseHintLetterFree event,
-    Emitter<QuizImageState> emit,
-  ) {
+  void _onUseHintLetterFree(QuizImageUseHintLetterFree event, Emitter<QuizImageState> emit) {
     _controller?.revealOneWord();
     _emitLoaded();
   }
 
-  void _onUseSkip(
-    QuizImageUseSkip event,
-    Emitter<QuizImageState> emit,
-  ) {
+  void _onUseSkip(QuizImageUseSkip event, Emitter<QuizImageState> emit) {
     if (_controller == null) return;
-
-    _score = (_score - 100).clamp(0, 99999);
-    _syncScoreDelta(-100);
-
+    _syncHintCost(100);
     _controller!.revealAllWords();
     _emitLoaded();
   }
-
-  // ================= DISPOSE =================
 
   @override
   Future<void> close() {

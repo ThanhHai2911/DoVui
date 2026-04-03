@@ -37,34 +37,33 @@ class UserBloc extends Bloc<UserEvent, UserState> {
 
   /// ================= CHECK USER =================
   Future<void> _onCheckUser(
-    CheckUserEvent event,
-    Emitter<UserState> emit,
-  ) async {
-    if (state is UserRegistered) return;
+  CheckUserEvent event,
+  Emitter<UserState> emit,
+) async {
+  // Bỏ dòng: if (state is UserRegistered) return;
+  
+  emit(UserLoading());
 
-    emit(UserLoading());
+  final prefs = await SharedPreferences.getInstance();
+  final userId = prefs.getString("userId");
 
-    final prefs = await SharedPreferences.getInstance();
-    final userId = prefs.getString("userId");
-
-    if (userId == null) {
-      emit(UserNotRegistered());
-      return;
-    }
-
-    await _userSubscription?.cancel();
-
-    _userSubscription = repository
-        .streamUserById(userId)
-        .listen(
-          (user) {
-            if (!isClosed) add(_UserUpdatedEvent(user));
-          },
-          onError: (_) {
-            if (!isClosed) add(_UserUpdatedEvent(null));
-          },
-        );
+  if (userId == null) {
+    emit(UserNotRegistered());
+    return;
   }
+
+  await _userSubscription?.cancel();
+  _userSubscription = null;
+
+  _userSubscription = repository.streamUserById(userId).listen(
+    (user) {
+      if (!isClosed) add(_UserUpdatedEvent(user));
+    },
+    onError: (_) {
+      if (!isClosed) add(_UserUpdatedEvent(null));
+    },
+  );
+}
 
   /// ================= REGISTER (UPDATED) =================
   Future<void> _onRegisterUser(
@@ -152,36 +151,36 @@ class UserBloc extends Bloc<UserEvent, UserState> {
 
   /// ================= LOGOUT =================
   Future<void> _onLogoutUser(
-    LogoutUserEvent event,
-    Emitter<UserState> emit,
-  ) async {
-    await _userSubscription?.cancel();
-      await _leaderboardSubscription?.cancel(); // ✅ thêm
+  LogoutUserEvent event,
+  Emitter<UserState> emit,
+) async {
+  // 1. Cancel stream TRƯỚC TIÊN để không nhận data mới
+  await _userSubscription?.cancel();
+  _userSubscription = null; // ✅ thêm dòng này
+  await _leaderboardSubscription?.cancel();
+  _leaderboardSubscription = null; // ✅ thêm dòng này
 
-  await FirebaseAuth.instance.signOut(); // ✅ thêm
+  await FirebaseAuth.instance.signOut();
 
-    final prefs = await SharedPreferences.getInstance();
-    final isAdmin = prefs.getBool("isAdmin") ?? false;
-    final userId = prefs.getString("userId");
+  final prefs = await SharedPreferences.getInstance();
+  final isAdmin = prefs.getBool("isAdmin") ?? false;
+  final userId = prefs.getString("userId");
 
-    if (isAdmin && userId != null) {
-      try {
-        await FirebaseFirestore.instance.collection('users').doc(userId).update(
-          {'isAdmin': false},
-        );
-      } catch (e) {
-        debugPrint("Logout admin update error: $e");
-      }
+  if (isAdmin && userId != null) {
+    try {
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId)
+          .update({'isAdmin': false});
+    } catch (e) {
+      debugPrint("Logout admin update error: $e");
     }
-
-    await prefs.remove("userId");
-    await prefs.remove("isRegistered");
-    await prefs.remove("isAdmin");
-
-    await prefs.clear();
-
-    emit(UserNotRegistered());
   }
+
+  await prefs.clear();
+
+  emit(UserNotRegistered());
+}
 
   @override
   Future<void> close() {

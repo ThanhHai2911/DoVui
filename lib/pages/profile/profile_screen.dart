@@ -538,15 +538,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             costText: "Dữ liệu được lưu",
                             confirmText: "Đăng xuất",
                             confirmColor: Colors.red,
-                            onConfirm: () {
-                              context.read<UserBloc>().add(LogoutUserEvent());
-                              Navigator.pushAndRemoveUntil(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => const LoginScreen(),
-                                ),
-                                (route) => false,
-                              );
+                            onConfirm: () async {
+                              // Xóa SharedPreferences
+                              final prefs =
+                                  await SharedPreferences.getInstance();
+                              await prefs.clear();
+
+                              // Dispatch logout event
+                              if (context.mounted) {
+                                context.read<UserBloc>().add(LogoutUserEvent());
+                                Navigator.pushAndRemoveUntil(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => const LoginScreen(),
+                                  ),
+                                  (route) => false,
+                                );
+                              }
                             },
                           ),
                       child: Container(

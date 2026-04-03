@@ -1,6 +1,4 @@
-import 'package:dovui/pages/user/bloc/user_bloc.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 
 class GameCompleteScreen extends StatefulWidget {
   final int score;
@@ -26,7 +24,6 @@ class GameCompleteScreen extends StatefulWidget {
 
 class _GameCompleteScreenState extends State<GameCompleteScreen>
     with SingleTickerProviderStateMixin {
-  bool _scoreUpdated = false;
   late AnimationController _controller;
   late Animation<double> _scaleAnim;
   late Animation<double> _fadeAnim;
@@ -35,17 +32,6 @@ class _GameCompleteScreenState extends State<GameCompleteScreen>
   void initState() {
     super.initState();
 
-    // ← logic cũ giữ nguyên
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_scoreUpdated) return;
-      final userState = context.read<UserBloc>().state;
-      if (userState is UserRegistered) {
-        context.read<UserBloc>().add(UpdateScoreEvent(widget.score));
-      }
-      _scoreUpdated = true;
-    });
-
-    // ← chỉ thêm animation
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 700),
@@ -64,7 +50,8 @@ class _GameCompleteScreenState extends State<GameCompleteScreen>
   @override
   Widget build(BuildContext context) {
     final isWin = widget.isWin;
-    final accentColor = isWin ? const Color(0xFFFFD700) : const Color(0xFFFF5252);
+    final accentColor =
+        isWin ? const Color(0xFFFFD700) : const Color(0xFFFF5252);
     final emoji = isWin ? '🏆' : '💔';
     final title = isWin ? 'Xuất Sắc!' : 'Thất Bại!';
     final subtitle = isWin ? 'Bạn đã hoàn thành!' : 'Cố lên lần sau nhé!';
@@ -74,12 +61,20 @@ class _GameCompleteScreenState extends State<GameCompleteScreen>
         decoration: BoxDecoration(
           gradient: isWin
               ? const LinearGradient(
-                  colors: [Color(0xFF1a1a2e), Color(0xFF16213e), Color(0xFF0f3460)],
+                  colors: [
+                    Color(0xFF1a1a2e),
+                    Color(0xFF16213e),
+                    Color(0xFF0f3460),
+                  ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 )
               : const LinearGradient(
-                  colors: [Color(0xFF1a1a1a), Color(0xFF2d1b1b), Color(0xFF3d1515)],
+                  colors: [
+                    Color(0xFF1a1a1a),
+                    Color(0xFF2d1b1b),
+                    Color(0xFF3d1515),
+                  ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
@@ -95,7 +90,8 @@ class _GameCompleteScreenState extends State<GameCompleteScreen>
                   children: [
                     ScaleTransition(
                       scale: _scaleAnim,
-                      child: Text(emoji, style: const TextStyle(fontSize: 90)),
+                      child:
+                          Text(emoji, style: const TextStyle(fontSize: 90)),
                     ),
                     const SizedBox(height: 24),
                     Text(
@@ -110,14 +106,16 @@ class _GameCompleteScreenState extends State<GameCompleteScreen>
                     const SizedBox(height: 8),
                     Text(
                       subtitle,
-                      style: const TextStyle(fontSize: 16, color: Colors.white54),
+                      style: const TextStyle(
+                          fontSize: 16, color: Colors.white54),
                     ),
                     const SizedBox(height: 40),
 
                     // Card điểm
                     Container(
                       width: double.infinity,
-                      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 28),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 32, vertical: 28),
                       decoration: BoxDecoration(
                         color: Colors.white.withOpacity(0.07),
                         borderRadius: BorderRadius.circular(24),
@@ -129,7 +127,7 @@ class _GameCompleteScreenState extends State<GameCompleteScreen>
                       child: Column(
                         children: [
                           const Text(
-                            'TỔNG SAO',
+                            'SAO KIẾM ĐƯỢC',
                             style: TextStyle(
                               fontSize: 13,
                               color: Colors.white38,
@@ -149,7 +147,8 @@ class _GameCompleteScreenState extends State<GameCompleteScreen>
                           const SizedBox(height: 4),
                           const Text(
                             '⭐',
-                            style: TextStyle(fontSize: 25, color: Colors.white54),
+                            style: TextStyle(
+                                fontSize: 25, color: Colors.white54),
                           ),
                         ],
                       ),
@@ -161,9 +160,11 @@ class _GameCompleteScreenState extends State<GameCompleteScreen>
                       width: double.infinity,
                       height: 54,
                       child: OutlinedButton(
-                        onPressed: () => Navigator.pop(context, widget.isWin),
+                        onPressed: () =>
+                            Navigator.pop(context, widget.isWin),
                         style: OutlinedButton.styleFrom(
-                          side: BorderSide(color: accentColor, width: 1.5),
+                          side:
+                              BorderSide(color: accentColor, width: 1.5),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(16),
                           ),

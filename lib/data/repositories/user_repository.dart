@@ -68,15 +68,33 @@ class UserRepository {
   }
 
   Future<String?> getCurrentUserId() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(_userKey);
-  }
+  final firebaseUser = _auth.currentUser;
+  if (firebaseUser != null) return firebaseUser.uid;
+
+  // Fallback SharedPreferences
+  final prefs = await SharedPreferences.getInstance();
+  return prefs.getString(_userKey);
+}
 
   /// ================= UPDATE SCORE =================
   Future<void> updateScore(String id, int newScore) async {
-    await _firestore.collection("users").doc(id).update({"score": newScore});
-    await updateRanks();
+  await _firestore.collection("users").doc(id).update({"score": newScore});
+  // ❌ Bỏ await updateRanks() ở đây
+}
+
+// Gọi updateRanks riêng, ví dụ chỉ gọi khi vào màn leaderboard
+Future<void> updateRanks() async {
+  final snapshot = await _firestore
+      .collection('users')
+      .orderBy('score', descending: true)
+      .get();
+
+  final batch = _firestore.batch();
+  for (int i = 0; i < snapshot.docs.length; i++) {
+    batch.update(snapshot.docs[i].reference, {'rank': i + 1});
   }
+  await batch.commit();
+}
 
   /// ================= STREAM LEADERBOARD =================
   Stream<List<AppUser>> streamTopUsers() {
@@ -98,18 +116,6 @@ class UserRepository {
     await prefs.remove("isAdmin");
   }
 
-  Future<void> updateRanks() async {
-    final snapshot = await _firestore
-        .collection('users')
-        .orderBy('score', descending: true)
-        .get();
-
-    final batch = _firestore.batch();
-    for (int i = 0; i < snapshot.docs.length; i++) {
-      batch.update(snapshot.docs[i].reference, {'rank': i + 1});
-    }
-    await batch.commit();
-  }
 
   Stream<int> getTotalUsersStream() {
     return _firestore

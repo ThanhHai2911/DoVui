@@ -1,3 +1,4 @@
+import 'package:dovui/pages/home/widgets/check_score.dart';
 import 'package:dovui/pages/home/widgets/game_dialog.dart';
 import 'package:dovui/pages/quiz_image/widgets/quiz_image_input.dart';
 import 'package:dovui/pages/word_answer/widgets/hint_bar.dart';
@@ -16,34 +17,33 @@ class QuizImageScreen extends StatelessWidget {
   final String categoryId;
   final String? levelId;
   final String type;
-  
 
   final _userLevelRepo = UserLevelRepository();
 
   QuizImageScreen({
     super.key,
-    required this.categoryId, 
+    required this.categoryId,
     required this.type,
     this.levelId,
   });
 
   Future<void> _saveResult({required int score, required int total}) async {
-  if (levelId == null) return;
+    if (levelId == null) return;
 
-  final prefs = await SharedPreferences.getInstance();
-  final userId = prefs.getString("userId");
+    final prefs = await SharedPreferences.getInstance();
+    final userId = prefs.getString("userId");
 
-  if (userId == null) return;
+    if (userId == null) return;
 
-  final maxScore = total * 10;
-  final percent = maxScore > 0 ? ((score / maxScore) * 10).round() : 0;
+    final maxScore = total * 10;
+    final percent = maxScore > 0 ? ((score / maxScore) * 10).round() : 0;
 
-  await _userLevelRepo.saveLevel(
-    userId: userId, // ✅ THÊM DÒNG NÀY
-    levelId: levelId!,
-    score: percent,
-  );
-}
+    await _userLevelRepo.saveLevel(
+      userId: userId, // ✅ THÊM DÒNG NÀY
+      levelId: levelId!,
+      score: percent,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -65,7 +65,9 @@ class QuizImageScreen extends StatelessWidget {
                     (_) => GameCompleteScreen(
                       score: state.score,
                       totalQuestions: state.total,
-                      isWin: state.total > 0 && (state.score / (state.total * 10)) >= 0.6,
+                      isWin:
+                          state.total > 0 &&
+                          (state.score / (state.total * 10)) >= 0.6,
                       categoryId: categoryId,
                       levelId: levelId,
                       type: type,
@@ -83,7 +85,9 @@ class QuizImageScreen extends StatelessWidget {
                     (_) => GameCompleteScreen(
                       score: state.score,
                       totalQuestions: state.total,
-                      isWin: state.total > 0 && (state.score / (state.total * 10)) >= 0.6,
+                      isWin:
+                          state.total > 0 &&
+                          (state.score / (state.total * 10)) >= 0.6,
                       categoryId: categoryId,
                       levelId: levelId,
                       type: type,
@@ -234,17 +238,18 @@ class QuizImageScreen extends StatelessWidget {
                             const SizedBox(height: 20),
                             HintBar(
                               onMagnifier: () {
-                                showGameDialog(
+                                final score =
+                                    context.read<QuizImageBloc>().currentScore;
+                                checkScoreAndShowHint(
                                   context: context,
-                                  icon: "🔍",
-                                  iconColor: Colors.amber,
-                                  title: "Gợi ý chữ cái",
-                                  description:
+                                  currentScore: score,
+                                  cost: 50,
+                                  hintIcon: "🔍",
+                                  hintTitle: "Gợi ý chữ cái",
+                                  hintDescription:
                                       "Hé lộ 1 chữ cái đúng\ncho câu trả lời hiện tại",
-                                  costIcon: "⭐",
-                                  costText: "Tốn 50 sao",
+                                  hintColor: Colors.amber,
                                   confirmText: "Dùng ngay!",
-                                  confirmColor: Colors.amber,
                                   onConfirm:
                                       () => context.read<QuizImageBloc>().add(
                                         QuizImageUseHintLetter(),
@@ -252,17 +257,18 @@ class QuizImageScreen extends StatelessWidget {
                                 );
                               },
                               onKey: () {
-                                showGameDialog(
+                                final score =
+                                    context.read<QuizImageBloc>().currentScore;
+                                checkScoreAndShowHint(
                                   context: context,
-                                  icon: "🗝️",
-                                  iconColor: Colors.deepPurple,
-                                  title: "Mở đáp án",
-                                  description:
+                                  currentScore: score,
+                                  cost: 100,
+                                  hintIcon: "🗝️",
+                                  hintTitle: "Mở đáp án",
+                                  hintDescription:
                                       "Hiện toàn bộ đáp án\ncâu hỏi hiện tại",
-                                  costIcon: "⭐",
-                                  costText: "Tốn 100 sao",
+                                  hintColor: Colors.deepPurple,
                                   confirmText: "Mở thôi!",
-                                  confirmColor: Colors.deepPurple,
                                   onConfirm:
                                       () => context.read<QuizImageBloc>().add(
                                         QuizImageUseSkip(),
@@ -282,8 +288,7 @@ class QuizImageScreen extends StatelessWidget {
                                   confirmText: "Đã hiểu",
                                   confirmColor: Colors.orange,
                                   showCancel: false,
-                                  onConfirm: () {
-                                  },
+                                  onConfirm: () {},
                                 );
                               },
                             ),
@@ -308,4 +313,3 @@ class QuizImageScreen extends StatelessWidget {
     );
   }
 }
-
