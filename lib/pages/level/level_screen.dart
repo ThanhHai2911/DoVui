@@ -1,3 +1,4 @@
+import 'package:dovui/data/audio/audio_manager.dart';
 import 'package:dovui/data/models/user_level_model.dart';
 import 'package:dovui/pages/category/widgets/category_shimmer.dart';
 import 'package:dovui/pages/level/bloc/level_bloc.dart';
@@ -151,6 +152,7 @@ class _LevelscreenState extends State<Levelscreen> {
                                   status: status,
                                   isUnlocked: isUnlocked,
                                   onTap:
+                                  
                                       isUnlocked
                                           ? () {
                                             Widget screen;

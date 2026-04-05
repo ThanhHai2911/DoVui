@@ -1,3 +1,4 @@
+import 'package:dovui/data/audio/audio_manager.dart';
 import 'package:flutter/material.dart';
 
 class GameCompleteScreen extends StatefulWidget {
@@ -36,13 +37,29 @@ class _GameCompleteScreenState extends State<GameCompleteScreen>
       vsync: this,
       duration: const Duration(milliseconds: 700),
     );
-    _scaleAnim = CurvedAnimation(parent: _controller, curve: Curves.elasticOut);
-    _fadeAnim = CurvedAnimation(parent: _controller, curve: Curves.easeIn);
+
+    _scaleAnim =
+        CurvedAnimation(parent: _controller, curve: Curves.elasticOut);
+    _fadeAnim =
+        CurvedAnimation(parent: _controller, curve: Curves.easeIn);
+
     _controller.forward();
+
+    // 🔥 phát âm thanh (respect mute)
+    Future.delayed(const Duration(milliseconds: 300), () {
+      if (!mounted) return;
+
+      if (widget.isWin) {
+        AudioManager().playWin();
+      } else {
+        AudioManager().playLose();
+      }
+    });
   }
 
   @override
   void dispose() {
+    AudioManager().stopBackgroundMusic();
     _controller.dispose();
     super.dispose();
   }
@@ -54,7 +71,8 @@ class _GameCompleteScreenState extends State<GameCompleteScreen>
         isWin ? const Color(0xFFFFD700) : const Color(0xFFFF5252);
     final emoji = isWin ? '🏆' : '💔';
     final title = isWin ? 'Xuất Sắc!' : 'Thất Bại!';
-    final subtitle = isWin ? 'Bạn đã hoàn thành!' : 'Cố lên lần sau nhé!';
+    final subtitle =
+        isWin ? 'Bạn đã hoàn thành!' : 'Cố lên lần sau nhé!';
 
     return Scaffold(
       body: Container(
@@ -90,10 +108,13 @@ class _GameCompleteScreenState extends State<GameCompleteScreen>
                   children: [
                     ScaleTransition(
                       scale: _scaleAnim,
-                      child:
-                          Text(emoji, style: const TextStyle(fontSize: 90)),
+                      child: Text(
+                        emoji,
+                        style: const TextStyle(fontSize: 90),
+                      ),
                     ),
                     const SizedBox(height: 24),
+
                     Text(
                       title,
                       style: TextStyle(
@@ -103,15 +124,20 @@ class _GameCompleteScreenState extends State<GameCompleteScreen>
                         letterSpacing: 2,
                       ),
                     ),
+
                     const SizedBox(height: 8),
+
                     Text(
                       subtitle,
                       style: const TextStyle(
-                          fontSize: 16, color: Colors.white54),
+                        fontSize: 16,
+                        color: Colors.white54,
+                      ),
                     ),
+
                     const SizedBox(height: 40),
 
-                    // Card điểm
+                    /// Card điểm
                     Container(
                       width: double.infinity,
                       padding: const EdgeInsets.symmetric(
@@ -148,14 +174,17 @@ class _GameCompleteScreenState extends State<GameCompleteScreen>
                           const Text(
                             '⭐',
                             style: TextStyle(
-                                fontSize: 25, color: Colors.white54),
+                              fontSize: 25,
+                              color: Colors.white54,
+                            ),
                           ),
                         ],
                       ),
                     ),
+
                     const SizedBox(height: 40),
 
-                    // Nút thoát
+                    /// Nút thoát
                     SizedBox(
                       width: double.infinity,
                       height: 54,
@@ -163,8 +192,8 @@ class _GameCompleteScreenState extends State<GameCompleteScreen>
                         onPressed: () =>
                             Navigator.pop(context, widget.isWin),
                         style: OutlinedButton.styleFrom(
-                          side:
-                              BorderSide(color: accentColor, width: 1.5),
+                          side: BorderSide(
+                              color: accentColor, width: 1.5),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(16),
                           ),

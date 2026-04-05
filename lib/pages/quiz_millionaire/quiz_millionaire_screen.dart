@@ -1,3 +1,4 @@
+import 'package:dovui/data/audio/audio_manager.dart';
 import 'package:dovui/data/repositories/user_level_repository.dart';
 import 'package:dovui/pages/quiz_millionaire/widgets/askcontinue_dialog.dart';
 import 'package:dovui/pages/quiz_millionaire/widgets/prizeladderoverlay.dart';
@@ -14,6 +15,7 @@ import 'widgets/millionaire_top_bar.dart';
 import 'widgets/question_card.dart';
 import 'widgets/answer_grid.dart';
 import 'widgets/timer_bar.dart';
+
 
 class MillionaireScreen extends StatefulWidget {
   final String categoryId;
@@ -81,6 +83,15 @@ class _MillionaireView extends StatefulWidget {
 
 class _MillionaireViewState extends State<_MillionaireView> {
   bool _isNavigated = false;
+
+  @override
+  void initState() {
+    super.initState();  
+
+    AudioManager().stopBackgroundMusic();
+
+    AudioManager().stopSfx();
+  }
 
   @override
   Widget build(BuildContext context) {

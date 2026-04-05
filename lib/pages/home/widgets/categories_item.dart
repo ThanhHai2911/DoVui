@@ -1,3 +1,4 @@
+import 'package:dovui/data/audio/audio_manager.dart';
 import 'package:dovui/resources/color_manager.dart';
 import 'package:dovui/pages/it_topic/topic_screen.dart';
 import 'package:dovui/pages/level/level_screen.dart';
@@ -36,6 +37,7 @@ class CategoriesItem extends StatelessWidget {
 
     return GestureDetector(
       onTap: () {
+        AudioManager().playClick();
         if (type == "imagequiz") {
           Navigator.push(
             context,

@@ -1,6 +1,6 @@
+import 'package:dovui/data/audio/audio_manager.dart';
 import 'package:dovui/pages/home/widgets/game_dialog.dart';
 import 'package:dovui/pages/user/login_screen.dart';
-import 'package:dovui/pages/user/register_screen.dart';
 import 'package:dovui/resources/color_manager.dart';
 import 'package:dovui/pages/profile/widgets/profile_shimmer.dart';
 import 'package:dovui/pages/user/bloc/user_bloc.dart';
@@ -25,6 +25,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void initState() {
     super.initState();
     _loadCheckInStatus();
+    _applySavedSoundSetting(); // ← áp dụng setting âm thanh khi vào app
+  }
+
+  /// Đọc và áp dụng trạng thái âm thanh đã lưu
+  Future<void> _applySavedSoundSetting() async {
+    final prefs = await SharedPreferences.getInstance();
+    final isSoundOn = prefs.getBool('sound_enabled') ?? true;
+    if (isSoundOn) {
+      AudioManager().resumeBackgroundMusic();
+    } else {
+      AudioManager().stopBackgroundMusic();
+      AudioManager().stopSfx();
+    }
   }
 
   Future<void> _loadCheckInStatus() async {
@@ -82,6 +95,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       builder:
           (ctx) => StatefulBuilder(
             builder: (ctx, setStateDialog) {
+              AudioManager().playClick();
               return Dialog(
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(24),
@@ -183,6 +197,76 @@ class _ProfileScreenState extends State<ProfileScreen> {
               );
             },
           ),
+    );
+  }
+
+  // ── FIX: đọc trạng thái âm thanh từ SharedPreferences ──
+  void _showSettingsDialog(BuildContext context) async {
+    final prefs = await SharedPreferences.getInstance();
+    // Đọc giá trị đã lưu, mặc định true nếu chưa có
+    bool isSoundOn = prefs.getBool('sound_enabled') ?? true;
+
+    if (!context.mounted) return;
+    AudioManager().playClick();
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setStateDialog) {
+            return Dialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text(
+                      "⚙️ Cài đặt",
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text("Âm thanh", style: TextStyle(fontSize: 15)),
+                        Switch(
+                          value: isSoundOn,
+                          onChanged: (value) async {
+                            setStateDialog(() => isSoundOn = value);
+                            // Lưu setting + điều khiển AudioManager trong 1 call
+                            await AudioManager().setSoundEnabled(value);
+                            // nếu user đã tắt âm thanh thì playBackgroundMusic() sẽ bị skip bên trong
+                            AudioManager().init().then((_) {
+                              AudioManager().playBackgroundMusic();
+                            });
+                          },
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    SizedBox(
+                      width: double.infinity,
+                      child: TextButton(
+                        onPressed: () => Navigator.pop(ctx),
+                        child: const Text("Đóng"),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 
@@ -366,6 +450,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 ),
                               ),
                             ),
+                            Positioned(
+                              top: 20,
+                              right: 16,
+                              child: GestureDetector(
+                                onTap: () => _showSettingsDialog(context),
+                                child: Container(
+                                  padding: const EdgeInsets.all(10),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.15),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(
+                                    Icons.settings,
+                                    color: Colors.white,
+                                    size: 22,
+                                  ),
+                                ),
+                              ),
+                            ),
                           ],
                         ),
                       ),
@@ -438,7 +541,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                 const SizedBox(height: 30),
 
-                /// STATS — nhấn vào "Nhiệm vụ" mở dialog
+                /// STATS
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: Row(
@@ -539,12 +642,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             confirmText: "Đăng xuất",
                             confirmColor: Colors.red,
                             onConfirm: () async {
-                              // Xóa SharedPreferences
                               final prefs =
                                   await SharedPreferences.getInstance();
                               await prefs.clear();
 
-                              // Dispatch logout event
                               if (context.mounted) {
                                 context.read<UserBloc>().add(LogoutUserEvent());
                                 Navigator.pushAndRemoveUntil(

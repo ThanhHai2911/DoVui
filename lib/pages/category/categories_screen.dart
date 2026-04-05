@@ -1,3 +1,4 @@
+import 'package:dovui/data/audio/audio_manager.dart';
 import 'package:dovui/resources/color_manager.dart';
 import 'package:dovui/data/models/category_model.dart';
 import 'package:dovui/pages/category/bloc/categori_even.dart';
@@ -56,6 +57,9 @@ class _CategoriesscreenState extends State<Categoriesscreen>
     );
 
     _entryCtrl.forward();
+    AudioManager().init().then((_) {
+      AudioManager().playBackgroundMusic();
+    });
   }
 
   @override

@@ -1,3 +1,4 @@
+import 'package:dovui/data/audio/audio_manager.dart';
 import 'package:dovui/resources/color_manager.dart';
 import 'package:dovui/pages/gamecomplete/game_complete_sceen.dart';
 import 'package:dovui/pages/quiz/bloc/quiz_event.dart';
@@ -23,9 +24,7 @@ class QuizScreen extends StatefulWidget {
   State<QuizScreen> createState() => _QuizScreenState();
 }
 
-class _QuizScreenState extends State<QuizScreen>
-    with TickerProviderStateMixin {
-
+class _QuizScreenState extends State<QuizScreen> with TickerProviderStateMixin {
   // Entry animation
   late AnimationController _entryCtrl;
   late Animation<double> _entryFade;
@@ -55,45 +54,56 @@ class _QuizScreenState extends State<QuizScreen>
     super.initState();
 
     _entryCtrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 600));
-    _entryFade =
-        CurvedAnimation(parent: _entryCtrl, curve: Curves.easeOut);
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
+    _entryFade = CurvedAnimation(parent: _entryCtrl, curve: Curves.easeOut);
     _entrySlide = Tween<Offset>(
       begin: const Offset(0, 0.08),
       end: Offset.zero,
-    ).animate(
-        CurvedAnimation(parent: _entryCtrl, curve: Curves.easeOutCubic));
+    ).animate(CurvedAnimation(parent: _entryCtrl, curve: Curves.easeOutCubic));
 
     _questionCtrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 450));
-    _questionScale = Tween<double>(begin: 0.88, end: 1.0).animate(
-      CurvedAnimation(parent: _questionCtrl, curve: Curves.elasticOut),
+      vsync: this,
+      duration: const Duration(milliseconds: 450),
     );
+    _questionScale = Tween<double>(
+      begin: 0.88,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _questionCtrl, curve: Curves.elasticOut));
     _questionFade = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
-          parent: _questionCtrl,
-          curve: const Interval(0.0, 0.5, curve: Curves.easeIn)),
+        parent: _questionCtrl,
+        curve: const Interval(0.0, 0.5, curve: Curves.easeIn),
+      ),
     );
 
     _pulseCtrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 1200))
-      ..repeat(reverse: true);
-    _pulseAnim = Tween<double>(begin: 1.0, end: 1.05).animate(
-      CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut),
-    );
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    )..repeat(reverse: true);
+    _pulseAnim = Tween<double>(
+      begin: 1.0,
+      end: 1.05,
+    ).animate(CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut));
 
     _floatCtrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 2200))
-      ..repeat(reverse: true);
-    _floatAnim = Tween<double>(begin: -8.0, end: 8.0).animate(
-      CurvedAnimation(parent: _floatCtrl, curve: Curves.easeInOut),
-    );
+      vsync: this,
+      duration: const Duration(milliseconds: 2200),
+    )..repeat(reverse: true);
+    _floatAnim = Tween<double>(
+      begin: -8.0,
+      end: 8.0,
+    ).animate(CurvedAnimation(parent: _floatCtrl, curve: Curves.easeInOut));
 
     _shakeCtrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 400));
-    _shakeAnim = Tween<double>(begin: -4.0, end: 4.0).animate(
-      CurvedAnimation(parent: _shakeCtrl, curve: Curves.elasticIn),
+      vsync: this,
+      duration: const Duration(milliseconds: 400),
     );
+    _shakeAnim = Tween<double>(
+      begin: -4.0,
+      end: 4.0,
+    ).animate(CurvedAnimation(parent: _shakeCtrl, curve: Curves.elasticIn));
 
     _entryCtrl.forward();
   }
@@ -128,25 +138,45 @@ class _QuizScreenState extends State<QuizScreen>
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (_) => QuizBloc()
-        ..add(LoadQuiz(
-            categoryId: widget.categoryId,
-            levelId: widget.levelId,
-            type: widget.type)),
-      child: BlocConsumer<QuizBloc, QuizState>(
-        listener: (context, state) {
-          if (state.isGameOver) {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(
-                builder: (_) => GameCompleteScreen(
-                  score: state.score,
-                  totalQuestions: state.questions.length,
-                  isWin: state.score > 0,
+      create:
+          (_) =>
+              QuizBloc()..add(
+                LoadQuiz(
                   categoryId: widget.categoryId,
                   levelId: widget.levelId,
                   type: widget.type,
                 ),
+              ),
+      child: BlocConsumer<QuizBloc, QuizState>(
+        listener: (context, state) {
+          // 🎯 Khi hiện kết quả
+          if (state.showResult) {
+            final correctIndex = state.currentQuestion?.correctIndex;
+            final selected = state.selectedIndex;
+
+            if (correctIndex != null && selected != null) {
+              if (selected == correctIndex) {
+                // ✅ đúng
+                AudioManager().playCorrect();
+              } else {
+                // ❌ sai
+                AudioManager().playWrong();
+              }
+            }
+          }
+          if (state.isGameOver) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder:
+                    (_) => GameCompleteScreen(
+                      score: state.score,
+                      totalQuestions: state.questions.length,
+                      isWin: state.score > 0,
+                      categoryId: widget.categoryId,
+                      levelId: widget.levelId,
+                      type: widget.type,
+                    ),
               ),
             );
           }
@@ -165,8 +195,10 @@ class _QuizScreenState extends State<QuizScreen>
             return const Scaffold(
               backgroundColor: Color(0xFFF4F6FF),
               body: Center(
-                child: Text("Chưa có câu hỏi cho chuyên đề này",
-                    style: TextStyle(fontSize: 18)),
+                child: Text(
+                  "Chưa có câu hỏi cho chuyên đề này",
+                  style: TextStyle(fontSize: 18),
+                ),
               ),
             );
           }
@@ -218,9 +250,7 @@ class _QuizScreenState extends State<QuizScreen>
                             const SizedBox(height: 60),
 
                             /// ===== ANSWERS =====
-                            Expanded(
-                              child: _buildAnswers(context, state),
-                            ),
+                            Expanded(child: _buildAnswers(context, state)),
                           ],
                         ),
                       ),
@@ -238,30 +268,31 @@ class _QuizScreenState extends State<QuizScreen>
   Widget _buildBackground() {
     return AnimatedBuilder(
       animation: _floatAnim,
-      builder: (_, __) => Stack(
-        children: [
-          Positioned(
-            top: -50 + _floatAnim.value,
-            left: -50,
-            child: _blob(180, const Color(0xFF6C63FF), 0.08),
+      builder:
+          (_, __) => Stack(
+            children: [
+              Positioned(
+                top: -50 + _floatAnim.value,
+                left: -50,
+                child: _blob(180, const Color(0xFF6C63FF), 0.08),
+              ),
+              Positioned(
+                top: 160 - _floatAnim.value,
+                right: -40,
+                child: _blob(140, const Color(0xFFFF6584), 0.07),
+              ),
+              Positioned(
+                bottom: 200 + _floatAnim.value * 0.5,
+                left: -30,
+                child: _blob(120, const Color(0xFF43C6AC), 0.07),
+              ),
+              Positioned(
+                bottom: 60 - _floatAnim.value * 0.5,
+                right: -40,
+                child: _blob(160, const Color(0xFFFFB347), 0.07),
+              ),
+            ],
           ),
-          Positioned(
-            top: 160 - _floatAnim.value,
-            right: -40,
-            child: _blob(140, const Color(0xFFFF6584), 0.07),
-          ),
-          Positioned(
-            bottom: 200 + _floatAnim.value * 0.5,
-            left: -30,
-            child: _blob(120, const Color(0xFF43C6AC), 0.07),
-          ),
-          Positioned(
-            bottom: 60 - _floatAnim.value * 0.5,
-            right: -40,
-            child: _blob(160, const Color(0xFFFFB347), 0.07),
-          ),
-        ],
-      ),
     );
   }
 
@@ -284,8 +315,7 @@ class _QuizScreenState extends State<QuizScreen>
       children: [
         /// Số câu
         Container(
-          padding:
-              const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(20),
@@ -297,8 +327,9 @@ class _QuizScreenState extends State<QuizScreen>
               ),
             ],
             border: Border.all(
-                color: const Color(0xFF6C63FF).withOpacity(0.2),
-                width: 1.5),
+              color: const Color(0xFF6C63FF).withOpacity(0.2),
+              width: 1.5,
+            ),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -306,23 +337,25 @@ class _QuizScreenState extends State<QuizScreen>
               const Text("📝", style: TextStyle(fontSize: 13)),
               const SizedBox(width: 5),
               RichText(
-                text: TextSpan(children: [
-                  TextSpan(
-                    text: "${state.questionCount}",
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF6C63FF),
+                text: TextSpan(
+                  children: [
+                    TextSpan(
+                      text: "${state.questionCount}",
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF6C63FF),
+                      ),
                     ),
-                  ),
-                  TextSpan(
-                    text: "/${state.questions.length}",
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey.shade400,
+                    TextSpan(
+                      text: "/${state.questions.length}",
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey.shade400,
+                      ),
                     ),
-                  ),
-                ]),
+                  ],
+                ),
               ),
             ],
           ),
@@ -332,8 +365,7 @@ class _QuizScreenState extends State<QuizScreen>
 
         /// Tim
         Container(
-          padding:
-              const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(20),
@@ -344,8 +376,7 @@ class _QuizScreenState extends State<QuizScreen>
                 offset: const Offset(0, 3),
               ),
             ],
-            border: Border.all(
-                color: Colors.red.withOpacity(0.2), width: 1.5),
+            border: Border.all(color: Colors.red.withOpacity(0.2), width: 1.5),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -355,16 +386,16 @@ class _QuizScreenState extends State<QuizScreen>
                 padding: const EdgeInsets.symmetric(horizontal: 2),
                 child: AnimatedSwitcher(
                   duration: const Duration(milliseconds: 300),
-                  transitionBuilder: (child, anim) =>
-                      ScaleTransition(scale: anim, child: child),
+                  transitionBuilder:
+                      (child, anim) =>
+                          ScaleTransition(scale: anim, child: child),
                   child: Icon(
                     active
                         ? Icons.favorite_rounded
                         : Icons.favorite_border_rounded,
                     key: ValueKey('$index-$active'),
                     size: 20,
-                    color:
-                        active ? Colors.red.shade400 : Colors.grey.shade300,
+                    color: active ? Colors.red.shade400 : Colors.grey.shade300,
                   ),
                 ),
               );
@@ -377,18 +408,16 @@ class _QuizScreenState extends State<QuizScreen>
         /// Timer
         AnimatedBuilder(
           animation: _shakeAnim,
-          builder: (_, child) => Transform.translate(
-            offset: Offset(isWarning ? _shakeAnim.value : 0, 0),
-            child: child,
-          ),
+          builder:
+              (_, child) => Transform.translate(
+                offset: Offset(isWarning ? _shakeAnim.value : 0, 0),
+                child: child,
+              ),
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 300),
-            padding:
-                const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
             decoration: BoxDecoration(
-              color: isWarning
-                  ? timeColor.withOpacity(0.12)
-                  : Colors.white,
+              color: isWarning ? timeColor.withOpacity(0.12) : Colors.white,
               borderRadius: BorderRadius.circular(20),
               boxShadow: [
                 BoxShadow(
@@ -397,14 +426,15 @@ class _QuizScreenState extends State<QuizScreen>
                   offset: const Offset(0, 3),
                 ),
               ],
-              border: Border.all(
-                  color: timeColor.withOpacity(0.4), width: 1.5),
+              border: Border.all(color: timeColor.withOpacity(0.4), width: 1.5),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(isWarning ? "⏰" : "⏱️",
-                    style: const TextStyle(fontSize: 13)),
+                Text(
+                  isWarning ? "⏰" : "⏱️",
+                  style: const TextStyle(fontSize: 13),
+                ),
                 const SizedBox(width: 5),
                 AnimatedDefaultTextStyle(
                   duration: const Duration(milliseconds: 200),
@@ -424,9 +454,10 @@ class _QuizScreenState extends State<QuizScreen>
   }
 
   Widget _buildProgressBar(QuizState state) {
-    final progress = state.questions.isNotEmpty
-        ? state.questionCount / state.questions.length
-        : 0.0;
+    final progress =
+        state.questions.isNotEmpty
+            ? state.questionCount / state.questions.length
+            : 0.0;
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(10),
@@ -434,18 +465,19 @@ class _QuizScreenState extends State<QuizScreen>
         tween: Tween(begin: 0, end: progress),
         duration: const Duration(milliseconds: 500),
         curve: Curves.easeOutCubic,
-        builder: (_, value, __) => LinearProgressIndicator(
-          value: value,
-          minHeight: 8,
-          backgroundColor: Colors.grey.shade200,
-          valueColor: AlwaysStoppedAnimation<Color>(
-            Color.lerp(
-              const Color(0xFF6C63FF),
-              const Color(0xFF43C6AC),
-              value,
-            )!,
-          ),
-        ),
+        builder:
+            (_, value, __) => LinearProgressIndicator(
+              value: value,
+              minHeight: 8,
+              backgroundColor: Colors.grey.shade200,
+              valueColor: AlwaysStoppedAnimation<Color>(
+                Color.lerp(
+                  const Color(0xFF6C63FF),
+                  const Color(0xFF43C6AC),
+                  value,
+                )!,
+              ),
+            ),
       ),
     );
   }
@@ -479,11 +511,11 @@ class _QuizScreenState extends State<QuizScreen>
             right: 0,
             child: AnimatedBuilder(
               animation: _floatAnim,
-              builder: (_, __) => Transform.translate(
-                offset: Offset(0, _floatAnim.value * 0.35),
-                child:
-                    const Text("🧠", style: TextStyle(fontSize: 28)),
-              ),
+              builder:
+                  (_, __) => Transform.translate(
+                    offset: Offset(0, _floatAnim.value * 0.35),
+                    child: const Text("🧠", style: TextStyle(fontSize: 28)),
+                  ),
             ),
           ),
           Positioned(
@@ -491,11 +523,11 @@ class _QuizScreenState extends State<QuizScreen>
             left: 0,
             child: AnimatedBuilder(
               animation: _floatAnim,
-              builder: (_, __) => Transform.translate(
-                offset: Offset(0, -_floatAnim.value * 0.35),
-                child:
-                    const Text("💡", style: TextStyle(fontSize: 20)),
-              ),
+              builder:
+                  (_, __) => Transform.translate(
+                    offset: Offset(0, -_floatAnim.value * 0.35),
+                    child: const Text("💡", style: TextStyle(fontSize: 20)),
+                  ),
             ),
           ),
 
@@ -507,7 +539,9 @@ class _QuizScreenState extends State<QuizScreen>
                 scale: _pulseAnim,
                 child: Container(
                   padding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 6),
+                    horizontal: 16,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
                     gradient: const LinearGradient(
                       colors: [Color(0xFF6C63FF), Color(0xFF9B8FFF)],
@@ -515,8 +549,7 @@ class _QuizScreenState extends State<QuizScreen>
                     borderRadius: BorderRadius.circular(20),
                     boxShadow: [
                       BoxShadow(
-                        color:
-                            const Color(0xFF6C63FF).withOpacity(0.3),
+                        color: const Color(0xFF6C63FF).withOpacity(0.3),
                         blurRadius: 8,
                         offset: const Offset(0, 3),
                       ),
@@ -551,7 +584,6 @@ class _QuizScreenState extends State<QuizScreen>
       ),
     );
   }
-  
 
   Widget _buildAnswers(BuildContext context, QuizState state) {
     final answers = state.currentQuestion!.answers;
@@ -563,7 +595,6 @@ class _QuizScreenState extends State<QuizScreen>
       [const Color(0xFFFFB347), const Color(0xFFFFD08A)],
       [const Color(0xFFF093FB), const Color(0xFFF5576C)],
     ];
-    
 
     return GridView.builder(
       itemCount: answers.length,
@@ -577,23 +608,16 @@ class _QuizScreenState extends State<QuizScreen>
       itemBuilder: (context, index) {
         List<Color> gradient = gradients[index % gradients.length];
         bool isCorrect =
-            state.showResult &&
-            index == state.currentQuestion!.correctIndex;
+            state.showResult && index == state.currentQuestion!.correctIndex;
         bool isWrong =
             state.showResult &&
             index == state.selectedIndex &&
             index != state.currentQuestion!.correctIndex;
 
         if (isCorrect) {
-          gradient = [
-            const Color(0xFF43C6AC),
-            const Color(0xFF77E8D2)
-          ];
+          gradient = [const Color(0xFF43C6AC), const Color(0xFF77E8D2)];
         } else if (isWrong) {
-          gradient = [
-            const Color(0xFFFF6584),
-            const Color(0xFFFF99AA)
-          ];
+          gradient = [const Color(0xFFFF6584), const Color(0xFFFF99AA)];
         }
 
         return _AnswerCard(
@@ -604,10 +628,15 @@ class _QuizScreenState extends State<QuizScreen>
           isWrong: isWrong,
           isDisabled: state.showResult,
           index: index,
-          onTap: state.showResult
-              ? null
-              : () =>
-                  context.read<QuizBloc>().add(SelectAnswer(index)),
+          onTap:
+              state.showResult
+                  ? null
+                  : () {
+                    // 🔊 âm click
+                    AudioManager().playClick();
+
+                    context.read<QuizBloc>().add(SelectAnswer(index));
+                  },
         );
       },
     );
@@ -652,14 +681,18 @@ class _AnswerCardState extends State<_AnswerCard>
   void initState() {
     super.initState();
     _ctrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 500));
-    _entryScale = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _ctrl, curve: Curves.elasticOut),
+      vsync: this,
+      duration: const Duration(milliseconds: 500),
     );
+    _entryScale = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _ctrl, curve: Curves.elasticOut));
     _entryFade = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
-          parent: _ctrl,
-          curve: const Interval(0.0, 0.4, curve: Curves.easeIn)),
+        parent: _ctrl,
+        curve: const Interval(0.0, 0.4, curve: Curves.easeIn),
+      ),
     );
 
     // Stagger theo index
@@ -703,8 +736,9 @@ class _AnswerCardState extends State<_AnswerCard>
                 borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(
-                    color: widget.gradient[0]
-                        .withOpacity(_pressed ? 0.2 : 0.35),
+                    color: widget.gradient[0].withOpacity(
+                      _pressed ? 0.2 : 0.35,
+                    ),
                     blurRadius: _pressed ? 4 : 12,
                     offset: Offset(0, _pressed ? 2 : 5),
                   ),
@@ -733,8 +767,9 @@ class _AnswerCardState extends State<_AnswerCard>
                       right: 8,
                       child: AnimatedSwitcher(
                         duration: const Duration(milliseconds: 300),
-                        transitionBuilder: (child, anim) =>
-                            ScaleTransition(scale: anim, child: child),
+                        transitionBuilder:
+                            (child, anim) =>
+                                ScaleTransition(scale: anim, child: child),
                         child: Text(
                           widget.isCorrect ? "✅" : "❌",
                           key: ValueKey(widget.isCorrect),

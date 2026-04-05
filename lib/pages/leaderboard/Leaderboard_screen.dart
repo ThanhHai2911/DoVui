@@ -1,3 +1,4 @@
+import 'package:dovui/data/audio/audio_manager.dart';
 import 'package:dovui/resources/color_manager.dart';
 import 'package:dovui/data/repositories/leaderboard_repository.dart';
 import 'package:dovui/pages/leaderboard/bloc/leaderboard_bloc.dart';
@@ -8,6 +9,7 @@ import 'package:dovui/pages/leaderboard/widgets/leaderboard_shimmer.dart';
 import 'package:dovui/pages/leaderboard/widgets/topusercard.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter/widgets.dart';
 
 class LeaderboardScreen extends StatefulWidget {
   const LeaderboardScreen({super.key});
@@ -52,6 +54,9 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
     ).animate(CurvedAnimation(parent: _floatCtrl, curve: Curves.easeInOut));
 
     _entryCtrl.forward();
+    AudioManager().init().then((_) {
+      AudioManager().playBackgroundMusic();
+    });
   }
 
   @override
@@ -153,6 +158,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
                                                     delay: 200,
                                                     child: _PodiumColumn(
                                                       card: TopUserCard(
+                                                        key: ValueKey(users[1].id),
                                                         rank: "#2",
                                                         name: users[1].name,
                                                         points:
@@ -175,6 +181,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
                                             delay: 0,
                                             child: _PodiumColumn(
                                               card: TopUserCard(
+                                                key: ValueKey(users[0].id),
                                                 rank: "#1",
                                                 name: users[0].name,
                                                 points: "${users[0].score} ⭐",
@@ -198,6 +205,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
                                                     delay: 400,
                                                     child: _PodiumColumn(
                                                       card: TopUserCard(
+                                                        key: ValueKey(users[2].id),
                                                         rank: "#3",
                                                         name: users[2].name,
                                                         points:
@@ -240,6 +248,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
                                     return _AnimatedTile(
                                       index: index,
                                       child: LeaderboardTile(
+                                        key: ValueKey(user.id),
                                         rank: "#${index + 4}",
                                         name: user.name,
                                         points: "${user.score} ⭐",
@@ -329,7 +338,7 @@ class _AnimatedTile extends StatefulWidget {
   final Widget child;
   final int index;
 
-  const _AnimatedTile({required this.child, required this.index});
+  const _AnimatedTile({required this.child, required this.index, Key? key}) : super(key: key);
 
   @override
   State<_AnimatedTile> createState() => _AnimatedTileState();

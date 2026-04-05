@@ -3,12 +3,13 @@ class QuestionModel {
   final List<String> answers;
   final int correctIndex;
   final int order;
+  final String? hint;
 
   QuestionModel({
     required this.question,
     required this.answers,
     required this.correctIndex,
-    required this.order,
+    required this.order, this.hint,
   });
 
   factory QuestionModel.fromMap(Map<String, dynamic> data) {
@@ -17,6 +18,7 @@ class QuestionModel {
       answers: List<String>.from(data['answers'] ?? []),
       correctIndex: data['correctIndex'] ?? 0,
       order: data['order'] ?? 0,
+      hint: data['hint'], 
     );
   }
   factory QuestionModel.fromQuizApi(Map<String, dynamic> json) {
@@ -41,6 +43,7 @@ class QuestionModel {
       answers: answers,
       correctIndex: correctIndex,
       order: 0,
+      hint: json['hint'], 
     );
   }
 }
