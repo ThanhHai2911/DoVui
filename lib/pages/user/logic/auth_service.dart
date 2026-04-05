@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -132,6 +133,7 @@ class AuthService {
         'avatar': firebaseUser.photoURL ?? '',
       });
     }
+    
  
     // Lưu SharedPreferences
     final prefs = await SharedPreferences.getInstance();
@@ -143,5 +145,91 @@ class AuthService {
       "userId": firebaseUser.uid,
       "name": firebaseUser.displayName ?? '',
     };
+  }
+  // ================= FACEBOOK SIGN IN =================
+  Future<Map<String, dynamic>> loginWithFacebook() async {
+    // Đăng xuất Facebook cũ
+    await FacebookAuth.instance.logOut();
+ 
+    final LoginResult result = await FacebookAuth.instance.login(
+      permissions: ['email', 'public_profile'],
+    );
+ 
+    if (result.status == LoginStatus.cancelled) {
+      throw Exception("FACEBOOK_CANCELLED");
+    }
+ 
+    if (result.status != LoginStatus.success) {
+      throw Exception("FACEBOOK_FAILED");
+    }
+ 
+    // Lấy thông tin user từ Facebook
+    final userData = await FacebookAuth.instance.getUserData(
+      fields: "name,email,picture.width(200)",
+    );
+ 
+    // Đăng nhập Firebase bằng Facebook credential
+    final OAuthCredential credential =
+        FacebookAuthProvider.credential(result.accessToken!.tokenString);
+ 
+    final userCredential = await _auth.signInWithCredential(credential);
+    final firebaseUser = userCredential.user!;
+ 
+    final name = userData['name'] as String? ??
+        firebaseUser.displayName ??
+        'Facebook User';
+    final email = userData['email'] as String? ?? firebaseUser.email ?? '';
+    final avatar = userData['picture']?['data']?['url'] as String? ??
+        firebaseUser.photoURL ?? '';
+ 
+    await _saveOrUpdateUser(
+      uid: firebaseUser.uid,
+      name: name,
+      email: email,
+      avatar: avatar,
+      loginType: 'facebook',
+    );
+ 
+    return {
+      "type": "facebook",
+      "userId": firebaseUser.uid,
+      "name": name,
+    };
+  }
+ 
+  // ================= LƯU / CẬP NHẬT USER =================
+  Future<void> _saveOrUpdateUser({
+    required String uid,
+    required String name,
+    required String email,
+    required String avatar,
+    required String loginType,
+  }) async {
+    final docRef = _firestore.collection('users').doc(uid);
+    final docSnapshot = await docRef.get();
+ 
+    if (!docSnapshot.exists) {
+      // Tạo user mới
+      await docRef.set({
+        'name': name,
+        'email': email,
+        'score': 300,
+        'rank': 0,
+        'createdAt': FieldValue.serverTimestamp(),
+        'isAdmin': false,
+        'loginType': loginType,
+        'avatar': avatar,
+      });
+    } else {
+      // Cập nhật avatar nếu đã có
+      await docRef.update({
+        'avatar': avatar,
+        'loginType': loginType,
+      });
+    }
+ 
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString("userId", uid);
+    await prefs.setBool("isRegistered", true);
   }
 }

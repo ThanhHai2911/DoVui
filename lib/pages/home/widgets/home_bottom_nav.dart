@@ -78,6 +78,7 @@ class _HomeBottomNavState extends State<HomeBottomNav> {
             //VietnamLandmarkSetup.setupVietnamLandmarks();
             //VietnamLandmarkSetupExtra.setupLevels5to50();
             //VietnamMixedSetup.setupLevels5to50();
+            //MillionaireDataSetup.run();
           });
         },
         child: Center(

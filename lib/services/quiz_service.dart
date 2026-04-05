@@ -1,6 +1,7 @@
   import 'dart:convert';
   import 'package:cloud_firestore/cloud_firestore.dart';
   import 'package:dovui/data/models/topic_model.dart';
+import 'package:firebase_auth/firebase_auth.dart';
   import 'package:flutter_dotenv/flutter_dotenv.dart';
   import '../data/models/category_model.dart';
   import '../data/models/man_model.dart';
@@ -184,4 +185,17 @@
 
       return snapshot;
     }
+    static Future<void> addStarsToUser(int score) async {
+  if (score <= 0) return;
+  
+  final uid = FirebaseAuth.instance.currentUser?.uid;
+  if (uid == null) return;
+
+  await _firestore
+      .collection('users')
+      .doc(uid)
+      .update({
+    'score': FieldValue.increment(score), // ✅ đúng field
+  });
+}
   }

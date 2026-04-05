@@ -50,7 +50,15 @@ class CategoriesItem extends StatelessWidget {
               builder: (_) => Levelscreen(categoryId: categoryId, type: type),
             ),
           );
-        } else {
+        }else if (type == "man") {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => Levelscreen(categoryId: categoryId, type: type),
+            ),
+          );
+        }
+         else {
           Navigator.push(
             context,
             MaterialPageRoute(

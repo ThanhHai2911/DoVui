@@ -77,6 +77,26 @@
     <array>
       <string>com.googleusercontent.apps.460307639969-fopugf82kn0a9dvo9mjfr3rk1tjse5js</string>
     </array>
+	<key>CFBundleURLTypes</key>
+<array>
+    <dict>
+        <key>CFBundleURLSchemes</key>
+        <array>
+            <string>fb931078319840469</string>
+        </array>
+    </dict>
+</array>
+<key>FacebookAppID</key>
+<string>931078319840469</string>
+<key>FacebookClientToken</key>
+<string>f3db3a54cd3f8244342bda7ea663bf61</string>
+<key>FacebookDisplayName</key>
+<string>Đố Vui - Quiz App</string>
+<key>LSApplicationQueriesSchemes</key>
+<array>
+    <string>fbapi</string>
+    <string>fb-messenger-share-api</string>
+</array>
   </dict>
 </array>
 </dict>

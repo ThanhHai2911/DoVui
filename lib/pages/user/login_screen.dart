@@ -6,6 +6,7 @@ import 'package:dovui/pages/user/forgot_password_screen.dart';
 import 'package:dovui/resources/color_manager.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_svg/svg.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -27,9 +28,12 @@ class _LoginScreenState extends State<LoginScreen>
   bool _isPasswordVisible = false;
   bool _isLoading = false;
   bool _isGoogleLoading = false;
+  bool _isFacebookLoading = false;
 
   String? _nameError;
   String? _passwordError;
+
+  bool get _anyLoading => _isLoading || _isGoogleLoading || _isFacebookLoading;
 
   @override
   void initState() {
@@ -38,9 +42,10 @@ class _LoginScreenState extends State<LoginScreen>
       vsync: this,
       duration: const Duration(milliseconds: 2000),
     )..repeat(reverse: true);
-    _floatAnim = Tween<double>(begin: -8, end: 8).animate(
-      CurvedAnimation(parent: _floatCtrl, curve: Curves.easeInOut),
-    );
+    _floatAnim = Tween<double>(
+      begin: -8,
+      end: 8,
+    ).animate(CurvedAnimation(parent: _floatCtrl, curve: Curves.easeInOut));
   }
 
   @override
@@ -49,6 +54,14 @@ class _LoginScreenState extends State<LoginScreen>
     _passwordController.dispose();
     _floatCtrl.dispose();
     super.dispose();
+  }
+
+  void _navigateHome() {
+    context.read<UserBloc>().add(CheckUserEvent());
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (_) => const HomeBottomNav()),
+    );
   }
 
   // ================= LOGIN THƯỜNG =================
@@ -101,12 +114,7 @@ class _LoginScreenState extends State<LoginScreen>
           duration: Duration(seconds: 1),
         ),
       );
-
-      context.read<UserBloc>().add(CheckUserEvent());
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const HomeBottomNav()),
-      );
+      _navigateHome();
     } catch (e) {
       final error = e.toString();
       if (error.contains("USER_NOT_FOUND")) {
@@ -123,17 +131,12 @@ class _LoginScreenState extends State<LoginScreen>
     }
   }
 
-  // ================= GOOGLE SIGN IN =================
+  // ================= GOOGLE =================
   Future<void> _onGoogleLogin() async {
     setState(() => _isGoogleLoading = true);
-
     try {
       final result = await _authService.loginWithGoogle();
-
       if (!mounted) return;
-
-      context.read<UserBloc>().add(CheckUserEvent());
-
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text("Chào mừng ${result['name']} 🎉"),
@@ -141,16 +144,10 @@ class _LoginScreenState extends State<LoginScreen>
           duration: const Duration(seconds: 1),
         ),
       );
-
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const HomeBottomNav()),
-      );
+      _navigateHome();
     } catch (e) {
-      final error = e.toString();
       if (!mounted) return;
-
-      if (!error.contains("GOOGLE_CANCELLED")) {
+      if (!e.toString().contains("GOOGLE_CANCELLED")) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text("Đăng nhập Google thất bại"),
@@ -160,6 +157,35 @@ class _LoginScreenState extends State<LoginScreen>
       }
     } finally {
       if (mounted) setState(() => _isGoogleLoading = false);
+    }
+  }
+
+  // ================= FACEBOOK =================
+  Future<void> _onFacebookLogin() async {
+    setState(() => _isFacebookLoading = true);
+    try {
+      final result = await _authService.loginWithFacebook();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Chào mừng ${result['name']} 🎉"),
+          backgroundColor: const Color(0xFF1877F2),
+          duration: const Duration(seconds: 1),
+        ),
+      );
+      _navigateHome();
+    } catch (e) {
+      if (!mounted) return;
+      if (!e.toString().contains("FACEBOOK_CANCELLED")) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Đăng nhập Facebook thất bại"),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isFacebookLoading = false);
     }
   }
 
@@ -203,7 +229,6 @@ class _LoginScreenState extends State<LoginScreen>
                   ),
                 ),
               ),
-
               Center(
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.symmetric(
@@ -214,8 +239,9 @@ class _LoginScreenState extends State<LoginScreen>
                     tween: Tween(begin: 0.95, end: 1.0),
                     duration: const Duration(milliseconds: 400),
                     curve: Curves.easeOutBack,
-                    builder: (context, value, child) =>
-                        Transform.scale(scale: value, child: child),
+                    builder:
+                        (context, value, child) =>
+                            Transform.scale(scale: value, child: child),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -223,17 +249,20 @@ class _LoginScreenState extends State<LoginScreen>
                         Center(
                           child: AnimatedBuilder(
                             animation: _floatAnim,
-                            builder: (_, child) => Transform.translate(
-                              offset: Offset(0, _floatAnim.value),
-                              child: child,
-                            ),
+                            builder:
+                                (_, child) => Transform.translate(
+                                  offset: Offset(0, _floatAnim.value),
+                                  child: child,
+                                ),
                             child: Container(
                               padding: const EdgeInsets.all(18),
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
                                 color: const Color(0xFF43C6AC).withOpacity(0.1),
                                 border: Border.all(
-                                  color: const Color(0xFF43C6AC).withOpacity(0.25),
+                                  color: const Color(
+                                    0xFF43C6AC,
+                                  ).withOpacity(0.25),
                                 ),
                               ),
                               child: const Text(
@@ -264,7 +293,6 @@ class _LoginScreenState extends State<LoginScreen>
 
                         const SizedBox(height: 20),
 
-
                         // ===== FORM =====
                         _fieldLabel("Tên người dùng"),
                         const SizedBox(height: 8),
@@ -286,8 +314,8 @@ class _LoginScreenState extends State<LoginScreen>
                           icon: Icons.lock_outline_rounded,
                           obscure: !_isPasswordVisible,
                           errorText: _passwordError,
-                          onChanged: (_) =>
-                              setState(() => _passwordError = null),
+                          onChanged:
+                              (_) => setState(() => _passwordError = null),
                           suffix: IconButton(
                             icon: Icon(
                               _isPasswordVisible
@@ -296,21 +324,25 @@ class _LoginScreenState extends State<LoginScreen>
                               size: 20,
                               color: Colors.grey.shade400,
                             ),
-                            onPressed: () => setState(
-                              () => _isPasswordVisible = !_isPasswordVisible,
-                            ),
+                            onPressed:
+                                () => setState(
+                                  () =>
+                                      _isPasswordVisible = !_isPasswordVisible,
+                                ),
                           ),
                         ),
-                        
+
                         Align(
                           alignment: Alignment.centerRight,
                           child: TextButton(
-                            onPressed: () => Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const ForgotPasswordScreen(),
-                              ),
-                            ),
+                            onPressed:
+                                () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder:
+                                        (_) => const ForgotPasswordScreen(),
+                                  ),
+                                ),
                             style: TextButton.styleFrom(
                               padding: const EdgeInsets.symmetric(
                                 vertical: 6,
@@ -328,7 +360,7 @@ class _LoginScreenState extends State<LoginScreen>
                         ),
 
                         const SizedBox(height: 4),
-                      
+
                         // ===== LOGIN BUTTON =====
                         SizedBox(
                           width: double.infinity,
@@ -342,31 +374,30 @@ class _LoginScreenState extends State<LoginScreen>
                                 borderRadius: BorderRadius.circular(16),
                               ),
                             ),
-                            onPressed:
-                                (_isLoading || _isGoogleLoading)
-                                    ? null
-                                    : _onLogin,
-                            child: _isLoading
-                                ? const SizedBox(
-                                    width: 22,
-                                    height: 22,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2.5,
-                                      color: Colors.white,
+                            onPressed: _anyLoading ? null : _onLogin,
+                            child:
+                                _isLoading
+                                    ? const SizedBox(
+                                      width: 22,
+                                      height: 22,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2.5,
+                                        color: Colors.white,
+                                      ),
+                                    )
+                                    : const Text(
+                                      "Đăng nhập",
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white,
+                                      ),
                                     ),
-                                  )
-                                : const Text(
-                                    "Đăng nhập",
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.white,
-                                    ),
-                                  ),
                           ),
                         ),
 
                         const SizedBox(height: 20),
+
                         // ===== DIVIDER =====
                         Row(
                           children: [
@@ -374,8 +405,9 @@ class _LoginScreenState extends State<LoginScreen>
                               child: Divider(color: Colors.grey.shade200),
                             ),
                             Padding(
-                              padding:
-                                  const EdgeInsets.symmetric(horizontal: 12),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                              ),
                               child: Text(
                                 "hoặc",
                                 style: TextStyle(
@@ -391,64 +423,68 @@ class _LoginScreenState extends State<LoginScreen>
                         ),
 
                         const SizedBox(height: 20),
-
-                        // ===== GOOGLE BUTTON =====
-                        SizedBox(
-                          width: double.infinity,
-                          height: 56,
-                          child: OutlinedButton(
-                            onPressed:
-                                (_isLoading || _isGoogleLoading)
-                                    ? null
-                                    : _onGoogleLogin,
-                            style: OutlinedButton.styleFrom(
-                              side: BorderSide(
-                                color: Colors.grey.shade300,
-                                width: 1.5,
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                              backgroundColor: Colors.white,
-                            ),
-                            child: _isGoogleLoading
-                                ? const SizedBox(
-                                    width: 22,
-                                    height: 22,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2.5,
-                                      color: Colors.grey,
+                        Row(
+                          children: [
+                            // ===== GOOGLE (BÊN TRÁI) =====
+                            Expanded(
+                              child: _buildSocialButton(
+                                onPressed: _anyLoading ? null : _onGoogleLogin,
+                                isLoading: _isGoogleLoading,
+                                backgroundColor: Colors.white,
+                                borderColor: Colors.grey.shade300,
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    SvgPicture.network(
+                                      'https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg',
+                                      width: 20,
+                                      height: 20,
                                     ),
-                                  )
-                                : Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      // Google logo SVG-like bằng Text
-                                      Image.network(
-                                        'https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg',
-                                        width: 22,
-                                        height: 22,
-                                        errorBuilder: (_, __, ___) =>
-                                            const Text("G",
-                                                style: TextStyle(
-                                                  fontSize: 18,
-                                                  fontWeight: FontWeight.bold,
-                                                  color: Color(0xFF4285F4),
-                                                )),
+                                    const SizedBox(width: 8),
+                                    const Text(
+                                      "Đăng nhập bằng Google",
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w600,
                                       ),
-                                      const SizedBox(width: 12),
-                                      Text(
-                                        "Đăng nhập với Google",
-                                        style: TextStyle(
-                                          fontSize: 15,
-                                          fontWeight: FontWeight.w600,
-                                          color: Colors.grey.shade700,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                          ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+
+                            // const SizedBox(width: 12),
+
+                            // // ===== FACEBOOK (BÊN PHẢI) =====
+                            // Expanded(
+                            //   child: _buildSocialButton(
+                            //     onPressed:
+                            //         _anyLoading ? null : _onFacebookLogin,
+                            //     isLoading: _isFacebookLoading,
+                            //     backgroundColor: const Color(0xFF1877F2),
+                            //     borderColor: const Color(0xFF1877F2),
+                            //     child: const Row(
+                            //       mainAxisAlignment: MainAxisAlignment.center,
+                            //       children: [
+                            //         Icon(
+                            //           Icons.facebook,
+                            //           color: Colors.white,
+                            //           size: 20,
+                            //         ),
+                            //         SizedBox(width: 8),
+                            //         Text(
+                            //           "Facebook",
+                            //           style: TextStyle(
+                            //             fontWeight: FontWeight.w600,
+                            //             color: Colors.white,
+                            //           ),
+                            //         ),
+                            //       ],
+                            //     ),
+                            //   ),
+                            // ),
+                          ],
                         ),
+
                         const SizedBox(height: 20),
 
                         Center(
@@ -463,12 +499,13 @@ class _LoginScreenState extends State<LoginScreen>
                                 ),
                               ),
                               GestureDetector(
-                                onTap: () => Navigator.pushReplacement(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => const RegisterScreen(),
-                                  ),
-                                ),
+                                onTap:
+                                    () => Navigator.pushReplacement(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) => const RegisterScreen(),
+                                      ),
+                                    ),
                                 child: const Text(
                                   "Tạo tài khoản",
                                   style: TextStyle(
@@ -493,14 +530,51 @@ class _LoginScreenState extends State<LoginScreen>
     );
   }
 
-  Widget _fieldLabel(String text) => Text(
-        text,
-        style: const TextStyle(
-          fontSize: 13,
-          fontWeight: FontWeight.w600,
-          color: Color(0xFF1E1B4B),
+  Widget _buildSocialButton({
+    required VoidCallback? onPressed,
+    required bool isLoading,
+    required Color backgroundColor,
+    required Color borderColor,
+    required Widget child,
+  }) {
+    return SizedBox(
+      width: double.infinity,
+      height: 56,
+      child: OutlinedButton(
+        onPressed: onPressed,
+        style: OutlinedButton.styleFrom(
+          side: BorderSide(color: borderColor, width: 1.5),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          backgroundColor: backgroundColor,
         ),
-      );
+        child:
+            isLoading
+                ? SizedBox(
+                  width: 22,
+                  height: 22,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2.5,
+                    color:
+                        backgroundColor == Colors.white
+                            ? Colors.grey
+                            : Colors.white,
+                  ),
+                )
+                : child,
+      ),
+    );
+  }
+
+  Widget _fieldLabel(String text) => Text(
+    text,
+    style: const TextStyle(
+      fontSize: 13,
+      fontWeight: FontWeight.w600,
+      color: Color(0xFF1E1B4B),
+    ),
+  );
 
   Widget _buildField({
     required TextEditingController controller,
@@ -519,21 +593,22 @@ class _LoginScreenState extends State<LoginScreen>
           duration: const Duration(milliseconds: 200),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(14),
-            boxShadow: hasError
-                ? [
-                    BoxShadow(
-                      color: const Color(0xFFFF6584).withOpacity(0.15),
-                      blurRadius: 10,
-                      spreadRadius: 1,
-                    ),
-                  ]
-                : [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
+            boxShadow:
+                hasError
+                    ? [
+                      BoxShadow(
+                        color: const Color(0xFFFF6584).withOpacity(0.15),
+                        blurRadius: 10,
+                        spreadRadius: 1,
+                      ),
+                    ]
+                    : [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
           ),
           child: TextField(
             controller: controller,
@@ -542,20 +617,21 @@ class _LoginScreenState extends State<LoginScreen>
             style: const TextStyle(color: Color(0xFF1E1B4B), fontSize: 15),
             decoration: InputDecoration(
               hintText: hint,
-              hintStyle:
-                  TextStyle(color: Colors.grey.shade400, fontSize: 14),
+              hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14),
               prefixIcon: Icon(
                 icon,
-                color: hasError
-                    ? const Color(0xFFFF6584)
-                    : const Color(0xFF43C6AC).withOpacity(0.7),
+                color:
+                    hasError
+                        ? const Color(0xFFFF6584)
+                        : const Color(0xFF43C6AC).withOpacity(0.7),
                 size: 20,
               ),
               suffixIcon: suffix,
               filled: true,
-              fillColor: hasError
-                  ? const Color(0xFFFF6584).withOpacity(0.04)
-                  : Colors.grey.shade50,
+              fillColor:
+                  hasError
+                      ? const Color(0xFFFF6584).withOpacity(0.04)
+                      : Colors.grey.shade50,
               contentPadding: const EdgeInsets.symmetric(
                 vertical: 18,
                 horizontal: 16,
@@ -563,27 +639,26 @@ class _LoginScreenState extends State<LoginScreen>
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(14),
                 borderSide: BorderSide(
-                  color: hasError
-                      ? const Color(0xFFFF6584)
-                      : Colors.grey.shade200,
+                  color:
+                      hasError ? const Color(0xFFFF6584) : Colors.grey.shade200,
                   width: hasError ? 1.5 : 1,
                 ),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(14),
                 borderSide: BorderSide(
-                  color: hasError
-                      ? const Color(0xFFFF6584)
-                      : Colors.grey.shade200,
+                  color:
+                      hasError ? const Color(0xFFFF6584) : Colors.grey.shade200,
                   width: hasError ? 1.5 : 1,
                 ),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(14),
                 borderSide: BorderSide(
-                  color: hasError
-                      ? const Color(0xFFFF6584)
-                      : const Color(0xFF43C6AC),
+                  color:
+                      hasError
+                          ? const Color(0xFFFF6584)
+                          : const Color(0xFF43C6AC),
                   width: 1.5,
                 ),
               ),

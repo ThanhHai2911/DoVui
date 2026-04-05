@@ -3,7 +3,9 @@ import 'package:dovui/pages/category/widgets/category_shimmer.dart';
 import 'package:dovui/pages/level/bloc/level_bloc.dart';
 import 'package:dovui/pages/level/bloc/level_event.dart';
 import 'package:dovui/pages/level/bloc/level_state.dart';
+import 'package:dovui/pages/quiz/quiz_screen.dart';
 import 'package:dovui/pages/quiz_image/quiz_image_screen.dart';
+import 'package:dovui/pages/quiz_millionaire/quiz_millionaire_screen.dart';
 import 'package:dovui/pages/word_answer/word_answer_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -167,8 +169,15 @@ class _LevelscreenState extends State<Levelscreen> {
                                                   type: widget.type,
                                                 );
                                                 break;
+                                              case "man":
+                                                screen = MillionaireScreen(
+                                                  categoryId: widget.categoryId,
+                                                  levelId: level.id,
+                                                  type: widget.type,
+                                                );
+                                                break;
                                               default:
-                                                screen = WordAnswerScreen(
+                                                screen = QuizScreen(
                                                   categoryId: widget.categoryId,
                                                   levelId: level.id,
                                                   type: widget.type,

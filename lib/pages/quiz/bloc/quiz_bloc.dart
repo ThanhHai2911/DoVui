@@ -18,8 +18,7 @@ class QuizBloc extends Bloc<QuizEvent, QuizState> {
     on<TimeUp>(_onTimeUp);
   }
 
-  Future<void> _onLoadQuiz(
-      LoadQuiz event, Emitter<QuizState> emit) async {
+  Future<void> _onLoadQuiz(LoadQuiz event, Emitter<QuizState> emit) async {
     emit(state.copyWith(isLoading: true));
 
     await emit.forEach(
@@ -65,36 +64,37 @@ class QuizBloc extends Bloc<QuizEvent, QuizState> {
     }
   }
 
-  void _onTimeUp(TimeUp event, Emitter<QuizState> emit) {
+  Future<void> _onTimeUp(TimeUp event, Emitter<QuizState> emit) async {
     _timer?.cancel();
 
     final newLives = state.lives - 1;
 
     if (newLives <= 0) {
-      emit(state.copyWith(
-        lives: newLives,
-        showResult: true,
-        isGameOver: true,
-      ));
-      return;
-    }
+  // ✅ Cộng điểm cuối game
+  await QuizService.addStarsToUser(state.score);
+  
+  emit(state.copyWith(
+    lives: newLives,
+    showResult: true,
+    isGameOver: true,
+  ));
+  return;
+}
 
-    emit(state.copyWith(
-      lives: newLives,
-      showResult: true,
-    ));
+    emit(state.copyWith(lives: newLives, showResult: true));
 
     Future.delayed(const Duration(seconds: 1), () {
       add(NextQuestion());
     });
   }
 
-  void _onSelectAnswer(
-      SelectAnswer event, Emitter<QuizState> emit) {
+  Future<void> _onSelectAnswer(
+    SelectAnswer event,
+    Emitter<QuizState> emit,
+  ) async {
     _timer?.cancel();
 
-    final isCorrect =
-        event.index == state.currentQuestion?.correctIndex;
+    final isCorrect = event.index == state.currentQuestion?.correctIndex;
 
     int newLives = state.lives;
     int newScore = state.score;
@@ -106,35 +106,45 @@ class QuizBloc extends Bloc<QuizEvent, QuizState> {
     }
 
     if (newLives <= 0) {
-      emit(state.copyWith(
-        selectedIndex: event.index,
-        showResult: true,
-        lives: newLives,
-        isGameOver: true,
-      ));
+      // ✅ Cộng điểm cuối game
+      await QuizService.addStarsToUser(newScore);
+
+      emit(
+        state.copyWith(
+          selectedIndex: event.index,
+          showResult: true,
+          lives: newLives,
+          score: newScore, // ← fix bug thiếu newScore
+          isGameOver: true,
+        ),
+      );
       return;
     }
 
-    emit(state.copyWith(
-      selectedIndex: event.index,
-      showResult: true,
-      lives: newLives,
-      score: newScore,
-    ));
+    emit(
+      state.copyWith(
+        selectedIndex: event.index,
+        showResult: true,
+        lives: newLives,
+        score: newScore,
+      ),
+    );
 
     Future.delayed(const Duration(seconds: 1), () {
       add(NextQuestion());
     });
   }
 
-  void _onNextQuestion(
-      NextQuestion event, Emitter<QuizState> emit) {
+  Future<void> _onNextQuestion(NextQuestion event, Emitter<QuizState> emit) async {
     if (state.questions.isEmpty) return;
 
     if (usedIndexes.length == state.questions.length) {
-      emit(state.copyWith(isGameOver: true, isWin: true));
-      return;
-    }
+  // ✅ Cộng điểm cuối game
+  await QuizService.addStarsToUser(state.score);
+  
+  emit(state.copyWith(isGameOver: true, isWin: true));
+  return;
+}
 
     int index;
     final random = Random();
@@ -146,13 +156,15 @@ class QuizBloc extends Bloc<QuizEvent, QuizState> {
 
     _startTimer();
 
-    emit(state.copyWith(
-      currentQuestion: state.questions[index],
-      selectedIndex: null,
-      showResult: false,
-      questionCount: state.questionCount + 1,
-      timeLeft: 15,
-    ));
+    emit(
+      state.copyWith(
+        currentQuestion: state.questions[index],
+        selectedIndex: null,
+        showResult: false,
+        questionCount: state.questionCount + 1,
+        timeLeft: 15,
+      ),
+    );
   }
 
   @override

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Đố Vui</string>
+    <string name="facebook_app_id">931078319840469</string>
+    <string name="fb_login_protocol_scheme">fb931078319840469</string>
+    <string name="facebook_client_token">f3db3a54cd3f8244342bda7ea663bf61</string>
+</resources>
