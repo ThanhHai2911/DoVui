@@ -193,4 +193,15 @@ class QuizImageController {
     rebuildNotifier.dispose();
     timer?.cancel();
   }
+  // Thêm vào WordAnswerController
+void pauseTimer() {
+  timer?.cancel();
+}
+
+void resumeTimer() {
+  // Chỉ resume nếu game chưa kết thúc
+  if (timeLeft > 0) {
+    startTimer(); // gọi lại hàm startTimer() đã có sẵn
+  }
+}
 }

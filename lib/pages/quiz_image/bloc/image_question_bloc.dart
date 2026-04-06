@@ -43,6 +43,14 @@ class QuizImageBloc extends Bloc<QuizImageEvent, QuizImageState> {
     on<QuizImageUseHintLetter>(_onUseHintLetter);
     on<QuizImageUseHintLetterFree>(_onUseHintLetterFree);
     on<QuizImageUseSkip>(_onUseSkip);
+    on<QuizImagePauseTimer>((event, emit) {
+      _controller?.pauseTimer();
+    });
+
+    on<QuizImageResumeTimer>((event, emit) {
+      _controller?.resumeTimer();
+    });
+    on<QuizImageUseSkipFree>(_onUseSkipFree);
   }
 
   // Trừ Firebase + cập nhật _firebaseScore local luôn (không fetch lại)
@@ -106,12 +114,25 @@ class QuizImageBloc extends Bloc<QuizImageEvent, QuizImageState> {
 
   void _emitLoaded() {
     if (_controller == null) return;
-    emit(QuizImageLoaded(
-      controller: _controller!,
-      questions: _questions,
-      currentIndex: _currentIndex,
-      score: _gameEarned,
-    ));
+    emit(
+      QuizImageLoaded(
+        controller: _controller!,
+        questions: _questions,
+        currentIndex: _currentIndex,
+        score: _gameEarned,
+      ),
+    );
+  }
+
+  // Thêm method:
+  void _onUseSkipFree(
+    QuizImageUseSkipFree event,
+    Emitter<QuizImageState> emit,
+  ) {
+    if (_controller == null) return;
+    // KHÔNG gọi _syncHintCost — miễn phí vì đã xem ad
+    _controller!.revealAllWords();
+    _emitLoaded();
   }
 
   Future<void> _onLoad(
@@ -124,10 +145,11 @@ class QuizImageBloc extends Bloc<QuizImageEvent, QuizImageState> {
 
       // ✅ Load điểm Firebase thực tế để check hint
       if (_userId != null) {
-        final snapshot = await FirebaseFirestore.instance
-            .collection('users')
-            .doc(_userId)
-            .get();
+        final snapshot =
+            await FirebaseFirestore.instance
+                .collection('users')
+                .doc(_userId)
+                .get();
         _firebaseScore = snapshot.data()?['score'] ?? 0;
       }
 
@@ -152,11 +174,17 @@ class QuizImageBloc extends Bloc<QuizImageEvent, QuizImageState> {
     }
   }
 
-  void _onSelectLetter(QuizImageSelectLetter event, Emitter<QuizImageState> emit) {
+  void _onSelectLetter(
+    QuizImageSelectLetter event,
+    Emitter<QuizImageState> emit,
+  ) {
     _controller?.selectLetter(event.index);
   }
 
-  void _onRemoveLetter(QuizImageRemoveLetter event, Emitter<QuizImageState> emit) {
+  void _onRemoveLetter(
+    QuizImageRemoveLetter event,
+    Emitter<QuizImageState> emit,
+  ) {
     _controller?.removeLetter(event.index);
   }
 
@@ -164,14 +192,20 @@ class QuizImageBloc extends Bloc<QuizImageEvent, QuizImageState> {
     _emitLoaded();
   }
 
-  void _onUseHintLetter(QuizImageUseHintLetter event, Emitter<QuizImageState> emit) {
+  void _onUseHintLetter(
+    QuizImageUseHintLetter event,
+    Emitter<QuizImageState> emit,
+  ) {
     if (_controller == null) return;
     _syncHintCost(50);
     _controller!.revealOneWord();
     _emitLoaded();
   }
 
-  void _onUseHintLetterFree(QuizImageUseHintLetterFree event, Emitter<QuizImageState> emit) {
+  void _onUseHintLetterFree(
+    QuizImageUseHintLetterFree event,
+    Emitter<QuizImageState> emit,
+  ) {
     _controller?.revealOneWord();
     _emitLoaded();
   }

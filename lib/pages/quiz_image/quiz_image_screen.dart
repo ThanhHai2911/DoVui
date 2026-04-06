@@ -14,47 +14,130 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-class QuizImageScreen extends StatelessWidget {
+class QuizImageScreen extends StatefulWidget {
   final String categoryId;
   final String? levelId;
   final String type;
 
-  final _userLevelRepo = UserLevelRepository();
-
-  QuizImageScreen({
+  const QuizImageScreen({
     super.key,
     required this.categoryId,
     required this.type,
     this.levelId,
   });
 
+  @override
+  State<QuizImageScreen> createState() => _QuizImageScreenState();
+}
+
+class _QuizImageScreenState extends State<QuizImageScreen>
+    with WidgetsBindingObserver {
+  final _userLevelRepo = UserLevelRepository();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  // Pause/resume khi app vào background hoặc quay lại
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (!mounted) return;
+    final bloc = context.read<QuizImageBloc>();
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive) {
+      bloc.add(QuizImagePauseTimer());
+    } else if (state == AppLifecycleState.resumed) {
+      bloc.add(QuizImageResumeTimer());
+    }
+  }
+
   Future<void> _saveResult({required int score, required int total}) async {
-    if (levelId == null) return;
+    if (widget.levelId == null) return;
 
     final prefs = await SharedPreferences.getInstance();
     final userId = prefs.getString("userId");
-
     if (userId == null) return;
 
     final maxScore = total * 10;
     final percent = maxScore > 0 ? ((score / maxScore) * 10).round() : 0;
 
     await _userLevelRepo.saveLevel(
-      userId: userId, // ✅ THÊM DÒNG NÀY
-      levelId: levelId!,
+      userId: userId,
+      levelId: widget.levelId!,
       score: percent,
+    );
+  }
+
+  void _onVideoTap(BuildContext context) {
+    if (!RewardedAdManager().isAdLoaded) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('⏳ Quảng cáo chưa sẵn sàng, thử lại sau!'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    showGameDialog(
+      context: context,
+      icon: "🎬",
+      iconColor: Colors.purple,
+      title: "Xem video nhận gợi ý?",
+      description: "Xem 1 video ngắn để\nhé lộ toàn bộ đáp án miễn phí!",
+      costIcon: "🎬",
+      costText: "Xem video",
+      confirmText: "Xem ngay!",
+      confirmColor: Colors.purple,
+      showCancel: true,
+      onConfirm: () {
+        context.read<QuizImageBloc>().add(QuizImagePauseTimer()); // ⏸ dừng
+
+        RewardedAdManager().showAd(
+          onRewarded: () {
+            context.read<QuizImageBloc>().add(QuizImageUseSkipFree());
+            context.read<QuizImageBloc>().add(QuizImageResumeTimer()); // ▶ tiếp
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('🎉 Đáp án đã được mở!'),
+                  backgroundColor: Color(0xFF43C6AC),
+                ),
+              );
+            }
+          },
+          onFailed: () {
+            context.read<QuizImageBloc>().add(QuizImageResumeTimer()); // ▶ tiếp dù thất bại
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('❌ Không tải được quảng cáo, thử lại sau!'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+          },
+        );
+      },
     );
   }
 
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create:
-          (_) => QuizImageBloc(
-            categoryId: categoryId,
-            levelId: levelId,
-            type: type,
-          )..add(QuizImageLoadQuestions()),
+      create: (_) => QuizImageBloc(
+        categoryId: widget.categoryId,
+        levelId: widget.levelId,
+        type: widget.type,
+      )..add(QuizImageLoadQuestions()),
       child: BlocConsumer<QuizImageBloc, QuizImageState>(
         listener: (context, state) async {
           if (state is QuizImageCompleted) {
@@ -62,17 +145,15 @@ class QuizImageScreen extends StatelessWidget {
             Navigator.pushReplacement(
               context,
               MaterialPageRoute(
-                builder:
-                    (_) => GameCompleteScreen(
-                      score: state.score,
-                      totalQuestions: state.total,
-                      isWin:
-                          state.total > 0 &&
-                          (state.score / (state.total * 10)) >= 0.6,
-                      categoryId: categoryId,
-                      levelId: levelId,
-                      type: type,
-                    ),
+                builder: (_) => GameCompleteScreen(
+                  score: state.score,
+                  totalQuestions: state.total,
+                  isWin: state.total > 0 &&
+                      (state.score / (state.total * 10)) >= 0.6,
+                  categoryId: widget.categoryId,
+                  levelId: widget.levelId,
+                  type: widget.type,
+                ),
               ),
             );
           }
@@ -82,29 +163,25 @@ class QuizImageScreen extends StatelessWidget {
             Navigator.pushReplacement(
               context,
               MaterialPageRoute(
-                builder:
-                    (_) => GameCompleteScreen(
-                      score: state.score,
-                      totalQuestions: state.total,
-                      isWin:
-                          state.total > 0 &&
-                          (state.score / (state.total * 10)) >= 0.6,
-                      categoryId: categoryId,
-                      levelId: levelId,
-                      type: type,
-                    ),
+                builder: (_) => GameCompleteScreen(
+                  score: state.score,
+                  totalQuestions: state.total,
+                  isWin: state.total > 0 &&
+                      (state.score / (state.total * 10)) >= 0.6,
+                  categoryId: widget.categoryId,
+                  levelId: widget.levelId,
+                  type: widget.type,
+                ),
               ),
             );
           }
         },
         builder: (context, state) {
-          if (state is QuizImageLoading) {
-            return const WordAnswerShimmer();
-          }
+          if (state is QuizImageLoading) return const WordAnswerShimmer();
 
           if (state is QuizImageLoaded) {
             final controller = state.controller;
-            final question = state.question; // ✅ ImageQuestion
+            final question = state.question;
 
             return Scaffold(
               backgroundColor: ColorManager.scaffoldBackground,
@@ -129,10 +206,8 @@ class QuizImageScreen extends StatelessWidget {
                                 final screenWidth = constraints.maxWidth;
                                 final horizontalPadding = screenWidth * 0.08;
                                 final verticalPadding = screenWidth * 0.05;
-                                final titleFont = (screenWidth * 0.045).clamp(
-                                  14.0,
-                                  22.0,
-                                );
+                                final titleFont =
+                                    (screenWidth * 0.045).clamp(14.0, 22.0);
 
                                 return Container(
                                   width: double.infinity,
@@ -169,7 +244,8 @@ class QuizImageScreen extends StatelessWidget {
                                       ),
                                       SizedBox(height: screenWidth * 0.05),
                                       ClipRRect(
-                                        borderRadius: BorderRadius.circular(12),
+                                        borderRadius:
+                                            BorderRadius.circular(12),
                                         child: SizedBox(
                                           height: 150,
                                           width: double.infinity,
@@ -178,11 +254,8 @@ class QuizImageScreen extends StatelessWidget {
                                             height: 150,
                                             width: double.infinity,
                                             fit: BoxFit.contain,
-                                            loadingBuilder: (
-                                              context,
-                                              child,
-                                              loadingProgress,
-                                            ) {
+                                            loadingBuilder: (context, child,
+                                                loadingProgress) {
                                               if (loadingProgress == null)
                                                 return child;
                                               return Container(
@@ -190,27 +263,22 @@ class QuizImageScreen extends StatelessWidget {
                                                 child: const Center(
                                                   child:
                                                       CircularProgressIndicator(
-                                                        strokeWidth: 2,
-                                                      ),
+                                                    strokeWidth: 2,
+                                                  ),
                                                 ),
                                               );
                                             },
-                                            errorBuilder: (
-                                              context,
-                                              error,
-                                              stackTrace,
-                                            ) {
+                                            errorBuilder:
+                                                (context, error, stackTrace) {
                                               return Container(
                                                 color: Colors.grey.shade200,
                                                 child: const Column(
                                                   mainAxisAlignment:
                                                       MainAxisAlignment.center,
                                                   children: [
-                                                    Icon(
-                                                      Icons.broken_image,
-                                                      color: Colors.grey,
-                                                      size: 40,
-                                                    ),
+                                                    Icon(Icons.broken_image,
+                                                        color: Colors.grey,
+                                                        size: 40),
                                                     SizedBox(height: 8),
                                                     Text("Không tải được ảnh"),
                                                   ],
@@ -239,8 +307,9 @@ class QuizImageScreen extends StatelessWidget {
                             const SizedBox(height: 20),
                             HintBar(
                               onMagnifier: () {
-                                final score =
-                                    context.read<QuizImageBloc>().currentScore;
+                                final score = context
+                                    .read<QuizImageBloc>()
+                                    .currentScore;
                                 checkScoreAndShowHint(
                                   context: context,
                                   currentScore: score,
@@ -251,15 +320,15 @@ class QuizImageScreen extends StatelessWidget {
                                       "Hé lộ 1 chữ cái đúng\ncho câu trả lời hiện tại",
                                   hintColor: Colors.amber,
                                   confirmText: "Dùng ngay!",
-                                  onConfirm:
-                                      () => context.read<QuizImageBloc>().add(
-                                        QuizImageUseHintLetter(),
-                                      ),
+                                  onConfirm: () => context
+                                      .read<QuizImageBloc>()
+                                      .add(QuizImageUseHintLetter()),
                                 );
                               },
                               onKey: () {
-                                final score =
-                                    context.read<QuizImageBloc>().currentScore;
+                                final score = context
+                                    .read<QuizImageBloc>()
+                                    .currentScore;
                                 checkScoreAndShowHint(
                                   context: context,
                                   currentScore: score,
@@ -270,65 +339,12 @@ class QuizImageScreen extends StatelessWidget {
                                       "Hiện toàn bộ đáp án\ncâu hỏi hiện tại",
                                   hintColor: Colors.deepPurple,
                                   confirmText: "Mở thôi!",
-                                  onConfirm:
-                                      () => context.read<QuizImageBloc>().add(
-                                        QuizImageUseSkip(),
-                                      ),
+                                  onConfirm: () => context
+                                      .read<QuizImageBloc>()
+                                      .add(QuizImageUseSkip()),
                                 );
                               },
-                              onVideo: () {
-                                showGameDialog(
-                                  context: context,
-                                  icon: "🎬",
-                                  iconColor: Colors.purple,
-                                  title: "Xem video nhận gợi ý?",
-                                  description:
-                                      "Xem 1 video ngắn để\nhé lộ toàn bộ đáp án miễn phí!",
-                                  costIcon: "🎬",
-                                  costText: "Xem video",
-                                  confirmText: "Xem ngay!",
-                                  confirmColor: Colors.purple,
-                                  showCancel: true,
-                                  onConfirm: () {
-                                    RewardedAdManager().showAd(
-                                      onRewarded: () {
-                                        // Xem xong → gợi ý toàn bộ đáp án
-                                        context.read<QuizImageBloc>().add(
-                                          QuizImageUseSkip(),
-                                        );
-                                        if (context.mounted) {
-                                          ScaffoldMessenger.of(
-                                            context,
-                                          ).showSnackBar(
-                                            const SnackBar(
-                                              content: Text(
-                                                '🎉 Đáp án đã được mở!',
-                                              ),
-                                              backgroundColor: Color(
-                                                0xFF43C6AC,
-                                              ),
-                                            ),
-                                          );
-                                        }
-                                      },
-                                      onFailed: () {
-                                        if (context.mounted) {
-                                          ScaffoldMessenger.of(
-                                            context,
-                                          ).showSnackBar(
-                                            const SnackBar(
-                                              content: Text(
-                                                '❌ Không tải được quảng cáo, thử lại sau!',
-                                              ),
-                                              backgroundColor: Colors.red,
-                                            ),
-                                          );
-                                        }
-                                      },
-                                    );
-                                  },
-                                );
-                              },
+                              onVideo: () => _onVideoTap(context),
                             ),
                             const SizedBox(height: 16),
                           ],
@@ -342,7 +358,8 @@ class QuizImageScreen extends StatelessWidget {
           }
 
           if (state is QuizImageError) {
-            return Scaffold(body: Center(child: Text(state.message)));
+            return Scaffold(
+                body: Center(child: Text(state.message)));
           }
 
           return const WordAnswerShimmer();

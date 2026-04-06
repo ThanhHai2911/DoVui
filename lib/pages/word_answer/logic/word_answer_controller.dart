@@ -194,6 +194,17 @@ class WordAnswerController {
     _generateLetterPool();
     startTimer();
     onUpdate?.call();
+  } // Thêm vào WordAnswerController
+
+  void pauseTimer() {
+    timer?.cancel();
+  }
+
+  void resumeTimer() {
+    // Chỉ resume nếu game chưa kết thúc
+    if (timeLeft > 0) {
+      startTimer(); // gọi lại hàm startTimer() đã có sẵn
+    }
   }
 
   @override

@@ -21,3 +21,6 @@ class QuizImageUseHintLetter extends QuizImageEvent {}
 class QuizImageUseHintLetterFree extends QuizImageEvent {}
 
 class QuizImageUseSkip extends QuizImageEvent {}
+class QuizImagePauseTimer extends QuizImageEvent {}
+class QuizImageResumeTimer extends QuizImageEvent {}
+class QuizImageUseSkipFree extends QuizImageEvent {}

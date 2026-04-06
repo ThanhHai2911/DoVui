@@ -44,6 +44,18 @@ class WordAnswerBloc extends Bloc<WordAnswerEvent, WordAnswerState> {
     on<UseHintLetter>(_onUseHintLetter);
     on<UseSkip>(_onUseSkip);
     on<UseHintLetterFree>(_onUseHintLetterFree);
+    on<PauseTimer>((event, emit) {
+      // dừng timer
+      _controller?.pauseTimer();
+    });
+
+    on<ResumeTimer>((event, emit) {
+      // chạy lại timer nếu game đang chạy
+      if (state is WordAnswerLoaded) {
+        _controller?.resumeTimer();
+      }
+    });
+    on<UseSkipFree>(_onUseSkipFree);
   }
 
   Future<void> _onLoadQuestions(
@@ -56,10 +68,11 @@ class WordAnswerBloc extends Bloc<WordAnswerEvent, WordAnswerState> {
     // ✅ Load điểm Firebase thực tế để check hint
     if (_userId != null) {
       try {
-        final snapshot = await FirebaseFirestore.instance
-            .collection('users')
-            .doc(_userId)
-            .get();
+        final snapshot =
+            await FirebaseFirestore.instance
+                .collection('users')
+                .doc(_userId)
+                .get();
         _firebaseScore = snapshot.data()?['score'] ?? 0;
       } catch (e) {
         debugPrint('Load firebase score error: $e');
@@ -124,31 +137,42 @@ class WordAnswerBloc extends Bloc<WordAnswerEvent, WordAnswerState> {
     final q = _questions[_currentIndex];
 
     _controller?.dispose();
-    _controller = WordAnswerController(q)
-      ..onUpdate = () { add(NextQuestion()); }
-      ..onCorrect = () { add(AnswerCorrect()); }
-      ..onTimeUp = () { add(TimeUp()); };
+    _controller =
+        WordAnswerController(q)
+          ..onUpdate = () {
+            add(NextQuestion());
+          }
+          ..onCorrect = () {
+            add(AnswerCorrect());
+          }
+          ..onTimeUp = () {
+            add(TimeUp());
+          };
 
     _controller!.startTimer();
 
-    emit(WordAnswerLoaded(
-      questions: _questions,
-      question: q,
-      controller: _controller!,
-      currentIndex: _currentIndex,
-      score: _gameEarned,
-    ));
+    emit(
+      WordAnswerLoaded(
+        questions: _questions,
+        question: q,
+        controller: _controller!,
+        currentIndex: _currentIndex,
+        score: _gameEarned,
+      ),
+    );
   }
 
   void _onNextQuestion(NextQuestion event, Emitter<WordAnswerState> emit) {
     if (_controller == null) return;
-    emit(WordAnswerLoaded(
-      questions: _questions,
-      question: _questions[_currentIndex],
-      controller: _controller!,
-      currentIndex: _currentIndex,
-      score: _gameEarned,
-    ));
+    emit(
+      WordAnswerLoaded(
+        questions: _questions,
+        question: _questions[_currentIndex],
+        controller: _controller!,
+        currentIndex: _currentIndex,
+        score: _gameEarned,
+      ),
+    );
   }
 
   void _onAnswerCorrect(AnswerCorrect event, Emitter<WordAnswerState> emit) {
@@ -184,16 +208,24 @@ class WordAnswerBloc extends Bloc<WordAnswerEvent, WordAnswerState> {
     _controller!.revealOneWord();
     _rebuildLoaded(emit);
   }
+  void _onUseSkipFree(UseSkipFree event, Emitter<WordAnswerState> emit) {
+  if (_controller == null) return;
+  // KHÔNG gọi _syncHintCost — miễn phí vì đã xem ad
+  _controller!.revealAllWords();
+  _rebuildLoaded(emit);
+}
 
   void _rebuildLoaded(Emitter<WordAnswerState> emit) {
     if (_currentIndex >= _questions.length) return;
-    emit(WordAnswerLoaded(
-      questions: _questions,
-      question: _questions[_currentIndex],
-      controller: _controller!,
-      currentIndex: _currentIndex,
-      score: _gameEarned,
-    ));
+    emit(
+      WordAnswerLoaded(
+        questions: _questions,
+        question: _questions[_currentIndex],
+        controller: _controller!,
+        currentIndex: _currentIndex,
+        score: _gameEarned,
+      ),
+    );
   }
 
   @override

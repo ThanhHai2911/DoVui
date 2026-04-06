@@ -15,29 +15,60 @@ void main() async {
 
   await WakelockPlus.enable();
   await MobileAds.instance.initialize();
-  RewardedAdManager().loadAd(); 
-  AppOpenAdManager().loadAd();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
-  WidgetsFlutterBinding.ensureInitialized(); 
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   await dotenv.load(fileName: ".env");
+
+  // Load ads sau khi init xong
+  RewardedAdManager().loadAd();
+  AppOpenAdManager().loadAd();
 
   runApp(const MyApp());
 }
 
-class MyApp extends StatelessWidget {
+// ═══════════════════════════════════════════
+//  MyApp — StatefulWidget để dùng WidgetsBindingObserver
+// ═══════════════════════════════════════════
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
+
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+
+    // Hiện App Open Ad sau khi app render xong
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Future.delayed(const Duration(seconds: 2), () {
+        AppOpenAdManager().showAdIfAvailable();
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  // Hiện ad khi user quay lại app từ background
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      AppOpenAdManager().showAdIfAvailable();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return MultiBlocProvider(
       providers: [
-        BlocProvider<UserBloc>(
-          create: (_) => UserBloc(
-             UserRepository()
-          ),
-        ),
+        BlocProvider<UserBloc>(create: (_) => UserBloc(UserRepository())),
       ],
       child: const MaterialApp(
         debugShowCheckedModeBanner: false,

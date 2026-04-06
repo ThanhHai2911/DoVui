@@ -45,3 +45,6 @@ class TimeUp extends WordAnswerEvent {}
 class UseHintLetter extends WordAnswerEvent {}   // 🔍 gợi ý chữ, trừ 10đ
 class UseSkip extends WordAnswerEvent {}         // 🔑 bỏ qua, trừ 15đ
 class UseHintLetterFree extends WordAnswerEvent {} // 🎬 gợi ý miễn phí từ ads
+class PauseTimer extends WordAnswerEvent {}
+class ResumeTimer extends WordAnswerEvent {}
+class UseSkipFree extends WordAnswerEvent {} 
