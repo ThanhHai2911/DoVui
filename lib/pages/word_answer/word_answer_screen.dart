@@ -462,51 +462,86 @@ class _WordAnswerScreenState extends State<WordAnswerScreen>
   }
 
   Widget _buildHintBar(BuildContext context) {
-    return HintBar(
-      onMagnifier: () {
-        final score = context.read<WordAnswerBloc>().currentScore;
-        checkScoreAndShowHint(
-          context: context,
-          currentScore: score,
-          cost: 50,
-          hintIcon: "🔍",
-          hintTitle: "Gợi ý chữ cái",
-          hintDescription: "Hé lộ 1 phần đáp án\ncho câu trả lời hiện tại",
-          hintColor: Colors.amber,
-          confirmText: "Dùng ngay!",
-          onConfirm: () => context.read<WordAnswerBloc>().add(UseHintLetter()),
+  return HintBar(
+    onMagnifier: () {
+      final score = context.read<WordAnswerBloc>().currentScore;
+      checkScoreAndShowHint(
+        context: context,
+        currentScore: score,
+        cost: 50,
+        hintIcon: "🔍",
+        hintTitle: "Gợi ý chữ cái",
+        hintDescription: "Hé lộ 1 phần đáp án\ncho câu trả lời hiện tại",
+        hintColor: Colors.amber,
+        confirmText: "Dùng ngay!",
+        onConfirm: () => context.read<WordAnswerBloc>().add(UseHintLetter()),
+      );
+    },
+    onKey: () {
+      final score = context.read<WordAnswerBloc>().currentScore;
+      checkScoreAndShowHint(
+        context: context,
+        currentScore: score,
+        cost: 100,
+        hintIcon: "🗝️",
+        hintTitle: "Mở đáp án",
+        hintDescription: "Hiện toàn bộ đáp án\ncâu hỏi hiện tại",
+        hintColor: Colors.deepPurple,
+        confirmText: "Mở thôi!",
+        onConfirm: () => context.read<WordAnswerBloc>().add(UseSkip()),
+      );
+    },
+    onVideo: () {
+      if (!RewardedAdManager().isAdLoaded) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('⏳ Quảng cáo chưa sẵn sàng, thử lại sau!'),
+            backgroundColor: Colors.orange,
+          ),
         );
-      },
-      onKey: () {
-        final score = context.read<WordAnswerBloc>().currentScore;
-        checkScoreAndShowHint(
-          context: context,
-          currentScore: score,
-          cost: 100,
-          hintIcon: "🗝️",
-          hintTitle: "Mở đáp án",
-          hintDescription: "Hiện toàn bộ đáp án\ncâu hỏi hiện tại",
-          hintColor: Colors.deepPurple,
-          confirmText: "Mở thôi!",
-          onConfirm: () => context.read<WordAnswerBloc>().add(UseSkip()),
-        );
-      },
-      onVideo: () {
-        showGameDialog(
-          context: context,
-          icon: "🛠️",
-          iconColor: Colors.orange,
-          title: "Tính năng đang phát triển",
-          description:
-              "Chức năng mở đáp án đang được cập nhật.\nVui lòng quay lại sau nhé!",
-          costIcon: "⭐",
-          costText: "Sắp ra mắt",
-          confirmText: "Đã hiểu",
-          confirmColor: Colors.orange,
-          showCancel: false,
-          onConfirm: () {},
-        );
-      },
-    );
-  }
+        return;
+      }
+
+      // Hiện dialog xác nhận trước khi xem ad
+      showGameDialog(
+        context: context,
+        icon: "🎬",
+        iconColor: Colors.purple,
+        title: "Xem video nhận gợi ý?",
+        description: "Xem 1 video ngắn để\nhé lộ toàn bộ đáp án miễn phí!",
+        costIcon: "🎬",
+        costText: "Xem video",
+        confirmText: "Xem ngay!",
+        confirmColor: Colors.purple,
+        showCancel: true,
+        onConfirm: () {
+          RewardedAdManager().showAd(
+            onRewarded: () {
+              // Xem xong → gợi ý toàn bộ đáp án
+              context.read<WordAnswerBloc>().add(UseSkip());
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('🎉 Đáp án đã được mở!'),
+                    backgroundColor: Color(0xFF43C6AC),
+                  ),
+                );
+              }
+            },
+            onFailed: () {
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('❌ Không tải được quảng cáo, thử lại sau!'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
+            },
+          );
+        },
+      );
+    },
+  );
+}
 }

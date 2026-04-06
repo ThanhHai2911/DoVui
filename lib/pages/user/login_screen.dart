@@ -1,3 +1,4 @@
+import 'package:dovui/data/audio/audio_manager.dart';
 import 'package:dovui/pages/home/widgets/home_bottom_nav.dart';
 import 'package:dovui/pages/user/bloc/user_bloc.dart';
 import 'package:dovui/pages/user/logic/auth_service.dart';
@@ -46,6 +47,7 @@ class _LoginScreenState extends State<LoginScreen>
       begin: -8,
       end: 8,
     ).animate(CurvedAnimation(parent: _floatCtrl, curve: Curves.easeInOut));
+    AudioManager().stopBackgroundMusic();
   }
 
   @override

@@ -1,3 +1,4 @@
+import 'package:dovui/data/audio/audio_manager.dart';
 import 'package:flutter/material.dart';
 //=============================================
 //  DIALOG
@@ -204,7 +205,8 @@ class _GameDialogState extends State<_GameDialog>
                       // ← bọc nút Hủy lại
                       Expanded(
                         child: TextButton(
-                          onPressed: () => Navigator.pop(context),
+                          onPressed: () =>
+                           Navigator.pop(context),
                           style: TextButton.styleFrom(
                             padding: const EdgeInsets.symmetric(vertical: 14),
                             shape: RoundedRectangleBorder(
@@ -227,6 +229,7 @@ class _GameDialogState extends State<_GameDialog>
                     Expanded(
                       child: ElevatedButton(
                         onPressed: () {
+                          AudioManager().playBackgroundMusic();
                           Navigator.pop(context);
                           widget.onConfirm();
                         },

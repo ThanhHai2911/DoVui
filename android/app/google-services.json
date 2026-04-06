@@ -58,6 +58,14 @@
           }
         },
         {
+          "client_id": "460307639969-32c0nptqhoenijrucs36qi7blqs35cli.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.thanhhai.dovui",
+            "certificate_hash": "858a4ebc7a83e0ab3bceca2b5134592c4b343260"
+          }
+        },
+        {
           "client_id": "460307639969-jct8p3dp4e4hf0anl0279m36hee51juh.apps.googleusercontent.com",
           "client_type": 3
         }

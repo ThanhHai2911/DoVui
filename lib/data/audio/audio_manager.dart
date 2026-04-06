@@ -2,7 +2,7 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-class AudioManager {
+class AudioManager with WidgetsBindingObserver {
   static final AudioManager _instance = AudioManager._internal();
   factory AudioManager() => _instance;
   AudioManager._internal();
@@ -10,26 +10,52 @@ class AudioManager {
   final AudioPlayer _bgPlayer  = AudioPlayer();
   final AudioPlayer _sfxPlayer = AudioPlayer();
 
-  // Trạng thái in-memory — luôn sync với SharedPreferences
-  bool _isMusicOn = true;
-  bool _isSfxOn   = true;
+  bool _isMusicOn   = true;
+  bool _isSfxOn     = true;
   bool _initialized = false;
 
-  // ── Khởi tạo: đọc setting đã lưu ─────────────────────
-  // Gọi 1 lần duy nhất khi app start (trong main.dart hoặc HomeScreen)
+  // Dùng để phân biệt pause do lifecycle vs pause do quảng cáo/user
+  bool _pausedByLifecycle = false;
+
+  // ── Khởi tạo ──────────────────────────────────────────
   Future<void> init() async {
     if (_initialized) return;
     _initialized = true;
+
+    // Đăng ký lắng nghe lifecycle
+    WidgetsBinding.instance.addObserver(this);
 
     final prefs = await SharedPreferences.getInstance();
     _isMusicOn = prefs.getBool('sound_enabled') ?? true;
     _isSfxOn   = prefs.getBool('sound_enabled') ?? true;
   }
 
-  // ── Nhạc nền ──────────────────────────────────────────
+  // ── Lifecycle handler ─────────────────────────────────
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    switch (state) {
+      case AppLifecycleState.paused:
+      case AppLifecycleState.hidden:
+        // Vuốt app xuống nền → dừng nhạc
+        _pausedByLifecycle = true;
+        _bgPlayer.pause();
+        break;
 
+      case AppLifecycleState.resumed:
+        // Quay lại app → phát tiếp (chỉ nếu setting còn bật)
+        if (_pausedByLifecycle && _isMusicOn) {
+          _pausedByLifecycle = false;
+          _bgPlayer.resume();
+        }
+        break;
+
+      default:
+        break;
+    }
+  }
+
+  // ── Nhạc nền ──────────────────────────────────────────
   Future<void> playBackgroundMusic() async {
-    // Đọc lại setting trước khi play để chắc chắn
     final prefs = await SharedPreferences.getInstance();
     _isMusicOn = prefs.getBool('sound_enabled') ?? true;
 
@@ -54,7 +80,6 @@ class AudioManager {
   }
 
   // ── Hiệu ứng âm thanh ─────────────────────────────────
-
   Future<void> playSfx(String file) async {
     if (!_isSfxOn) return;
     try {
@@ -69,14 +94,14 @@ class AudioManager {
   Future<void> playWrong()     async => playSfx('wrong.mp3');
   Future<void> playClick()     async => playSfx('click.mp3');
   Future<void> playCountdown() async => playSfx('countdown.mp3');
-  Future<void> playWin()     async => playSfx('win.mp3');
-  Future<void> playLose() async => playSfx('loss.mp3');
+  Future<void> playWin()       async => playSfx('win.mp3');
+  Future<void> playLose()      async => playSfx('loss.mp3');
 
   Future<void> stopSfx() async {
     await _sfxPlayer.stop();
   }
 
-  // Đây là method được gọi từ Settings dialog
+  // ── Settings ──────────────────────────────────────────
   Future<void> setSoundEnabled(bool enabled) async {
     _isMusicOn = enabled;
     _isSfxOn   = enabled;
@@ -94,15 +119,14 @@ class AudioManager {
 
   bool get isSoundOn => _isMusicOn;
 
-  // ── Toggle (dùng nội bộ nếu cần) ─────────────────────
   Future<void> toggleMusic() async {
     await setSoundEnabled(!_isMusicOn);
   }
 
   // ── Dọn dẹp ───────────────────────────────────────────
   Future<void> dispose() async {
+    WidgetsBinding.instance.removeObserver(this);
     await _bgPlayer.dispose();
     await _sfxPlayer.dispose();
   }
-  
 }

@@ -1,6 +1,4 @@
 import 'package:dovui/pages/ads/ads_service.dart';
-import 'package:dovui/pages/home/widgets/game_dialog.dart';
-import 'package:dovui/pages/quiz_image/bloc/image_question_bloc.dart';
 import 'package:dovui/resources/color_manager.dart';
 import 'package:dovui/pages/user/bloc/user_bloc.dart';
 import 'package:flutter/material.dart';
@@ -38,6 +36,40 @@ class _HomeHeaderState extends State<HomeHeader>
     _waveCtrl.dispose();
     super.dispose();
   }
+
+  void _onTapScore(BuildContext context) {
+  if (!RewardedAdManager().isAdLoaded) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('⏳ Quảng cáo chưa sẵn sàng, thử lại sau!'),
+        backgroundColor: Colors.orange,
+      ),
+    );
+    return;
+  }
+
+  RewardedAdManager().showAd(
+    onRewarded: () {
+      if (context.mounted) {
+        context.read<UserBloc>().add(AddScoreEvent(10)); // ✅ không giới hạn số lần
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('🎉 +10 ⭐ Cảm ơn bạn đã xem!'),
+            backgroundColor: Color(0xFF43C6AC),
+          ),
+        );
+      }
+    },
+    onFailed: () {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('❌ Không tải được quảng cáo, thử lại sau!'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    },
+  );
+}
 
   @override
   Widget build(BuildContext context) {
@@ -84,9 +116,7 @@ class _HomeHeaderState extends State<HomeHeader>
                         },
                         child: const Text("👋", style: TextStyle(fontSize: 18)),
                       ),
-
                       const SizedBox(width: 6),
-
                       Text(
                         "Xin Chào, $name",
                         style: const TextStyle(
@@ -99,21 +129,7 @@ class _HomeHeaderState extends State<HomeHeader>
 
                   /// SCORE CARD
                   GestureDetector(
-                    onTap:
-                        () => showGameDialog(
-                          context: context,
-                          icon: "🛠️",
-                          iconColor: Colors.orange,
-                          title: "Tính năng đang phát triển",
-                          description:
-                              "Chức năng mở đáp án đang được cập nhật.\nVui lòng quay lại sau nhé!",
-                          costIcon: "⭐",
-                          costText: "Sắp ra mắt",
-                          confirmText: "Đã hiểu",
-                          confirmColor: Colors.orange,
-                          showCancel: false,
-                          onConfirm: () {},
-                        ),
+                    onTap: () => _onTapScore(context),
                     child: TweenAnimationBuilder(
                       tween: Tween(begin: 0.9, end: 1.0),
                       duration: const Duration(milliseconds: 500),

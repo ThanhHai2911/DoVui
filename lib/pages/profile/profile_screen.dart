@@ -1,4 +1,5 @@
 import 'package:dovui/data/audio/audio_manager.dart';
+import 'package:dovui/pages/ads/ads_service.dart';
 import 'package:dovui/pages/home/widgets/game_dialog.dart';
 import 'package:dovui/pages/user/login_screen.dart';
 import 'package:dovui/resources/color_manager.dart';
@@ -7,6 +8,7 @@ import 'package:dovui/pages/user/bloc/user_bloc.dart';
 import 'package:dovui/data/repositories/user_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -20,12 +22,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool _canCheckIn = true;
   bool _videoWatched = false;
   bool _isAdmin = false;
+  final BannerAdManager _bannerAdManager = BannerAdManager();
 
   @override
   void initState() {
     super.initState();
     _loadCheckInStatus();
-    _applySavedSoundSetting(); // ← áp dụng setting âm thanh khi vào app
+    _applySavedSoundSetting();
+    _bannerAdManager.loadAd(onLoaded: () => setState(() {}));
+  }
+
+  @override
+  void dispose() {
+    _bannerAdManager.dispose();
+    super.dispose();
   }
 
   /// Đọc và áp dụng trạng thái âm thanh đã lưu
@@ -89,6 +99,57 @@ class _ProfileScreenState extends State<ProfileScreen> {
     setState(() => _canCheckIn = false);
   }
 
+  Future<void> _doWatchVideo(
+    BuildContext context,
+    String userId,
+    int score,
+    StateSetter setStateDialog,
+  ) async {
+    if (!RewardedAdManager().isAdLoaded) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('⏳ Quảng cáo chưa sẵn sàng, thử lại sau!'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    RewardedAdManager().showAd(
+      onRewarded: () async {
+        // Lưu trạng thái đã xem video hôm nay
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString(
+          'last_video_watch',
+          DateTime.now().toIso8601String(),
+        );
+
+        // Cộng điểm
+        await UserRepository().updateScore(userId, score + 10);
+
+        setState(() => _videoWatched = true);
+        setStateDialog(() {});
+
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('🎉 Cảm ơn bạn! +10 ⭐'),
+              backgroundColor: Color(0xFF6C63FF),
+            ),
+          );
+        }
+      },
+      onFailed: () {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('❌ Không tải được quảng cáo, thử lại sau!'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      },
+    );
+  }
+
   void _showMissionDialog(BuildContext context, String userId, int score) {
     showDialog(
       context: context,
@@ -144,29 +205,46 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       const SizedBox(height: 12),
 
                       // Xem video
+                      // _buildMissionRow(
+                      //   icon: "🎬",
+                      //   title: "Xem video nhận thưởng",
+                      //   reward: "+10 ⭐",
+                      //   color: const Color(0xFF6C63FF),
+                      //   done: false,
+                      //   onTap: () {
+                      //     Navigator.pop(ctx);
+                      //     showGameDialog(
+                      //       context: context,
+                      //       icon: "🛠️",
+                      //       iconColor: Colors.orange,
+                      //       title: "Tính năng đang phát triển",
+                      //       description:
+                      //           "Chức năng xem video đang được cập nhật.\nVui lòng quay lại sau nhé!",
+                      //       costIcon: "⭐",
+                      //       costText: "Sắp ra mắt",
+                      //       confirmText: "Đã hiểu",
+                      //       confirmColor: Colors.orange,
+                      //       showCancel: false,
+                      //       onConfirm: () {},
+                      //     );
+                      //   },
+                      // ),
+                      // Xem video
                       _buildMissionRow(
                         icon: "🎬",
                         title: "Xem video nhận thưởng",
                         reward: "+10 ⭐",
                         color: const Color(0xFF6C63FF),
-                        done: false,
-                        onTap: () {
-                          Navigator.pop(ctx);
-                          showGameDialog(
-                            context: context,
-                            icon: "🛠️",
-                            iconColor: Colors.orange,
-                            title: "Tính năng đang phát triển",
-                            description:
-                                "Chức năng xem video đang được cập nhật.\nVui lòng quay lại sau nhé!",
-                            costIcon: "⭐",
-                            costText: "Sắp ra mắt",
-                            confirmText: "Đã hiểu",
-                            confirmColor: Colors.orange,
-                            showCancel: false,
-                            onConfirm: () {},
-                          );
-                        },
+                        done: _videoWatched, // ✅ đọc trạng thái thật
+                        onTap:
+                            _videoWatched
+                                ? null
+                                : () => _doWatchVideo(
+                                  context,
+                                  userId,
+                                  score,
+                                  setStateDialog,
+                                ), // ✅ gọi ad thật
                       ),
 
                       const SizedBox(height: 24),
@@ -174,7 +252,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       SizedBox(
                         width: double.infinity,
                         child: TextButton(
-                          onPressed: () => Navigator.pop(ctx),
+                          onPressed: () {
+                            AudioManager()
+                                .playBackgroundMusic(); // 🔊 phát âm thanh
+                            Navigator.pop(ctx); // đóng dialog
+                          },
                           style: TextButton.styleFrom(
                             backgroundColor: Colors.grey.shade100,
                             shape: RoundedRectangleBorder(
@@ -256,7 +338,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     SizedBox(
                       width: double.infinity,
                       child: TextButton(
-                        onPressed: () => Navigator.pop(ctx),
+                        onPressed: () {
+                          AudioManager().playBackgroundMusic();
+                          Navigator.pop(ctx);
+                        },
                         child: const Text("Đóng"),
                       ),
                     ),
@@ -623,6 +708,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
 
                 const SizedBox(height: 28),
+
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: _bannerAdManager.buildBannerWidget(),
+                ),
+
+                const SizedBox(height: 12),
 
                 /// LOGOUT
                 if (state is UserRegistered)

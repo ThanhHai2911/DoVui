@@ -1,3 +1,4 @@
+import 'package:dovui/pages/ads/ads_service.dart';
 import 'package:dovui/pages/home/widgets/check_score.dart';
 import 'package:dovui/pages/home/widgets/game_dialog.dart';
 import 'package:dovui/pages/quiz_image/widgets/quiz_image_input.dart';
@@ -278,17 +279,54 @@ class QuizImageScreen extends StatelessWidget {
                               onVideo: () {
                                 showGameDialog(
                                   context: context,
-                                  icon: "🛠️",
-                                  iconColor: Colors.orange,
-                                  title: "Tính năng đang phát triển",
+                                  icon: "🎬",
+                                  iconColor: Colors.purple,
+                                  title: "Xem video nhận gợi ý?",
                                   description:
-                                      "Chức năng mở đáp án đang được cập nhật.\nVui lòng quay lại sau nhé!",
-                                  costIcon: "⭐",
-                                  costText: "Sắp ra mắt",
-                                  confirmText: "Đã hiểu",
-                                  confirmColor: Colors.orange,
-                                  showCancel: false,
-                                  onConfirm: () {},
+                                      "Xem 1 video ngắn để\nhé lộ toàn bộ đáp án miễn phí!",
+                                  costIcon: "🎬",
+                                  costText: "Xem video",
+                                  confirmText: "Xem ngay!",
+                                  confirmColor: Colors.purple,
+                                  showCancel: true,
+                                  onConfirm: () {
+                                    RewardedAdManager().showAd(
+                                      onRewarded: () {
+                                        // Xem xong → gợi ý toàn bộ đáp án
+                                        context.read<QuizImageBloc>().add(
+                                          QuizImageUseSkip(),
+                                        );
+                                        if (context.mounted) {
+                                          ScaffoldMessenger.of(
+                                            context,
+                                          ).showSnackBar(
+                                            const SnackBar(
+                                              content: Text(
+                                                '🎉 Đáp án đã được mở!',
+                                              ),
+                                              backgroundColor: Color(
+                                                0xFF43C6AC,
+                                              ),
+                                            ),
+                                          );
+                                        }
+                                      },
+                                      onFailed: () {
+                                        if (context.mounted) {
+                                          ScaffoldMessenger.of(
+                                            context,
+                                          ).showSnackBar(
+                                            const SnackBar(
+                                              content: Text(
+                                                '❌ Không tải được quảng cáo, thử lại sau!',
+                                              ),
+                                              backgroundColor: Colors.red,
+                                            ),
+                                          );
+                                        }
+                                      },
+                                    );
+                                  },
                                 );
                               },
                             ),
