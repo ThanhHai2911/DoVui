@@ -1,7 +1,8 @@
 import 'package:dovui/data/audio/audio_manager.dart';
 import 'package:flutter/material.dart';
-//=============================================
-//  DIALOG
+
+// =============================================
+//  DIALOG — void version (giữ nguyên, không breaking)
 // =============================================
 void showGameDialog({
   required BuildContext context,
@@ -19,22 +20,59 @@ void showGameDialog({
   showDialog(
     context: context,
     barrierColor: Colors.black54,
-    builder:
-        (_) => _GameDialog(
-          icon: icon,
-          iconColor: iconColor,
-          title: title,
-          description: description,
-          costIcon: costIcon,
-          costText: costText,
-          confirmText: confirmText,
-          confirmColor: confirmColor,
-          onConfirm: onConfirm,
-          showCancel: showCancel,
-        ),
+    builder: (_) => _GameDialog(
+      icon: icon,
+      iconColor: iconColor,
+      title: title,
+      description: description,
+      costIcon: costIcon,
+      costText: costText,
+      confirmText: confirmText,
+      confirmColor: confirmColor,
+      onConfirm: onConfirm,
+      showCancel: showCancel,
+      returnValue: null, // void mode → không trả về gì
+    ),
   );
 }
 
+// =============================================
+//  DIALOG — Future<bool?> version (dùng cho await)
+// =============================================
+Future<bool?> showGameDialogConfirm({
+  required BuildContext context,
+  required String icon,
+  required Color iconColor,
+  required String title,
+  required String description,
+  required String costIcon,
+  required String costText,
+  required String confirmText,
+  required Color confirmColor,
+  bool showCancel = true,
+}) {
+  return showDialog<bool>(
+    context: context,
+    barrierColor: Colors.black54,
+    builder: (_) => _GameDialog(
+      icon: icon,
+      iconColor: iconColor,
+      title: title,
+      description: description,
+      costIcon: costIcon,
+      costText: costText,
+      confirmText: confirmText,
+      confirmColor: confirmColor,
+      onConfirm: () {}, // không cần callback, caller dùng await
+      showCancel: showCancel,
+      returnValue: true, // confirm → pop với true
+    ),
+  );
+}
+
+// =============================================
+//  INTERNAL WIDGET
+// =============================================
 class _GameDialog extends StatefulWidget {
   final String icon;
   final Color iconColor;
@@ -46,6 +84,7 @@ class _GameDialog extends StatefulWidget {
   final Color confirmColor;
   final VoidCallback onConfirm;
   final bool showCancel;
+  final bool? returnValue;
 
   const _GameDialog({
     required this.icon,
@@ -58,6 +97,7 @@ class _GameDialog extends StatefulWidget {
     required this.confirmColor,
     required this.onConfirm,
     this.showCancel = true,
+    this.returnValue,
   });
 
   @override
@@ -77,10 +117,9 @@ class _GameDialogState extends State<_GameDialog>
       vsync: this,
       duration: const Duration(milliseconds: 400),
     );
-    _scaleAnim = Tween<double>(
-      begin: 0.7,
-      end: 1.0,
-    ).animate(CurvedAnimation(parent: _ctrl, curve: Curves.elasticOut));
+    _scaleAnim = Tween<double>(begin: 0.7, end: 1.0).animate(
+      CurvedAnimation(parent: _ctrl, curve: Curves.elasticOut),
+    );
     _fadeAnim = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
         parent: _ctrl,
@@ -121,6 +160,7 @@ class _GameDialogState extends State<_GameDialog>
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
+                // ── Icon ────────────────────────────────────
                 Container(
                   width: 84,
                   height: 84,
@@ -146,7 +186,10 @@ class _GameDialogState extends State<_GameDialog>
                     ),
                   ),
                 ),
+
                 const SizedBox(height: 16),
+
+                // ── Title ────────────────────────────────────
                 Text(
                   widget.title,
                   style: const TextStyle(
@@ -155,7 +198,10 @@ class _GameDialogState extends State<_GameDialog>
                     color: Color(0xFF1E1B4B),
                   ),
                 ),
+
                 const SizedBox(height: 10),
+
+                // ── Description ──────────────────────────────
                 Text(
                   widget.description,
                   textAlign: TextAlign.center,
@@ -165,7 +211,10 @@ class _GameDialogState extends State<_GameDialog>
                     height: 1.6,
                   ),
                 ),
+
                 const SizedBox(height: 16),
+
+                // ── Cost badge ───────────────────────────────
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 18,
@@ -198,15 +247,16 @@ class _GameDialogState extends State<_GameDialog>
                     ],
                   ),
                 ),
+
                 const SizedBox(height: 24),
+
+                // ── Buttons ──────────────────────────────────
                 Row(
                   children: [
                     if (widget.showCancel) ...[
-                      // ← bọc nút Hủy lại
                       Expanded(
                         child: TextButton(
-                          onPressed: () =>
-                           Navigator.pop(context),
+                          onPressed: () => Navigator.pop(context, false),
                           style: TextButton.styleFrom(
                             padding: const EdgeInsets.symmetric(vertical: 14),
                             shape: RoundedRectangleBorder(
@@ -230,7 +280,8 @@ class _GameDialogState extends State<_GameDialog>
                       child: ElevatedButton(
                         onPressed: () {
                           AudioManager().playBackgroundMusic();
-                          Navigator.pop(context);
+                          // ✅ pop với returnValue (true hoặc null)
+                          Navigator.pop(context, widget.returnValue);
                           widget.onConfirm();
                         },
                         style: ElevatedButton.styleFrom(

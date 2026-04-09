@@ -20,11 +20,11 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   late AnimationController _entryCtrl;
-  late Animation<double>   _fade;
-  late Animation<Offset>   _slide;
+  late Animation<double> _fade;
+  late Animation<Offset> _slide;
 
   late AnimationController _floatCtrl;
-  late Animation<double>   _float;
+  late Animation<double> _float;
 
   @override
   void initState() {
@@ -44,9 +44,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       vsync: this,
       duration: const Duration(milliseconds: 2600),
     )..repeat(reverse: true);
-    _float = Tween<double>(begin: -12, end: 12).animate(
-      CurvedAnimation(parent: _floatCtrl, curve: Curves.easeInOut),
-    );
+    _float = Tween<double>(
+      begin: -12,
+      end: 12,
+    ).animate(CurvedAnimation(parent: _floatCtrl, curve: Curves.easeInOut));
 
     _entryCtrl.forward();
 
@@ -66,93 +67,97 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (_) => HomeBloc()..add(LoadHome()),
-      child: Scaffold(
-        backgroundColor: ColorManager.scaffoldBackground,
-        body: Stack(
-          children: [
-            /// BACKGROUND BLOB
-            AnimatedBuilder(
-              animation: _float,
-              builder: (_, __) {
-                return Stack(
-                  children: [
-                    Positioned(
-                      top: -60 + _float.value,
-                      left: -40,
-                      child: _blob(200, const Color(0xFF6C63FF), 0.07),
-                    ),
-                    Positioned(
-                      top: 260 - _float.value,
-                      right: -50,
-                      child: _blob(160, const Color(0xFFFF6584), 0.06),
-                    ),
-                    Positioned(
-                      bottom: 120 + _float.value,
-                      left: -40,
-                      child: _blob(150, const Color(0xFF43C6AC), 0.06),
-                    ),
-                  ],
-                );
-              },
-            ),
-
-            SafeArea(
-              child: BlocBuilder<HomeBloc, HomeState>(
-                builder: (context, state) {
-                  if (state is HomeLoading) return const HomeShimmer();
-
-                  if (state is HomeLoaded) {
-                    final size = MediaQuery.sizeOf(context);
-                    return FadeTransition(
-                      opacity: _fade,
-                      child: SlideTransition(
-                        position: _slide,
-                        child: SingleChildScrollView(
-                          padding: EdgeInsets.fromLTRB(
-                            size.width * 0.06,
-                            0,
-                            size.width * 0.06,
-                            70,
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const SizedBox(height: 20),
-                              const HomeHeader(),
-                              const SizedBox(height: 25),
-                              _AnimatedSection(
-                                delay: 0,
-                                child: StreakCard(
-                                  days: state.days,
-                                  name: state.name,
-                                  score: state.score,
-                                ),
-                              ),
-                              const SizedBox(height: 30),
-                              const _AnimatedSection(
-                                delay: 120,
-                                child: QuizOfWeek(),
-                              ),
-                              const SizedBox(height: 30),
-                              const _AnimatedSection(
-                                delay: 240,
-                                child: CategoriesSection(),
-                              ),
-                              const SizedBox(height: 30),
-                            ],
-                          ),
-                        ),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {},
+      child: BlocProvider(
+        create: (_) => HomeBloc()..add(LoadHome()),
+        child: Scaffold(
+          backgroundColor: ColorManager.scaffoldBackground,
+          body: Stack(
+            children: [
+              /// BACKGROUND BLOB
+              AnimatedBuilder(
+                animation: _float,
+                builder: (_, __) {
+                  return Stack(
+                    children: [
+                      Positioned(
+                        top: -60 + _float.value,
+                        left: -40,
+                        child: _blob(200, const Color(0xFF6C63FF), 0.07),
                       ),
-                    );
-                  }
-
-                  return const SizedBox();
+                      Positioned(
+                        top: 260 - _float.value,
+                        right: -50,
+                        child: _blob(160, const Color(0xFFFF6584), 0.06),
+                      ),
+                      Positioned(
+                        bottom: 120 + _float.value,
+                        left: -40,
+                        child: _blob(150, const Color(0xFF43C6AC), 0.06),
+                      ),
+                    ],
+                  );
                 },
               ),
-            ),
-          ],
+
+              SafeArea(
+                child: BlocBuilder<HomeBloc, HomeState>(
+                  builder: (context, state) {
+                    if (state is HomeLoading) return const HomeShimmer();
+
+                    if (state is HomeLoaded) {
+                      final size = MediaQuery.sizeOf(context);
+                      return FadeTransition(
+                        opacity: _fade,
+                        child: SlideTransition(
+                          position: _slide,
+                          child: SingleChildScrollView(
+                            padding: EdgeInsets.fromLTRB(
+                              size.width * 0.06,
+                              0,
+                              size.width * 0.06,
+                              70,
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const SizedBox(height: 20),
+                                const HomeHeader(),
+                                const SizedBox(height: 25),
+                                _AnimatedSection(
+                                  delay: 0,
+                                  child: StreakCard(
+                                    days: state.days,
+                                    name: state.name,
+                                    score: state.score,
+                                  ),
+                                ),
+                                const SizedBox(height: 30),
+                                const _AnimatedSection(
+                                  delay: 120,
+                                  child: QuizOfWeek(),
+                                ),
+                                const SizedBox(height: 30),
+                                const _AnimatedSection(
+                                  delay: 240,
+                                  child: CategoriesSection(),
+                                ),
+                                const SizedBox(height: 30),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    }
+
+                    return const SizedBox();
+                  },
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -194,9 +199,10 @@ class _AnimatedSectionState extends State<_AnimatedSection>
       vsync: this,
       duration: const Duration(milliseconds: 500),
     );
-    _fade = Tween<double>(begin: 0, end: 1).animate(
-      CurvedAnimation(parent: _ctrl, curve: Curves.easeOut),
-    );
+    _fade = Tween<double>(
+      begin: 0,
+      end: 1,
+    ).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOut));
     _slide = Tween<Offset>(
       begin: const Offset(0, 0.08),
       end: Offset.zero,

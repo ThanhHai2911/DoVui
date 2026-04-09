@@ -174,7 +174,7 @@ class _Header extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            'AI LÀ TRIỆU PHÚ',
+            'AI LÀ VUA ĐIỂM',
             style: TextStyle(
               fontSize: 11,
               letterSpacing: 3,
@@ -376,10 +376,10 @@ class _LadderRow extends StatelessWidget {
     if (pts >= 1000) {
       final thousands  = pts ~/ 1000;
       final remainder  = pts % 1000;
-      if (remainder == 0) return '$thousands.000 điểm';
-      return '$thousands.${remainder.toString().padLeft(3, '0')} điểm';
+      if (remainder == 0) return '$thousands.000 Sao';
+      return '$thousands.${remainder.toString().padLeft(3, '0')} Sao';
     }
-    return '$pts điểm';
+    return '$pts Sao';
   }
 }
 

@@ -1,11 +1,16 @@
 import 'package:dovui/data/audio/audio_manager.dart';
-import 'package:dovui/resources/color_manager.dart';
+import 'package:dovui/data/repositories/user_level_repository.dart';
+import 'package:dovui/pages/ads/ads_service.dart';
 import 'package:dovui/pages/gamecomplete/game_complete_sceen.dart';
+import 'package:dovui/pages/home/widgets/check_score.dart';
+import 'package:dovui/pages/home/widgets/game_dialog.dart';
 import 'package:dovui/pages/quiz/bloc/quiz_event.dart';
 import 'package:dovui/pages/quiz/bloc/quiz_state.dart';
-import 'package:dovui/pages/quiz/widgets/answer_item.dart';
+import 'package:dovui/pages/quiz/widgets/answer_card.dart';
+import 'package:dovui/pages/word_answer/widgets/hint_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'bloc/quiz_bloc.dart';
 
 class QuizScreen extends StatefulWidget {
@@ -25,29 +30,40 @@ class QuizScreen extends StatefulWidget {
 }
 
 class _QuizScreenState extends State<QuizScreen> with TickerProviderStateMixin {
-  // Entry animation
   late AnimationController _entryCtrl;
   late Animation<double> _entryFade;
   late Animation<Offset> _entrySlide;
 
-  // Question card animation
   late AnimationController _questionCtrl;
   late Animation<double> _questionScale;
   late Animation<double> _questionFade;
 
-  // Pulse badge tiêu đề
   late AnimationController _pulseCtrl;
   late Animation<double> _pulseAnim;
 
-  // Float blobs nền
   late AnimationController _floatCtrl;
   late Animation<double> _floatAnim;
 
-  // Timer warning shake
   late AnimationController _shakeCtrl;
   late Animation<double> _shakeAnim;
 
+  final _userLevelRepo = UserLevelRepository();
   String _lastQuestion = '';
+
+  Future<void> _saveResult({required int score, required int total}) async {
+    if (widget.levelId == null) return;
+    final prefs = await SharedPreferences.getInstance();
+    final userId = prefs.getString("userId");
+    if (userId == null) return;
+    final maxScore = total * 10;
+    final percent = maxScore > 0 ? ((score / maxScore) * 10).round() : 0;
+    _userLevelRepo.saveLevelWithType(
+      userId: userId,
+      levelId: widget.levelId!,
+      score: percent,
+      type: widget.type,
+    );
+  }
 
   @override
   void initState() {
@@ -137,131 +153,207 @@ class _QuizScreenState extends State<QuizScreen> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create:
-          (_) =>
-              QuizBloc()..add(
-                LoadQuiz(
-                  categoryId: widget.categoryId,
-                  levelId: widget.levelId,
-                  type: widget.type,
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {},
+      child: BlocProvider(
+        create:
+            (_) =>
+                QuizBloc()..add(
+                  LoadQuiz(
+                    categoryId: widget.categoryId,
+                    levelId: widget.levelId,
+                    type: widget.type,
+                  ),
                 ),
-              ),
-      child: BlocConsumer<QuizBloc, QuizState>(
-        listener: (context, state) {
-          // 🎯 Khi hiện kết quả
-          if (state.showResult) {
-            final correctIndex = state.currentQuestion?.correctIndex;
-            final selected = state.selectedIndex;
-
-            if (correctIndex != null && selected != null) {
-              if (selected == correctIndex) {
-                // ✅ đúng
-                AudioManager().playCorrect();
-              } else {
-                // ❌ sai
-                AudioManager().playWrong();
+        child: BlocConsumer<QuizBloc, QuizState>(
+          listener: (context, state) async {
+            if (state.showResult) {
+              final correctIndex = state.currentQuestion?.correctIndex;
+              final selected = state.selectedIndex;
+              if (correctIndex != null && selected != null) {
+                if (selected == correctIndex) {
+                  AudioManager().playCorrect();
+                } else {
+                  AudioManager().playWrong();
+                }
               }
             }
-          }
-          if (state.isGameOver) {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(
-                builder:
-                    (_) => GameCompleteScreen(
-                      score: state.score,
-                      totalQuestions: state.questions.length,
-                      isWin: state.score > 0,
-                      categoryId: widget.categoryId,
-                      levelId: widget.levelId,
-                      type: widget.type,
-                    ),
-              ),
-            );
-          }
-          // Shake khi thời gian sắp hết
-          if (state.timeLeft <= 5) _triggerShake();
-        },
-        builder: (context, state) {
-          if (state.isLoading) {
-            return const Scaffold(
-              backgroundColor: Color(0xFFF4F6FF),
-              body: Center(child: CircularProgressIndicator()),
-            );
-          }
-
-          if (state.questions.isEmpty) {
-            return const Scaffold(
-              backgroundColor: Color(0xFFF4F6FF),
-              body: Center(
-                child: Text(
-                  "Chưa có câu hỏi cho chuyên đề này",
-                  style: TextStyle(fontSize: 18),
+            if (state.isGameOver) {
+              _saveResult(score: state.score, total: state.questions.length);
+              NativeAdManager().loadAd();
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                  builder:
+                      (_) => GameCompleteScreen(
+                        score: state.score,
+                        totalQuestions: state.questions.length,
+                        isWin: state.score >= 60,
+                        categoryId: widget.categoryId,
+                        levelId: widget.levelId,
+                        type: widget.type,
+                      ),
                 ),
-              ),
-            );
-          }
+              );
+            }
+            if (state.timeLeft <= 5) _triggerShake();
+          },
+          builder: (context, state) {
+            if (state.isLoading) {
+              return const Scaffold(
+                backgroundColor: Color(0xFFF4F6FF),
+                body: Center(child: CircularProgressIndicator()),
+              );
+            }
+            if (state.questions.isEmpty) {
+              return const Scaffold(
+                backgroundColor: Color(0xFFF4F6FF),
+                body: Center(
+                  child: Text(
+                    "Chưa có câu hỏi cho chuyên đề này",
+                    style: TextStyle(fontSize: 18),
+                  ),
+                ),
+              );
+            }
+            if (state.currentQuestion == null) {
+              return const Scaffold(
+                backgroundColor: Color(0xFFF4F6FF),
+                body: Center(child: CircularProgressIndicator()),
+              );
+            }
 
-          if (state.currentQuestion == null) {
-            return const Scaffold(
-              backgroundColor: Color(0xFFF4F6FF),
-              body: Center(child: CircularProgressIndicator()),
-            );
-          }
+            _triggerQuestionAnim(state.currentQuestion!.question);
 
-          _triggerQuestionAnim(state.currentQuestion!.question);
-
-          return Scaffold(
-            backgroundColor: const Color(0xFFF4F6FF),
-            body: Stack(
-              children: [
-                /// ===== NỀN BLOB =====
-                _buildBackground(),
-
-                FadeTransition(
-                  opacity: _entryFade,
-                  child: SlideTransition(
-                    position: _entrySlide,
-                    child: SafeArea(
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-                        child: Column(
-                          children: [
-                            /// ===== HEADER =====
-                            _buildHeader(state),
-
-                            const SizedBox(height: 12),
-
-                            /// ===== PROGRESS BAR =====
-                            _buildProgressBar(state),
-
-                            const SizedBox(height: 20),
-
-                            /// ===== CARD CÂU HỎI =====
-                            FadeTransition(
-                              opacity: _questionFade,
-                              child: ScaleTransition(
-                                scale: _questionScale,
-                                child: _buildQuestionCard(state),
+            return Scaffold(
+              backgroundColor: const Color(0xFFF4F6FF),
+              body: Stack(
+                children: [
+                  _buildBackground(),
+                  FadeTransition(
+                    opacity: _entryFade,
+                    child: SlideTransition(
+                      position: _entrySlide,
+                      child: SafeArea(
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                          child: Column(
+                            children: [
+                              _buildHeader(state),
+                              const SizedBox(height: 12),
+                              _buildProgressBar(state),
+                              const SizedBox(height: 20),
+                              FadeTransition(
+                                opacity: _questionFade,
+                                child: ScaleTransition(
+                                  scale: _questionScale,
+                                  child: _buildQuestionCard(state),
+                                ),
                               ),
-                            ),
-
-                            const SizedBox(height: 60),
-
-                            /// ===== ANSWERS =====
-                            Expanded(child: _buildAnswers(context, state)),
-                          ],
+                              const SizedBox(height: 16),
+                              Expanded(child: _buildAnswers(context, state)),
+                              const SizedBox(height: 12),
+                              _buildHintBar(context, state),
+                            ],
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHintBar(BuildContext context, QuizState state) {
+    return HintBar(
+      onMagnifier: () {
+        showGameDialog(
+          context: context,
+          icon: "✂️",
+          iconColor: Colors.amber,
+          title: "Loại 50/50",
+          description: "Ẩn 2 đáp án sai bất kỳ\nchỉ còn 2 lựa chọn!",
+          costIcon: "⭐",
+          costText: "50",
+          confirmText: "Dùng ngay!",
+          confirmColor: Colors.amber,
+          showCancel: true,
+          onConfirm: () {
+            context.read<QuizBloc>().add(UseHint5050());
+          },
+        );
+      },
+      onKey: () {
+        showGameDialog(
+          context: context,
+          icon: "🗝️",
+          iconColor: Colors.deepPurple,
+          title: "Lộ đáp án",
+          description: "Ẩn toàn bộ đáp án sai\nchỉ còn đúng 1 lựa chọn!",
+          costIcon: "⭐",
+          costText: "100",
+          confirmText: "Mở thôi!",
+          confirmColor: Colors.deepPurple,
+          showCancel: true,
+          onConfirm: () {
+            context.read<QuizBloc>().add(UseHintEliminate());
+          },
+        );
+      },
+      onVideo: () {
+        if (!RewardedAdManager().isAdLoaded) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('⏳ Quảng cáo chưa sẵn sàng, thử lại sau!'),
+              backgroundColor: Colors.orange,
             ),
           );
-        },
-      ),
+          return;
+        }
+        showGameDialog(
+          context: context,
+          icon: "🎬",
+          iconColor: Colors.purple,
+          title: "Xem video nhận gợi ý?",
+          description: "Xem 1 video ngắn để\nẩn 3 đáp án sai miễn phí!",
+          costIcon: "🎬",
+          costText: "Xem video",
+          confirmText: "Xem ngay!",
+          confirmColor: Colors.purple,
+          showCancel: true,
+          onConfirm: () {
+            RewardedAdManager().showAd(
+              onRewarded: () {
+                context.read<QuizBloc>().add(UseHintFree());
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('🎉 Đã ẩn 3 đáp án sai!'),
+                      backgroundColor: Color(0xFF43C6AC),
+                    ),
+                  );
+                }
+              },
+              onFailed: () {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('❌ Không tải được quảng cáo!'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              },
+            );
+          },
+        );
+      },
     );
   }
 
@@ -313,7 +405,6 @@ class _QuizScreenState extends State<QuizScreen> with TickerProviderStateMixin {
 
     return Row(
       children: [
-        /// Số câu
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
           decoration: BoxDecoration(
@@ -363,7 +454,6 @@ class _QuizScreenState extends State<QuizScreen> with TickerProviderStateMixin {
 
         const Spacer(),
 
-        /// Tim
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
           decoration: BoxDecoration(
@@ -405,7 +495,6 @@ class _QuizScreenState extends State<QuizScreen> with TickerProviderStateMixin {
 
         const Spacer(),
 
-        /// Timer
         AnimatedBuilder(
           animation: _shakeAnim,
           builder:
@@ -458,7 +547,6 @@ class _QuizScreenState extends State<QuizScreen> with TickerProviderStateMixin {
         state.questions.isNotEmpty
             ? state.questionCount / state.questions.length
             : 0.0;
-
     return ClipRRect(
       borderRadius: BorderRadius.circular(10),
       child: TweenAnimationBuilder<double>(
@@ -485,7 +573,7 @@ class _QuizScreenState extends State<QuizScreen> with TickerProviderStateMixin {
   Widget _buildQuestionCard(QuizState state) {
     return Container(
       width: double.infinity,
-      constraints: const BoxConstraints(minHeight: 200),
+      constraints: const BoxConstraints(minHeight: 120),
       padding: const EdgeInsets.fromLTRB(20, 22, 20, 22),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -505,7 +593,6 @@ class _QuizScreenState extends State<QuizScreen> with TickerProviderStateMixin {
       child: Stack(
         clipBehavior: Clip.none,
         children: [
-          // Emoji nổi góc — float
           Positioned(
             top: -14,
             right: 0,
@@ -530,11 +617,9 @@ class _QuizScreenState extends State<QuizScreen> with TickerProviderStateMixin {
                   ),
             ),
           ),
-
           Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Badge pulse
               ScaleTransition(
                 scale: _pulseAnim,
                 child: Container(
@@ -565,9 +650,7 @@ class _QuizScreenState extends State<QuizScreen> with TickerProviderStateMixin {
                   ),
                 ),
               ),
-
               const SizedBox(height: 14),
-
               Text(
                 state.currentQuestion!.question,
                 textAlign: TextAlign.center,
@@ -587,8 +670,8 @@ class _QuizScreenState extends State<QuizScreen> with TickerProviderStateMixin {
 
   Widget _buildAnswers(BuildContext context, QuizState state) {
     final answers = state.currentQuestion!.answers;
+    final eliminated = state.eliminatedIndexes;
 
-    // Màu gradient cho 4 đáp án
     final gradients = [
       [const Color(0xFF6C63FF), const Color(0xFF9B8FFF)],
       [const Color(0xFF4FACFE), const Color(0xFF00F2FE)],
@@ -606,6 +689,7 @@ class _QuizScreenState extends State<QuizScreen> with TickerProviderStateMixin {
         childAspectRatio: 1.25,
       ),
       itemBuilder: (context, index) {
+        final isEliminated = eliminated.contains(index);
         List<Color> gradient = gradients[index % gradients.length];
         bool isCorrect =
             state.showResult && index == state.currentQuestion!.correctIndex;
@@ -614,199 +698,31 @@ class _QuizScreenState extends State<QuizScreen> with TickerProviderStateMixin {
             index == state.selectedIndex &&
             index != state.currentQuestion!.correctIndex;
 
-        if (isCorrect) {
+        if (isCorrect)
           gradient = [const Color(0xFF43C6AC), const Color(0xFF77E8D2)];
-        } else if (isWrong) {
+        else if (isWrong)
           gradient = [const Color(0xFFFF6584), const Color(0xFFFF99AA)];
-        }
+        else if (isEliminated)
+          gradient = [Colors.grey.shade300, Colors.grey.shade400];
 
-        return _AnswerCard(
+        return AnswerCard(
           key: ValueKey('$index-${state.questionCount}'),
           text: answers[index],
           gradient: gradient,
           isCorrect: isCorrect,
           isWrong: isWrong,
-          isDisabled: state.showResult,
+          isDisabled: state.showResult || isEliminated,
+          isEliminated: isEliminated,
           index: index,
           onTap:
-              state.showResult
+              (state.showResult || isEliminated)
                   ? null
                   : () {
-                    // 🔊 âm click
                     AudioManager().playClick();
-
                     context.read<QuizBloc>().add(SelectAnswer(index));
                   },
         );
       },
-    );
-  }
-}
-
-// =============================================
-//  ANSWER CARD với animation
-// =============================================
-class _AnswerCard extends StatefulWidget {
-  final String text;
-  final List<Color> gradient;
-  final bool isCorrect;
-  final bool isWrong;
-  final bool isDisabled;
-  final int index;
-  final VoidCallback? onTap;
-
-  const _AnswerCard({
-    super.key,
-    required this.text,
-    required this.gradient,
-    required this.isCorrect,
-    required this.isWrong,
-    required this.isDisabled,
-    required this.index,
-    required this.onTap,
-  });
-
-  @override
-  State<_AnswerCard> createState() => _AnswerCardState();
-}
-
-class _AnswerCardState extends State<_AnswerCard>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _ctrl;
-  late Animation<double> _entryScale;
-  late Animation<double> _entryFade;
-  bool _pressed = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _ctrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 500),
-    );
-    _entryScale = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(parent: _ctrl, curve: Curves.elasticOut));
-    _entryFade = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _ctrl,
-        curve: const Interval(0.0, 0.4, curve: Curves.easeIn),
-      ),
-    );
-
-    // Stagger theo index
-    Future.delayed(Duration(milliseconds: 80 * widget.index), () {
-      if (mounted) _ctrl.forward();
-    });
-  }
-
-  @override
-  void dispose() {
-    _ctrl.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return FadeTransition(
-      opacity: _entryFade,
-      child: ScaleTransition(
-        scale: _entryScale,
-        child: GestureDetector(
-          onTapDown: (_) {
-            if (!widget.isDisabled) setState(() => _pressed = true);
-          },
-          onTapUp: (_) {
-            setState(() => _pressed = false);
-            widget.onTap?.call();
-          },
-          onTapCancel: () => setState(() => _pressed = false),
-          child: AnimatedScale(
-            scale: _pressed ? 0.93 : 1.0,
-            duration: const Duration(milliseconds: 80),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 300),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: widget.gradient,
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(
-                    color: widget.gradient[0].withOpacity(
-                      _pressed ? 0.2 : 0.35,
-                    ),
-                    blurRadius: _pressed ? 4 : 12,
-                    offset: Offset(0, _pressed ? 2 : 5),
-                  ),
-                ],
-              ),
-              child: Stack(
-                children: [
-                  // Highlight 3D
-                  Positioned(
-                    top: 8,
-                    left: 10,
-                    child: Container(
-                      width: 50,
-                      height: 8,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.25),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                    ),
-                  ),
-
-                  // Icon kết quả
-                  if (widget.isCorrect || widget.isWrong)
-                    Positioned(
-                      top: 8,
-                      right: 8,
-                      child: AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 300),
-                        transitionBuilder:
-                            (child, anim) =>
-                                ScaleTransition(scale: anim, child: child),
-                        child: Text(
-                          widget.isCorrect ? "✅" : "❌",
-                          key: ValueKey(widget.isCorrect),
-                          style: const TextStyle(fontSize: 18),
-                        ),
-                      ),
-                    ),
-
-                  // Nội dung
-                  Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: Text(
-                        widget.text,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                          height: 1.3,
-                          shadows: [
-                            Shadow(
-                              color: Colors.black26,
-                              blurRadius: 4,
-                              offset: Offset(0, 1),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
     );
   }
 }

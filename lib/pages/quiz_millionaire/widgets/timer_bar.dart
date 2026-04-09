@@ -33,7 +33,7 @@ class _TimerBarState extends State<TimerBar> {
     return BlocBuilder<MillionaireBloc, MillionaireState>(
       buildWhen: (p, c) => p.timeLeft != c.timeLeft,
       builder: (context, state) {
-        final progress = (state.timeLeft / 60).clamp(0.0, 1.0);
+        final progress = (state.timeLeft / 30).clamp(0.0, 1.0);
         final isWarning = state.timeLeft <= 10;
 
         /// 🔥 Trigger sound đúng 1 lần

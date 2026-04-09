@@ -28,8 +28,6 @@ class UserLevelRepository {
     required int score,
     required String userId,
   }) async {
-    final uid = FirebaseAuth.instance.currentUser!.uid;
-
     final docRef = FirebaseFirestore.instance
         .collection('level_user')
         .doc("${userId}");
@@ -41,7 +39,59 @@ class UserLevelRepository {
           'status': score >= 6 ? 'completed' : 'failed',
         },
       },
-    }, SetOptions(merge: true)); // 🔥 giữ lại các level khác
+    }, SetOptions(merge: true));
+  }
+
+  Future<void> resetLevelsFrom({
+    required List<String> allLevelIds,
+    required int startIndex,
+    required String userId,
+  }) async {
+    final docRef = FirebaseFirestore.instance
+        .collection('level_user')
+        .doc(userId);
+
+    Map<String, dynamic> updatedLevels = {};
+
+    for (int i = startIndex; i < allLevelIds.length; i++) {
+      final levelId = allLevelIds[i];
+
+      updatedLevels[levelId] = {
+        'score': 0,
+        'status': 'locked', // hoặc 'not_started'
+      };
+    }
+
+    await docRef.set({'levels': updatedLevels}, SetOptions(merge: true));
+  }
+  // user_level_repository.dart
+
+  /// Lưu kết quả level — chỉ lưu status nếu type là 'soman', type 'direct' chỉ lưu điểm
+  Future<void> saveLevelWithType({
+    required String userId,
+    required String levelId,
+    required int score,
+    required String type, // 'direct' | 'soman'
+  }) async {
+    final docRef = _firestore.collection('level_user').doc(userId);
+
+    if (type == 'direct') {
+      // Chỉ lưu điểm, không ghi status
+      await docRef.set({
+        'levels': {
+          levelId: {'score': score},
+        },
+      }, SetOptions(merge: true));
+    } else {
+      await docRef.set({
+        'levels': {
+          levelId: {
+            'score': score,
+            'status': score >= 6 ? 'completed' : 'failed',
+          },
+        },
+      }, SetOptions(merge: true));
+    }
   }
 
   // =========================================================

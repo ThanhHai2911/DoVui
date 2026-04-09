@@ -87,7 +87,7 @@
           questions: quizState.questions,
           currentIndex: 0,
           correctCount: 0,
-          timeLeft: 60,
+          timeLeft: 30,
           clearSelected: true,
           clearHidden: true,
         ));
@@ -139,7 +139,7 @@
         currentIndex: nextIndex >= 15 ? 14 : nextIndex,
         correctCount: newCorrectCount,
         safePts: newSafePts,
-        timeLeft: 60,
+        timeLeft: 30,
         clearSelected: true,
         clearHidden: true,
       ));

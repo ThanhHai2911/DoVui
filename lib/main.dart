@@ -2,6 +2,7 @@ import 'package:dovui/data/repositories/user_repository.dart';
 import 'package:dovui/pages/ads/ads_service.dart';
 import 'package:dovui/pages/splash/splash_screen.dart';
 import 'package:dovui/pages/user/bloc/user_bloc.dart';
+import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -17,10 +18,13 @@ void main() async {
   await MobileAds.instance.initialize();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   await dotenv.load(fileName: ".env");
+  final analytics = FirebaseAnalytics.instance;
+  await analytics.logAppOpen();
 
   // Load ads sau khi init xong
   RewardedAdManager().loadAd();
-  AppOpenAdManager().loadAd();
+  InterstitialAdManager().loadAd();
+  NativeAdManager().loadAd(); 
 
   runApp(const MyApp());
 }
@@ -42,26 +46,12 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
 
-    // Hiện App Open Ad sau khi app render xong
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      Future.delayed(const Duration(seconds: 2), () {
-        AppOpenAdManager().showAdIfAvailable();
-      });
-    });
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
-  }
-
-  // Hiện ad khi user quay lại app từ background
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) {
-      AppOpenAdManager().showAdIfAvailable();
-    }
   }
 
   @override

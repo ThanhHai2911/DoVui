@@ -1,6 +1,4 @@
 import 'package:dovui/data/audio/audio_manager.dart';
-import 'package:dovui/resources/color_manager.dart';
-import 'package:dovui/pages/it_topic/topic_screen.dart';
 import 'package:dovui/pages/level/level_screen.dart';
 import 'package:dovui/pages/quiz/quiz_screen.dart';
 import 'package:flutter/material.dart';
@@ -53,6 +51,14 @@ class CategoriesItem extends StatelessWidget {
             ),
           );
         }else if (type == "man") {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => Levelscreen(categoryId: categoryId, type: type),
+            ),
+          );
+        }
+        else if (type == "soman") {
           Navigator.push(
             context,
             MaterialPageRoute(
@@ -183,9 +189,9 @@ class CategoriesItem extends StatelessWidget {
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Text(
-                          (type == "imagequiz" || type == "level")
-                              ? "Theo cấp độ"
-                              : "Câu hỏi",
+                          (type == "imagequiz" || type == "level" || type == "man" || type == "soman")
+                              ? "Màn chơi"
+                              : "Câu Hỏi",
                           style: TextStyle(
                             fontSize: 10,
                             fontWeight: FontWeight.w600,

@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:dovui/data/models/man_model.dart';
 import 'package:dovui/data/models/user_level_model.dart';
@@ -12,7 +13,9 @@ class LevelBloc extends Bloc<LevelEvent, LevelState> {
 
   LevelBloc() : super(LevelLoading()) {
     on<LoadLevels>(_onLoadLevels);
+    on<ResetLevelsFrom>(_onResetLevelsFrom); 
   }
+  
 
   Future<void> _onLoadLevels(
   LoadLevels event,
@@ -44,5 +47,26 @@ class LevelBloc extends Bloc<LevelEvent, LevelState> {
   } catch (e) {
     emit(LevelError(e.toString()));
   }
+}
+Future<void> _onResetLevelsFrom(
+  ResetLevelsFrom event,
+  Emitter<LevelState> emit,
+) async {
+  final currentState = state;
+  if (currentState is! LevelLoaded) return;
+
+  final uid = FirebaseAuth.instance.currentUser?.uid;
+  if (uid == null) return;
+
+  final levels = currentState.levels;
+
+  // ✅ Đổi tên biến thành levelIds để tránh trùng
+  final levelIds = levels.map((l) => l.id as String).toList();
+
+  await _repo.resetLevelsFrom(
+    allLevelIds: levelIds,   // ← dùng levelIds
+    startIndex: event.fromIndex,
+    userId: uid,
+  );
 }
 }

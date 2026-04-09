@@ -73,7 +73,7 @@ class AskContinueDialog extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 4),
-                const Text('điểm',
+                const Text('Sao',
                     style: TextStyle(fontSize: 14, color: Colors.white38)),
                 const SizedBox(height: 20),
                 const Divider(color: Colors.white12),
@@ -119,7 +119,7 @@ class AskContinueDialog extends StatelessWidget {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text('Điểm an toàn:',
+                        const Text('Sao an toàn:',
                             style: TextStyle(
                                 fontSize: 13,
                                 color: Color(0xFF4CFF8C))),
@@ -181,7 +181,7 @@ class AskContinueDialog extends StatelessWidget {
 
   String _formatPts(int pts) {
     if (pts >= 1000) {
-      return '${(pts / 1000).toStringAsFixed(pts % 1000 == 0 ? 0 : 1)}.000';
+      return '${(pts / 1000).toStringAsFixed(pts % 1000 == 0 ? 0 : 1)}000';
     }
     return '$pts';
   }

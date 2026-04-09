@@ -14,6 +14,8 @@ class QuizState extends Equatable {
   final bool isGameOver;
   final bool isWin;
   final int? eliminatedIndex;
+  final List<int> eliminatedIndexes;
+  final String? hintError;
 
   const QuizState({
     this.isLoading = true,
@@ -27,6 +29,8 @@ class QuizState extends Equatable {
     this.timeLeft = 15,
     this.isGameOver = false,
     this.isWin = false, this.eliminatedIndex,
+    this.eliminatedIndexes = const [],
+    this.hintError,
   });
 
   QuizState copyWith({
@@ -41,7 +45,9 @@ class QuizState extends Equatable {
   int? timeLeft,
   bool? isGameOver,
   bool? isWin,
-  int? eliminatedIndex,        
+  int? eliminatedIndex,   
+  List<int>? eliminatedIndexes, 
+  String? hintError,     
 }) {
   return QuizState(
     isLoading: isLoading ?? this.isLoading,
@@ -56,6 +62,8 @@ class QuizState extends Equatable {
     isGameOver: isGameOver ?? this.isGameOver,
     isWin: isWin ?? this.isWin,
     eliminatedIndex: eliminatedIndex ?? this.eliminatedIndex,
+    eliminatedIndexes: eliminatedIndexes ?? this.eliminatedIndexes,
+    hintError: hintError,
   );
 }
 
@@ -73,5 +81,7 @@ class QuizState extends Equatable {
         isGameOver,
         isWin,
         eliminatedIndex,
+        eliminatedIndexes,
+        hintError,
       ];
 }

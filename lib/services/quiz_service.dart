@@ -196,4 +196,34 @@ class QuizService {
       'score': FieldValue.increment(score),
     });
   }
+
+static Future<int> getUserScore() async {
+  final uid = FirebaseAuth.instance.currentUser?.uid;
+  if (uid == null) return 0;
+  final doc = await _firestore.collection('users').doc(uid).get();
+  return (doc.data()?['score'] as int?) ?? 0;
+}
+
+static Future<bool> deductStars(int amount) async {
+  final uid = FirebaseAuth.instance.currentUser?.uid;
+  if (uid == null) return false;
+
+  final docRef = _firestore.collection('users').doc(uid);
+
+  return _firestore.runTransaction<bool>((tx) async {
+    final doc = await tx.get(docRef);
+
+    final current = (doc.data()?['score'] as num?)?.toInt() ?? 0;
+
+    print("Current score: $current"); // 👈 debug
+
+    if (current < amount) return false;
+
+    tx.update(docRef, {
+      'score': current - amount,
+    });
+
+    return true;
+  });
+}
 }

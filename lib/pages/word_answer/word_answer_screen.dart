@@ -129,7 +129,7 @@ class _WordAnswerScreenState extends State<WordAnswerScreen>
     final maxScore = total * 10;
     final percent = maxScore > 0 ? ((score / maxScore) * 10).round() : 0;
 
-    await _userLevelRepo.saveLevel(
+    _userLevelRepo.saveLevel(
       userId: userId,
       levelId: widget.levelId!,
       score: percent,
@@ -157,144 +157,150 @@ class _WordAnswerScreenState extends State<WordAnswerScreen>
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create:
-          (_) => WordAnswerBloc(
-            categoryId: widget.categoryId,
-            levelId: widget.levelId,
-            type: widget.type,
-          )..add(LoadQuestions()),
-      child: BlocConsumer<WordAnswerBloc, WordAnswerState>(
-        listener: (context, state) async {
-          if (state is WordAnswerCompleted) {
-            await _saveResult(score: state.score, total: state.total);
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(
-                builder:
-                    (_) => GameCompleteScreen(
-                      score: state.score,
-                      totalQuestions: state.total,
-                      isWin:
-                          state.total > 0 &&
-                          (state.score / (state.total * 10)) >= 0.6,
-                      categoryId: widget.categoryId,
-                      levelId: widget.levelId,
-                      type: widget.type,
-                    ),
-              ),
-            );
-          }
-          if (state is WordAnswerTimeUp) {
-            await _saveResult(score: state.score, total: state.total);
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(
-                builder:
-                    (_) => GameCompleteScreen(
-                      score: state.score,
-                      totalQuestions: state.total,
-                      isWin:
-                          state.total > 0 &&
-                          (state.score / (state.total * 10)) >= 0.6,
-                      categoryId: widget.categoryId,
-                      levelId: widget.levelId,
-                      type: widget.type,
-                    ),
-              ),
-            );
-          }
-        },
-        builder: (context, state) {
-          if (state is WordAnswerLoading) return const WordAnswerShimmer();
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {},
+      child: BlocProvider(
+        create:
+            (_) => WordAnswerBloc(
+              categoryId: widget.categoryId,
+              levelId: widget.levelId,
+              type: widget.type,
+            )..add(LoadQuestions()),
+        child: BlocConsumer<WordAnswerBloc, WordAnswerState>(
+          listener: (context, state) async {
+            if (state is WordAnswerCompleted) {
+              _saveResult(score: state.score, total: state.total);
+              NativeAdManager().loadAd();
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                  builder:
+                      (_) => GameCompleteScreen(
+                        score: state.score,
+                        totalQuestions: state.total,
+                        isWin:
+                            state.total > 0 &&
+                            (state.score / (state.total * 10)) >= 0.6,
+                        categoryId: widget.categoryId,
+                        levelId: widget.levelId,
+                        type: widget.type,
+                      ),
+                ),
+              );
+            }
+            if (state is WordAnswerTimeUp) {
+              _saveResult(score: state.score, total: state.total);
+              NativeAdManager().loadAd();
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                  builder:
+                      (_) => GameCompleteScreen(
+                        score: state.score,
+                        totalQuestions: state.total,
+                        isWin:
+                            state.total > 0 &&
+                            (state.score / (state.total * 10)) >= 0.6,
+                        categoryId: widget.categoryId,
+                        levelId: widget.levelId,
+                        type: widget.type,
+                      ),
+                ),
+              );
+            }
+          },
+          builder: (context, state) {
+            if (state is WordAnswerLoading) return const WordAnswerShimmer();
 
-          if (state is WordAnswerLoaded) {
-            final controller = state.controller;
-            final question = state.question;
+            if (state is WordAnswerLoaded) {
+              final controller = state.controller;
+              final question = state.question;
 
-            // Trigger animation mỗi khi câu hỏi đổi
-            _triggerQuestionAnim(question.question);
+              // Trigger animation mỗi khi câu hỏi đổi
+              _triggerQuestionAnim(question.question);
 
-            return Scaffold(
-              backgroundColor: const Color(0xFFF4F6FF),
-              body: Stack(
-                children: [
-                  _buildBackground(),
-                  FadeTransition(
-                    opacity: _fadeAnim,
-                    child: SlideTransition(
-                      position: _slideAnim,
-                      child: SafeArea(
-                        child: Column(
-                          children: [
-                            const SizedBox(height: 12),
+              return Scaffold(
+                backgroundColor: const Color(0xFFF4F6FF),
+                body: Stack(
+                  children: [
+                    _buildBackground(),
+                    FadeTransition(
+                      opacity: _fadeAnim,
+                      child: SlideTransition(
+                        position: _slideAnim,
+                        child: SafeArea(
+                          child: Column(
+                            children: [
+                              const SizedBox(height: 12),
 
-                            Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                              ),
-                              child: WordAnswerHeader(
-                                lives: controller.lives,
-                                timeLeft: controller.timeLeft,
-                                currentIndex: state.currentIndex,
-                                totalQuestions: state.questions.length,
-                              ),
-                            ),
-
-                            const SizedBox(height: 20),
-
-                            Expanded(
-                              child: Padding(
+                              Padding(
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 16,
                                 ),
-                                child: Column(
-                                  children: [
-                                    /// Card câu hỏi — scale + fade khi đổi
-                                    FadeTransition(
-                                      opacity: _questionFadeAnim,
-                                      child: ScaleTransition(
-                                        scale: _questionScaleAnim,
-                                        child: _buildQuestionCard(question),
-                                      ),
-                                    ),
-
-                                    const Spacer(),
-
-                                    WordAnswerInput(
-                                      userInput: controller.userInput,
-                                      onRemove: controller.removeLetter,
-                                      controller: controller,
-                                    ),
-
-                                    const Spacer(),
-
-                                    LetterPoolWidget(
-                                      letters: controller.letterPool,
-                                      onSelect: controller.selectLetter,
-                                    ),
-
-                                    const SizedBox(height: 20),
-
-                                    _buildHintBar(context),
-
-                                    const SizedBox(height: 16),
-                                  ],
+                                child: WordAnswerHeader(
+                                  lives: controller.lives,
+                                  timeLeft: controller.timeLeft,
+                                  currentIndex: state.currentIndex,
+                                  totalQuestions: state.questions.length,
                                 ),
                               ),
-                            ),
-                          ],
+
+                              const SizedBox(height: 20),
+
+                              Expanded(
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                  ),
+                                  child: Column(
+                                    children: [
+                                      /// Card câu hỏi — scale + fade khi đổi
+                                      FadeTransition(
+                                        opacity: _questionFadeAnim,
+                                        child: ScaleTransition(
+                                          scale: _questionScaleAnim,
+                                          child: _buildQuestionCard(question),
+                                        ),
+                                      ),
+
+                                      const Spacer(),
+
+                                      WordAnswerInput(
+                                        userInput: controller.userInput,
+                                        onRemove: controller.removeLetter,
+                                        controller: controller,
+                                      ),
+
+                                      const Spacer(),
+
+                                      LetterPoolWidget(
+                                        letters: controller.letterPool,
+                                        onSelect: controller.selectLetter,
+                                      ),
+
+                                      const SizedBox(height: 20),
+
+                                      _buildHintBar(context),
+
+                                      const SizedBox(height: 16),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                ],
-              ),
-            );
-          }
+                  ],
+                ),
+              );
+            }
 
-          return const WordAnswerShimmer();
-        },
+            return const WordAnswerShimmer();
+          },
+        ),
       ),
     );
   }

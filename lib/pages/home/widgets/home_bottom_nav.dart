@@ -1,4 +1,3 @@
-import 'package:dovui/pages/adddulieu/adddulieu.dart';
 import 'package:dovui/pages/category/categories_screen.dart';
 import 'package:dovui/pages/home/home_screen.dart';
 import 'package:dovui/pages/leaderboard/Leaderboard_screen.dart';
@@ -79,6 +78,7 @@ class _HomeBottomNavState extends State<HomeBottomNav> {
             //VietnamLandmarkSetupExtra.setupLevels5to50();
             //VietnamMixedSetup.setupLevels5to50();
             //MillionaireDataSetup.run();
+            //RiddleDataSetup.setup();
           });
         },
         child: Center(

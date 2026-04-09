@@ -1,5 +1,6 @@
 import 'package:dovui/data/audio/audio_manager.dart';
 import 'package:dovui/data/repositories/user_level_repository.dart';
+import 'package:dovui/pages/ads/ads_service.dart';
 import 'package:dovui/pages/quiz_millionaire/widgets/askcontinue_dialog.dart';
 import 'package:dovui/pages/quiz_millionaire/widgets/prizeladderoverlay.dart';
 import 'package:flutter/material.dart';
@@ -15,7 +16,6 @@ import 'widgets/millionaire_top_bar.dart';
 import 'widgets/question_card.dart';
 import 'widgets/answer_grid.dart';
 import 'widgets/timer_bar.dart';
-
 
 class MillionaireScreen extends StatefulWidget {
   final String categoryId;
@@ -39,22 +39,19 @@ class _MillionaireScreenState extends State<MillionaireScreen> {
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (_) => MillionaireBloc(quizBloc: QuizBloc())
-        ..add(
-          LoadMillionaire(
-            categoryId: widget.categoryId,
-            levelId: widget.levelId,
-            type: widget.type,
+      create:
+          (_) => MillionaireBloc(quizBloc: QuizBloc())..add(
+            LoadMillionaire(
+              categoryId: widget.categoryId,
+              levelId: widget.levelId,
+              type: widget.type,
+            ),
           ),
-        ),
       child: const _MillionaireView(),
     );
   }
 
-  Future<void> _saveResult({
-    required int score,
-    required int total,
-  }) async {
+  Future<void> _saveResult({required int score, required int total}) async {
     if (widget.levelId == null) return;
 
     final prefs = await SharedPreferences.getInstance();
@@ -63,10 +60,9 @@ class _MillionaireScreenState extends State<MillionaireScreen> {
     if (userId == null) return;
 
     final maxScore = total * 10;
-    final percent =
-        maxScore > 0 ? ((score / maxScore) * 10).round() : 0;
+    final percent = maxScore > 0 ? ((score / maxScore) * 10).round() : 0;
 
-    await _userLevelRepo.saveLevel(
+    _userLevelRepo.saveLevel(
       userId: userId,
       levelId: widget.levelId!,
       score: percent,
@@ -86,7 +82,7 @@ class _MillionaireViewState extends State<_MillionaireView> {
 
   @override
   void initState() {
-    super.initState();  
+    super.initState();
 
     AudioManager().stopBackgroundMusic();
 
@@ -95,73 +91,80 @@ class _MillionaireViewState extends State<_MillionaireView> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocConsumer<MillionaireBloc, MillionaireState>(
-      listenWhen: (prev, curr) => prev.status != curr.status,
-      listener: (context, state) async {
-        if (!_isNavigated &&
-            (state.isGameOver || state.isFinished)) {
-          _isNavigated = true;
-          await _navigateToResult(context, state);
-        }
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {},
+      child: BlocConsumer<MillionaireBloc, MillionaireState>(
+        listenWhen: (prev, curr) => prev.status != curr.status,
+        listener: (context, state) async {
+          if (!_isNavigated && (state.isGameOver || state.isFinished)) {
+            _isNavigated = true;
+            _navigateToResult(context, state);
+          }
 
-        if (state.isAskContinue) {
-          _showAskContinue(context);
-        }
-      },
-      builder: (context, state) {
-        if (state.isLoading) return const _LoadingView();
+          if (state.isAskContinue) {
+            _showAskContinue(context);
+          }
+        },
+        builder: (context, state) {
+          if (state.isLoading) return const _LoadingView();
 
-        if (state.currentQuestion == null && !state.isLoading) {
-          return const _EmptyView();
-        }
+          if (state.currentQuestion == null && !state.isLoading) {
+            return const _EmptyView();
+          }
 
-        return Scaffold(
-          backgroundColor: MillionaireColors.bgPage,
-          body: Stack(
-            children: [
-              const StarfieldBackground(),
+          return Scaffold(
+            backgroundColor: MillionaireColors.bgPage,
+            body: Stack(
+              children: [
+                const StarfieldBackground(),
 
-              SafeArea(
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: Column(
-                        children: [
-                          Expanded(
-                            child: SingleChildScrollView(
-                              padding:
-                                  const EdgeInsets.fromLTRB(14, 10, 8, 20),
-                              child: Column(
-                                crossAxisAlignment:
-                                    CrossAxisAlignment.stretch,
-                                children: const [
-                                  TimerBar(),
-                                  SizedBox(height: 40),
-                                  QuestionCard(),
-                                  SizedBox(height: 60),
-                                  AnswerGrid(),
-                                ],
+                SafeArea(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          children: [
+                            Expanded(
+                              child: SingleChildScrollView(
+                                padding: const EdgeInsets.fromLTRB(
+                                  14,
+                                  10,
+                                  8,
+                                  20,
+                                ),
+                                child: Column(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.stretch,
+                                  children: const [
+                                    TimerBar(),
+                                    SizedBox(height: 40),
+                                    QuestionCard(),
+                                    SizedBox(height: 60),
+                                    AnswerGrid(),
+                                  ],
+                                ),
                               ),
                             ),
-                          ),
-                          const MillionaireTopBar(),
-                        ],
+                            const MillionaireTopBar(),
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
 
-              if (state.isShowPrizeLadder)
-                BlocProvider.value(
-                  value: context.read<MillionaireBloc>(),
-                  child: const PrizeLadderOverlay(),
-                ),
-            ],
-          ),
-        );
-      },
+                if (state.isShowPrizeLadder)
+                  BlocProvider.value(
+                    value: context.read<MillionaireBloc>(),
+                    child: const PrizeLadderOverlay(),
+                  ),
+              ],
+            ),
+          );
+        },
+      ),
     );
   }
 
@@ -170,33 +173,33 @@ class _MillionaireViewState extends State<_MillionaireView> {
     BuildContext context,
     MillionaireState state,
   ) async {
-    final screen =
-        context.findAncestorWidgetOfExactType<MillionaireScreen>();
+    final screen = context.findAncestorWidgetOfExactType<MillionaireScreen>();
 
-    final stateful =
-        context.findAncestorStateOfType<_MillionaireScreenState>();
+    final stateful = context.findAncestorStateOfType<_MillionaireScreenState>();
 
     if (stateful != null) {
-      await stateful._saveResult(
+      stateful._saveResult(
         score: state.finalScore,
         total: state.questions.length,
       );
     }
 
-    final isWin = state.questions.isNotEmpty &&
+    final isWin =
+        state.questions.isNotEmpty &&
         (state.finalScore / (state.questions.length * 10)) >= 0.6;
-
+    NativeAdManager().loadAd();
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
-        builder: (_) => GameCompleteScreen(
-          score: state.finalScore,
-          totalQuestions: state.questions.length,
-          isWin: isWin,
-          categoryId: screen?.categoryId ?? '',
-          levelId: screen?.levelId,
-          type: screen?.type ?? '',
-        ),
+        builder:
+            (_) => GameCompleteScreen(
+              score: state.finalScore,
+              totalQuestions: state.questions.length,
+              isWin: isWin,
+              categoryId: screen?.categoryId ?? '',
+              levelId: screen?.levelId,
+              type: screen?.type ?? '',
+            ),
       ),
     );
   }
@@ -205,10 +208,11 @@ class _MillionaireViewState extends State<_MillionaireView> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (_) => BlocProvider.value(
-        value: context.read<MillionaireBloc>(),
-        child: const AskContinueDialog(),
-      ),
+      builder:
+          (_) => BlocProvider.value(
+            value: context.read<MillionaireBloc>(),
+            child: const AskContinueDialog(),
+          ),
     );
   }
 }
@@ -218,13 +222,11 @@ class _LoadingView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => const Scaffold(
-        backgroundColor: MillionaireColors.bgDeep,
-        body: Center(
-          child: CircularProgressIndicator(
-            color: MillionaireColors.gold,
-          ),
-        ),
-      );
+    backgroundColor: MillionaireColors.bgDeep,
+    body: Center(
+      child: CircularProgressIndicator(color: MillionaireColors.gold),
+    ),
+  );
 }
 
 class _EmptyView extends StatelessWidget {
@@ -232,12 +234,12 @@ class _EmptyView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => const Scaffold(
-        backgroundColor: MillionaireColors.bgDeep,
-        body: Center(
-          child: Text(
-            'Chưa có câu hỏi cho chuyên đề này',
-            style: TextStyle(color: Colors.white70, fontSize: 16),
-          ),
-        ),
-      );
+    backgroundColor: MillionaireColors.bgDeep,
+    body: Center(
+      child: Text(
+        'Chưa có câu hỏi cho chuyên đề này',
+        style: TextStyle(color: Colors.white70, fontSize: 16),
+      ),
+    ),
+  );
 }

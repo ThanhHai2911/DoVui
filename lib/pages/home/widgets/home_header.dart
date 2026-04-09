@@ -1,4 +1,5 @@
 import 'package:dovui/pages/ads/ads_service.dart';
+import 'package:dovui/pages/home/widgets/game_dialog.dart';
 import 'package:dovui/resources/color_manager.dart';
 import 'package:dovui/pages/user/bloc/user_bloc.dart';
 import 'package:flutter/material.dart';
@@ -37,39 +38,60 @@ class _HomeHeaderState extends State<HomeHeader>
     super.dispose();
   }
 
+  // ✅ 3 hàm ngang hàng nhau, không lồng vào nhau
   void _onTapScore(BuildContext context) {
-  if (!RewardedAdManager().isAdLoaded) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('⏳ Quảng cáo chưa sẵn sàng, thử lại sau!'),
-        backgroundColor: Colors.orange,
-      ),
-    );
-    return;
-  }
+  showGameDialog(
+    context: context,
+    icon: '⭐',
+    iconColor: Colors.amber,
+    title: 'Nhận Thêm Sao',
+    description: 'Xem 1 quảng cáo ngắn để nhận\nphần thưởng ngay!',
+    costIcon: '⭐',
+    costText: '+10 Sao mỗi lần xem',
+    confirmText: 'Xem ngay',
+    confirmColor: Colors.amber.shade600,
+    showCancel: true,
+    onConfirm: () {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _showRewardedAd(context);
+      });
+    },
+  );
+}
 
-  RewardedAdManager().showAd(
-    onRewarded: () {
-      if (context.mounted) {
-        context.read<UserBloc>().add(AddScoreEvent(10)); // ✅ không giới hạn số lần
+  void _showRewardedAd(BuildContext context) {
+    if (!RewardedAdManager().isAdLoaded) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('⏳ Quảng cáo chưa sẵn sàng, thử lại sau!'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    RewardedAdManager().showAd(
+      onRewarded: () {
+        if (!mounted) return;
+        context.read<UserBloc>().add(AddScoreEvent(10));
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('🎉 +10 ⭐ Cảm ơn bạn đã xem!'),
             backgroundColor: Color(0xFF43C6AC),
           ),
         );
-      }
-    },
-    onFailed: () {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('❌ Không tải được quảng cáo, thử lại sau!'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    },
-  );
-}
+      },
+      onFailed: () {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('❌ Không tải được quảng cáo, thử lại sau!'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -183,16 +205,24 @@ class _HomeHeaderState extends State<HomeHeader>
                           Positioned(
                             bottom: -6,
                             left: -6,
-                            child: Container(
-                              padding: const EdgeInsets.all(4),
-                              decoration: const BoxDecoration(
-                                color: Colors.green,
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Icon(
-                                Icons.add,
-                                color: Colors.white,
-                                size: 14,
+                            child: GestureDetector(
+                              onTap:
+                                  () => _onTapScore(
+                                    context,
+                                  ), // ✅ tap vào đây mới show dialog
+                              child: Container(
+                                padding: const EdgeInsets.all(
+                                  4,
+                                ), // tăng padding để dễ bấm hơn
+                                decoration: const BoxDecoration(
+                                  color: Colors.green,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Icons.add,
+                                  color: Colors.white,
+                                  size: 14,
+                                ),
                               ),
                             ),
                           ),

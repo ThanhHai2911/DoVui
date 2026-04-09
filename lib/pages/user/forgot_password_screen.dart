@@ -76,29 +76,30 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
   }
 
   Future<void> _checkEmailExists(String email) async {
-  setState(() => _isCheckingName = true);
+    setState(() => _isCheckingName = true);
 
-  try {
-    final query = await FirebaseFirestore.instance
-        .collection('users')
-        .where('email', isEqualTo: email)
-        .limit(1)
-        .get();
+    try {
+      final query =
+          await FirebaseFirestore.instance
+              .collection('users')
+              .where('email', isEqualTo: email)
+              .limit(1)
+              .get();
 
-    if (!mounted) return;
+      if (!mounted) return;
 
-    setState(() {
-      _nameFound = query.docs.isNotEmpty;
-      _nameError = query.docs.isEmpty ? "Email không tồn tại" : null;
-      _isCheckingName = false;
-    });
-  } catch (e) {
-    setState(() {
-      _nameError = "Lỗi kết nối";
-      _isCheckingName = false;
-    });
+      setState(() {
+        _nameFound = query.docs.isNotEmpty;
+        _nameError = query.docs.isEmpty ? "Email không tồn tại" : null;
+        _isCheckingName = false;
+      });
+    } catch (e) {
+      setState(() {
+        _nameError = "Lỗi kết nối";
+        _isCheckingName = false;
+      });
+    }
   }
-}
 
   // ─── Xác nhận đổi mật khẩu ──────────────────────────────────────────────────
   Future<void> _onSubmit() async {
@@ -206,148 +207,152 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: SafeArea(
-        child: Stack(
-          children: [
-            // Accent blobs
-            Positioned(
-              top: -50,
-              right: -50,
-              child: Container(
-                width: 160,
-                height: 160,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: const Color(0xFF6C63FF).withOpacity(0.07),
-                ),
-              ),
-            ),
-            Positioned(
-              bottom: -40,
-              left: -40,
-              child: Container(
-                width: 140,
-                height: 140,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: const Color(0xFF43C6AC).withOpacity(0.07),
-                ),
-              ),
-            ),
-
-            Column(
-              children: [
-                // AppBar custom
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
-                  ),
-                  child: Row(
-                    children: [
-                      IconButton(
-                        icon: const Icon(
-                          Icons.arrow_back_ios_new_rounded,
-                          size: 20,
-                          color: Color(0xFF1E1B4B),
-                        ),
-                        onPressed: () => Navigator.pop(context),
-                      ),
-                      const Text(
-                        "Đặt lại mật khẩu",
-                        style: TextStyle(
-                          fontSize: 17,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF1E1B4B),
-                        ),
-                      ),
-                    ],
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {},
+      child: Scaffold(
+        backgroundColor: Colors.white,
+        body: SafeArea(
+          child: Stack(
+            children: [
+              // Accent blobs
+              Positioned(
+                top: -50,
+                right: -50,
+                child: Container(
+                  width: 160,
+                  height: 160,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: const Color(0xFF6C63FF).withOpacity(0.07),
                   ),
                 ),
+              ),
+              Positioned(
+                bottom: -40,
+                left: -40,
+                child: Container(
+                  width: 140,
+                  height: 140,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: const Color(0xFF43C6AC).withOpacity(0.07),
+                  ),
+                ),
+              ),
 
-                Expanded(
-                  child: SingleChildScrollView(
+              Column(
+                children: [
+                  // AppBar custom
+                  Padding(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 28,
-                      vertical: 8,
+                      horizontal: 8,
+                      vertical: 4,
                     ),
-                    child: TweenAnimationBuilder(
-                      tween: Tween(begin: 0.95, end: 1.0),
-                      duration: const Duration(milliseconds: 400),
-                      curve: Curves.easeOutBack,
-                      builder:
-                          (context, value, child) =>
-                              Transform.scale(scale: value, child: child),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Icon nổi
-                          Center(
-                            child: AnimatedBuilder(
-                              animation: _floatAnim,
-                              builder:
-                                  (_, child) => Transform.translate(
-                                    offset: Offset(0, _floatAnim.value),
-                                    child: child,
-                                  ),
-                              child: Container(
-                                padding: const EdgeInsets.all(18),
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: const Color(
-                                    0xFF6C63FF,
-                                  ).withOpacity(0.1),
-                                  border: Border.all(
+                    child: Row(
+                      children: [
+                        IconButton(
+                          icon: const Icon(
+                            Icons.arrow_back_ios_new_rounded,
+                            size: 20,
+                            color: Color(0xFF1E1B4B),
+                          ),
+                          onPressed: () => Navigator.pop(context),
+                        ),
+                        const Text(
+                          "Đặt lại mật khẩu",
+                          style: TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF1E1B4B),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  Expanded(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 28,
+                        vertical: 8,
+                      ),
+                      child: TweenAnimationBuilder(
+                        tween: Tween(begin: 0.95, end: 1.0),
+                        duration: const Duration(milliseconds: 400),
+                        curve: Curves.easeOutBack,
+                        builder:
+                            (context, value, child) =>
+                                Transform.scale(scale: value, child: child),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Icon nổi
+                            Center(
+                              child: AnimatedBuilder(
+                                animation: _floatAnim,
+                                builder:
+                                    (_, child) => Transform.translate(
+                                      offset: Offset(0, _floatAnim.value),
+                                      child: child,
+                                    ),
+                                child: Container(
+                                  padding: const EdgeInsets.all(18),
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
                                     color: const Color(
                                       0xFF6C63FF,
-                                    ).withOpacity(0.2),
+                                    ).withOpacity(0.1),
+                                    border: Border.all(
+                                      color: const Color(
+                                        0xFF6C63FF,
+                                      ).withOpacity(0.2),
+                                    ),
                                   ),
-                                ),
-                                child: const Text(
-                                  "🔑",
-                                  style: TextStyle(fontSize: 44),
+                                  child: const Text(
+                                    "🔑",
+                                    style: TextStyle(fontSize: 44),
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
 
-                          const SizedBox(height: 24),
+                            const SizedBox(height: 24),
 
-                          const Text(
-                            "Quên mật khẩu?",
-                            style: TextStyle(
-                              fontSize: 26,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF1E1B4B),
+                            const Text(
+                              "Quên mật khẩu?",
+                              style: TextStyle(
+                                fontSize: 26,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF1E1B4B),
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            "Nhập email để đặt lại mật khẩu",
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey.shade500,
+                            const SizedBox(height: 6),
+                            Text(
+                              "Nhập email để đặt lại mật khẩu",
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey.shade500,
+                              ),
                             ),
-                          ),
 
-                          const SizedBox(height: 32),
+                            const SizedBox(height: 32),
 
-                          // ── Ô nhập tên ──────────────────────────────────────
-                          _fieldLabel("Email"),
-                          const SizedBox(height: 8),
-                          _buildNameField(),
+                            // ── Ô nhập tên ──────────────────────────────────────
+                            _fieldLabel("Email"),
+                            const SizedBox(height: 8),
+                            _buildNameField(),
 
-                          const SizedBox(height: 20),
-                        ],
+                            const SizedBox(height: 20),
+                          ],
+                        ),
                       ),
                     ),
                   ),
-                ),
-              ],
-            ),
-          ],
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -503,41 +508,41 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
               ],
             ),
           ),
-          const SizedBox(height: 30),
+        const SizedBox(height: 30),
         if (_nameFound)
           SizedBox(
-                          width: double.infinity,
-                          height: 56,
-                          child: ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: ColorManager.gamecomplete,
-                              disabledBackgroundColor: Colors.grey.shade200,
-                              elevation: 0,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                            ),
-                            onPressed: _isSubmitting ? null : _onSubmit,
-                            child:
-                                _isSubmitting
-                                    ? const SizedBox(
-                                      width: 22,
-                                      height: 22,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2.5,
-                                        color: Colors.white,
-                                      ),
-                                    )
-                                    : const Text(
-                                      "Gửi link đặt lại mật khẩu",
-                                      style: TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                          ),
+            width: double.infinity,
+            height: 56,
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: ColorManager.gamecomplete,
+                disabledBackgroundColor: Colors.grey.shade200,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+              ),
+              onPressed: _isSubmitting ? null : _onSubmit,
+              child:
+                  _isSubmitting
+                      ? const SizedBox(
+                        width: 22,
+                        height: 22,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.5,
+                          color: Colors.white,
                         ),
+                      )
+                      : const Text(
+                        "Gửi link đặt lại mật khẩu",
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+            ),
+          ),
       ],
     );
   }

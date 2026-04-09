@@ -32,3 +32,6 @@ class TimeTick extends QuizEvent {}
 class TimeUp extends QuizEvent {}
 
 class Tick extends WordAnswerEvent {}
+class UseHint5050 extends QuizEvent {}    
+class UseHintEliminate extends QuizEvent {}
+class UseHintFree extends QuizEvent {} 

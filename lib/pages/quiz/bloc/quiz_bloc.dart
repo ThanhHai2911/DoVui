@@ -16,6 +16,9 @@ class QuizBloc extends Bloc<QuizEvent, QuizState> {
     on<NextQuestion>(_onNextQuestion);
     on<TimeTick>(_onTimeTick);
     on<TimeUp>(_onTimeUp);
+    on<UseHint5050>(_onUseHint5050);
+    on<UseHintEliminate>(_onUseHintEliminate);
+    on<UseHintFree>(_onUseHintFree);
   }
 
   Future<void> _onLoadQuiz(LoadQuiz event, Emitter<QuizState> emit) async {
@@ -42,6 +45,7 @@ class QuizBloc extends Bloc<QuizEvent, QuizState> {
           questions: questions,
           currentQuestion: questions[randomIndex],
           questionCount: 1,
+          eliminatedIndexes: [],
         );
       },
     );
@@ -70,16 +74,12 @@ class QuizBloc extends Bloc<QuizEvent, QuizState> {
     final newLives = state.lives - 1;
 
     if (newLives <= 0) {
-  // ✅ Cộng điểm cuối game
-  await QuizService.addStarsToUser(state.score);
-  
-  emit(state.copyWith(
-    lives: newLives,
-    showResult: true,
-    isGameOver: true,
-  ));
-  return;
-}
+      // ✅ Cộng điểm cuối game
+      await QuizService.addStarsToUser(state.score);
+
+      emit(state.copyWith(lives: newLives, showResult: true, isGameOver: true));
+      return;
+    }
 
     emit(state.copyWith(lives: newLives, showResult: true));
 
@@ -135,16 +135,19 @@ class QuizBloc extends Bloc<QuizEvent, QuizState> {
     });
   }
 
-  Future<void> _onNextQuestion(NextQuestion event, Emitter<QuizState> emit) async {
+  Future<void> _onNextQuestion(
+    NextQuestion event,
+    Emitter<QuizState> emit,
+  ) async {
     if (state.questions.isEmpty) return;
 
     if (usedIndexes.length == state.questions.length) {
-  // ✅ Cộng điểm cuối game
-  await QuizService.addStarsToUser(state.score);
-  
-  emit(state.copyWith(isGameOver: true, isWin: true));
-  return;
-}
+      // ✅ Cộng điểm cuối game
+      await QuizService.addStarsToUser(state.score);
+
+      emit(state.copyWith(isGameOver: true, isWin: true));
+      return;
+    }
 
     int index;
     final random = Random();
@@ -163,6 +166,7 @@ class QuizBloc extends Bloc<QuizEvent, QuizState> {
         showResult: false,
         questionCount: state.questionCount + 1,
         timeLeft: 15,
+        eliminatedIndexes: [],
       ),
     );
   }
@@ -172,5 +176,63 @@ class QuizBloc extends Bloc<QuizEvent, QuizState> {
     _subscription?.cancel();
     _timer?.cancel();
     return super.close();
+  }
+
+  // ── 50/50: trừ 50 sao ─────────────────────────────────────
+  Future<void> _onUseHint5050(
+    UseHint5050 event,
+    Emitter<QuizState> emit,
+  ) async {
+    final correct = state.currentQuestion?.correctIndex;
+    if (correct == null) return;
+
+    // Kiểm tra + trừ sao trên Firestore
+    final success = await QuizService.deductStars(50);
+    if (!success) {
+      emit(state.copyWith(hintError: 'not_enough_stars'));
+      emit(state.copyWith(hintError: null)); // reset ngay
+      return;
+    }
+
+    final wrongIndexes =
+        [0, 1, 2, 3]
+            .where((i) => i != correct && !state.eliminatedIndexes.contains(i))
+            .toList()
+          ..shuffle();
+
+    final toEliminate = wrongIndexes.take(2).toList();
+
+    emit(
+      state.copyWith(
+        eliminatedIndexes: [...state.eliminatedIndexes, ...toEliminate],
+      ),
+    );
+  }
+
+  // ── Lộ đáp án: trừ 100 sao ───────────────────────────────
+  Future<void> _onUseHintEliminate(
+    UseHintEliminate event,
+    Emitter<QuizState> emit,
+  ) async {
+    final correct = state.currentQuestion?.correctIndex;
+    if (correct == null) return;
+
+    final success = await QuizService.deductStars(100);
+    if (!success) {
+      emit(state.copyWith(hintError: 'not_enough_stars'));
+      emit(state.copyWith(hintError: null));
+      return;
+    }
+
+    final wrongIndexes = [0, 1, 2, 3].where((i) => i != correct).toList();
+    emit(state.copyWith(eliminatedIndexes: wrongIndexes));
+  }
+
+  // ── Xem video: miễn phí, không trừ sao ───────────────────
+  void _onUseHintFree(UseHintFree event, Emitter<QuizState> emit) {
+    final correct = state.currentQuestion?.correctIndex;
+    if (correct == null) return;
+    final wrongIndexes = [0, 1, 2, 3].where((i) => i != correct).toList();
+    emit(state.copyWith(eliminatedIndexes: wrongIndexes));
   }
 }

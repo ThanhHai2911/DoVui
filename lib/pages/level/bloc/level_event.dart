@@ -15,3 +15,12 @@ class LoadLevels extends LevelEvent {
   @override
   List<Object?> get props => [categoryId];
 }
+class ResetLevelsFrom extends LevelEvent {
+  final String categoryId;
+  final int fromIndex; // index của màn được chọn chơi lại
+
+  const ResetLevelsFrom({
+    required this.categoryId,
+    required this.fromIndex,
+  });
+}

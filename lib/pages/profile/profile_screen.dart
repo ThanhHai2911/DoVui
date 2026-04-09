@@ -8,7 +8,6 @@ import 'package:dovui/pages/user/bloc/user_bloc.dart';
 import 'package:dovui/data/repositories/user_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -30,6 +29,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _loadCheckInStatus();
     _applySavedSoundSetting();
     _bannerAdManager.loadAd(onLoaded: () => setState(() {}));
+    AudioManager().init().then((_) {
+      AudioManager().playBackgroundMusic();
+    });
   }
 
   @override
@@ -204,32 +206,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                       const SizedBox(height: 12),
 
-                      // Xem video
-                      // _buildMissionRow(
-                      //   icon: "🎬",
-                      //   title: "Xem video nhận thưởng",
-                      //   reward: "+10 ⭐",
-                      //   color: const Color(0xFF6C63FF),
-                      //   done: false,
-                      //   onTap: () {
-                      //     Navigator.pop(ctx);
-                      //     showGameDialog(
-                      //       context: context,
-                      //       icon: "🛠️",
-                      //       iconColor: Colors.orange,
-                      //       title: "Tính năng đang phát triển",
-                      //       description:
-                      //           "Chức năng xem video đang được cập nhật.\nVui lòng quay lại sau nhé!",
-                      //       costIcon: "⭐",
-                      //       costText: "Sắp ra mắt",
-                      //       confirmText: "Đã hiểu",
-                      //       confirmColor: Colors.orange,
-                      //       showCancel: false,
-                      //       onConfirm: () {},
-                      //     );
-                      //   },
-                      // ),
-                      // Xem video
                       _buildMissionRow(
                         icon: "🎬",
                         title: "Xem video nhận thưởng",
@@ -285,8 +261,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   // ── FIX: đọc trạng thái âm thanh từ SharedPreferences ──
   void _showSettingsDialog(BuildContext context) async {
     final prefs = await SharedPreferences.getInstance();
-    // Đọc giá trị đã lưu, mặc định true nếu chưa có
-    bool isSoundOn = prefs.getBool('sound_enabled') ?? true;
+    bool isMusicOn = prefs.getBool('music_enabled') ?? true;
+    bool isSfxOn = prefs.getBool('sfx_enabled') ?? true;
 
     if (!context.mounted) return;
     AudioManager().playClick();
@@ -296,53 +272,123 @@ class _ProfileScreenState extends State<ProfileScreen> {
         return StatefulBuilder(
           builder: (ctx, setStateDialog) {
             return Dialog(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(20),
+              backgroundColor: Colors.transparent,
+              child: Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(28),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.deepPurple.withOpacity(0.15),
+                      blurRadius: 24,
+                      spreadRadius: 2,
+                      offset: const Offset(0, 10),
+                    ),
+                  ],
+                ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Text(
-                      "⚙️ Cài đặt",
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
+                    // ── ICON ──
+                    Container(
+                      width: 84,
+                      height: 84,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: LinearGradient(
+                          colors: [
+                            Colors.deepPurple.withOpacity(0.15),
+                            Colors.deepPurple.withOpacity(0.05),
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        border: Border.all(
+                          color: Colors.deepPurple.withOpacity(0.35),
+                          width: 2,
+                        ),
+                      ),
+                      child: const Center(
+                        child: Text('⚙️', style: TextStyle(fontSize: 38)),
                       ),
                     ),
 
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 16),
 
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text("Âm thanh", style: TextStyle(fontSize: 15)),
-                        Switch(
-                          value: isSoundOn,
-                          onChanged: (value) async {
-                            setStateDialog(() => isSoundOn = value);
-                            // Lưu setting + điều khiển AudioManager trong 1 call
-                            await AudioManager().setSoundEnabled(value);
-                            // nếu user đã tắt âm thanh thì playBackgroundMusic() sẽ bị skip bên trong
-                            AudioManager().init().then((_) {
-                              AudioManager().playBackgroundMusic();
-                            });
-                          },
-                        ),
-                      ],
+                    // ── TITLE ──
+                    const Text(
+                      'Cài Đặt',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF1E1B4B),
+                      ),
                     ),
 
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 24),
 
+                    // ── NHẠC NỀN ──
+                    _buildSoundRow(
+                      icon: isMusicOn ? '🎵' : '🔕',
+                      label: 'Nhạc nền',
+                      value: isMusicOn,
+                      activeColor: Colors.deepPurple,
+                      onChanged: (value) async {
+                        setStateDialog(() => isMusicOn = value);
+                        await prefs.setBool('music_enabled', value);
+                        if (value) {
+                          await AudioManager().init();
+                          AudioManager().playBackgroundMusic();
+                        } else {
+                          AudioManager().stopBackgroundMusic();
+                        }
+                      },
+                    ),
+
+                    const SizedBox(height: 12),
+
+                    // ── HIỆU ỨNG ──
+                    _buildSoundRow(
+                      icon: isSfxOn ? '🔊' : '🔇',
+                      label: 'Hiệu ứng',
+                      value: isSfxOn,
+                      activeColor: const Color(0xFF43C6AC),
+                      onChanged: (value) async {
+                        setStateDialog(() => isSfxOn = value);
+                        await prefs.setBool('sfx_enabled', value);
+                        if (!value) {
+                          AudioManager().stopSfx();
+                        }
+                      },
+                    ),
+
+                    const SizedBox(height: 24),
+
+                    // ── BUTTON ĐÓNG ──
                     SizedBox(
                       width: double.infinity,
-                      child: TextButton(
+                      child: ElevatedButton(
                         onPressed: () {
-                          AudioManager().playBackgroundMusic();
+                          if (isMusicOn) AudioManager().playBackgroundMusic();
                           Navigator.pop(ctx);
                         },
-                        child: const Text("Đóng"),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.deepPurple,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                        ),
+                        child: const Text(
+                          'Đóng',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
                       ),
                     ),
                   ],
@@ -352,6 +398,54 @@ class _ProfileScreenState extends State<ProfileScreen> {
           },
         );
       },
+    );
+  }
+
+  // ── HELPER WIDGET ──
+  Widget _buildSoundRow({
+    required String icon,
+    required String label,
+    required bool value,
+    required Color activeColor,
+    required ValueChanged<bool> onChanged,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color:
+                  value
+                      ? activeColor.withOpacity(0.1)
+                      : Colors.grey.withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Center(
+              child: Text(icon, style: const TextStyle(fontSize: 18)),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              label,
+              style: const TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w500,
+                color: Color(0xFF1E1B4B),
+              ),
+            ),
+          ),
+          Switch(value: value, activeColor: activeColor, onChanged: onChanged),
+        ],
+      ),
     );
   }
 
@@ -439,363 +533,370 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF4F6FF),
-      body: BlocBuilder<UserBloc, UserState>(
-        builder: (context, state) {
-          if (state is UserLoading) return const ProfileShimmer();
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {},
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF4F6FF),
+        body: BlocBuilder<UserBloc, UserState>(
+          builder: (context, state) {
+            if (state is UserLoading) return const ProfileShimmer();
 
-          String name = "Admin";
-          int score = 0;
-          String correct = "0%";
-          int rank = 0;
-          String userId = '';
+            String name = "Admin";
+            int score = 0;
+            String correct = "0%";
+            int rank = 0;
+            String userId = '';
 
-          if (state is UserRegistered) {
-            name = state.user.name;
-            score = state.user.score;
-            rank = state.user.rank;
-            userId = state.user.id;
-            correct = "0%";
-          }
+            if (state is UserRegistered) {
+              name = state.user.name;
+              score = state.user.score;
+              rank = state.user.rank;
+              userId = state.user.id;
+              correct = "0%";
+            }
 
-          final avatarColor = _getColorByName(name);
+            final avatarColor = _getColorByName(name);
 
-          return SingleChildScrollView(
-            padding: const EdgeInsets.only(bottom: 140),
-            child: Column(
-              children: [
-                /// HEADER
-                Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    Container(
-                      height: 220,
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [avatarColor, avatarColor.withOpacity(0.7)],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
+            return SingleChildScrollView(
+              padding: const EdgeInsets.only(bottom: 140),
+              child: Column(
+                children: [
+                  /// HEADER
+                  Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      Container(
+                        height: 220,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [avatarColor, avatarColor.withOpacity(0.7)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: const BorderRadius.only(
+                            bottomLeft: Radius.circular(40),
+                            bottomRight: Radius.circular(40),
+                          ),
                         ),
-                        borderRadius: const BorderRadius.only(
-                          bottomLeft: Radius.circular(40),
-                          bottomRight: Radius.circular(40),
-                        ),
-                      ),
-                      child: SafeArea(
-                        child: Stack(
-                          children: [
-                            Positioned(
-                              top: -20,
-                              right: -20,
-                              child: Container(
-                                width: 120,
-                                height: 120,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: Colors.white.withOpacity(0.08),
-                                ),
-                              ),
-                            ),
-                            Positioned(
-                              top: 30,
-                              right: 50,
-                              child: Container(
-                                width: 60,
-                                height: 60,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: Colors.white.withOpacity(0.08),
-                                ),
-                              ),
-                            ),
-                            Positioned(
-                              bottom: 10,
-                              left: 20,
-                              child: Container(
-                                width: 80,
-                                height: 80,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: Colors.white.withOpacity(0.06),
-                                ),
-                              ),
-                            ),
-                            const Padding(
-                              padding: EdgeInsets.only(top: 20),
-                              child: Center(
-                                child: Text(
-                                  "Hồ Sơ",
-                                  style: TextStyle(
-                                    fontSize: 26,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white,
-                                    letterSpacing: 1,
-                                  ),
-                                ),
-                              ),
-                            ),
-                            Positioned(
-                              top: 20,
-                              right: 16,
-                              child: GestureDetector(
-                                onTap: () => _showSettingsDialog(context),
+                        child: SafeArea(
+                          child: Stack(
+                            children: [
+                              Positioned(
+                                top: -20,
+                                right: -20,
                                 child: Container(
-                                  padding: const EdgeInsets.all(10),
+                                  width: 120,
+                                  height: 120,
                                   decoration: BoxDecoration(
-                                    color: Colors.white.withOpacity(0.15),
                                     shape: BoxShape.circle,
-                                  ),
-                                  child: const Icon(
-                                    Icons.settings,
-                                    color: Colors.white,
-                                    size: 22,
+                                    color: Colors.white.withOpacity(0.08),
                                   ),
                                 ),
                               ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    Positioned(
-                      bottom: -55,
-                      left: 0,
-                      right: 0,
-                      child: Center(
-                        child: Container(
-                          padding: const EdgeInsets.all(4),
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: Colors.white,
-                            boxShadow: [
-                              BoxShadow(
-                                color: avatarColor.withOpacity(0.4),
-                                blurRadius: 20,
-                                spreadRadius: 2,
+                              Positioned(
+                                top: 30,
+                                right: 50,
+                                child: Container(
+                                  width: 60,
+                                  height: 60,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: Colors.white.withOpacity(0.08),
+                                  ),
+                                ),
+                              ),
+                              Positioned(
+                                bottom: 10,
+                                left: 20,
+                                child: Container(
+                                  width: 80,
+                                  height: 80,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: Colors.white.withOpacity(0.06),
+                                  ),
+                                ),
+                              ),
+                              const Padding(
+                                padding: EdgeInsets.only(top: 20),
+                                child: Center(
+                                  child: Text(
+                                    "Hồ Sơ",
+                                    style: TextStyle(
+                                      fontSize: 26,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                      letterSpacing: 1,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              Positioned(
+                                top: 20,
+                                right: 16,
+                                child: GestureDetector(
+                                  onTap: () => _showSettingsDialog(context),
+                                  child: Container(
+                                    padding: const EdgeInsets.all(10),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withOpacity(0.15),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(
+                                      Icons.settings,
+                                      color: Colors.white,
+                                      size: 22,
+                                    ),
+                                  ),
+                                ),
                               ),
                             ],
                           ),
-                          child: CircleAvatar(
-                            radius: 55,
-                            backgroundColor: avatarColor,
-                            child: Text(
-                              name.isNotEmpty ? name[0].toUpperCase() : "A",
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 42,
+                        ),
+                      ),
+                      Positioned(
+                        bottom: -55,
+                        left: 0,
+                        right: 0,
+                        child: Center(
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Colors.white,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: avatarColor.withOpacity(0.4),
+                                  blurRadius: 20,
+                                  spreadRadius: 2,
+                                ),
+                              ],
+                            ),
+                            child: CircleAvatar(
+                              radius: 55,
+                              backgroundColor: avatarColor,
+                              child: Text(
+                                name.isNotEmpty ? name[0].toUpperCase() : "A",
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 42,
+                                ),
                               ),
                             ),
                           ),
                         ),
                       ),
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 70),
-
-                Text(
-                  name,
-                  style: const TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF1E1B4B),
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 5,
-                  ),
-                  decoration: BoxDecoration(
-                    color: ColorManager.primaryColor.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    "@${name.toLowerCase()}",
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: ColorManager.primaryColor,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 30),
-
-                /// STATS
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: Row(
-                    children: [
-                      _buildStatCard(
-                        value: _missionPercent,
-                        label: "Nhiệm vụ",
-                        icon: "📋",
-                        color: const Color(0xFF43C6AC),
-                        onTap: () => _showMissionDialog(context, userId, score),
-                      ),
-                      const SizedBox(width: 12),
-                      _buildStatCard(
-                        value: "$score",
-                        label: "Điểm số",
-                        icon: "⭐",
-                        color: const Color(0xFFFFB347),
-                      ),
-                      const SizedBox(width: 12),
-                      _buildStatCard(
-                        value: "#$rank",
-                        label: "Xếp hạng",
-                        icon: "🏆",
-                        color: const Color(0xFF6C63FF),
-                      ),
                     ],
                   ),
-                ),
 
-                const SizedBox(height: 28),
+                  const SizedBox(height: 70),
 
-                /// ACHIEVEMENT BANNER
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: Container(
-                    padding: const EdgeInsets.all(18),
+                  Text(
+                    name,
+                    style: const TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF1E1B4B),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 5,
+                    ),
                     decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          const Color(0xFF6C63FF).withOpacity(0.15),
-                          const Color(0xFF43C6AC).withOpacity(0.15),
-                        ],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
+                      color: ColorManager.primaryColor.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: const Color(0xFF6C63FF).withOpacity(0.2),
+                    ),
+                    child: Text(
+                      "@${name.toLowerCase()}",
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: ColorManager.primaryColor,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
+                  ),
+
+                  const SizedBox(height: 30),
+
+                  /// STATS
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
                     child: Row(
                       children: [
-                        const Text("🎮", style: TextStyle(fontSize: 32)),
-                        const SizedBox(width: 14),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              "Người chơi tích cực",
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 15,
-                                color: Color(0xFF1E1B4B),
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              "Tiếp tục chinh phục các thử thách!",
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey.shade600,
-                              ),
-                            ),
-                          ],
+                        _buildStatCard(
+                          value: _missionPercent,
+                          label: "Nhiệm vụ",
+                          icon: "📋",
+                          color: const Color(0xFF43C6AC),
+                          onTap:
+                              () => _showMissionDialog(context, userId, score),
+                        ),
+                        const SizedBox(width: 12),
+                        _buildStatCard(
+                          value: "$score",
+                          label: "Điểm số",
+                          icon: "⭐",
+                          color: const Color(0xFFFFB347),
+                        ),
+                        const SizedBox(width: 12),
+                        _buildStatCard(
+                          value: "#$rank",
+                          label: "Xếp hạng",
+                          icon: "🏆",
+                          color: const Color(0xFF6C63FF),
                         ),
                       ],
                     ),
                   ),
-                ),
 
-                const SizedBox(height: 28),
+                  const SizedBox(height: 28),
 
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: _bannerAdManager.buildBannerWidget(),
-                ),
-
-                const SizedBox(height: 12),
-
-                /// LOGOUT
-                if (state is UserRegistered)
+                  /// ACHIEVEMENT BANNER
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 20),
-                    child: GestureDetector(
-                      onTap:
-                          () => showGameDialog(
-                            context: context,
-                            icon: "👋",
-                            iconColor: Colors.red,
-                            title: "Đăng xuất?",
-                            description:
-                                "Bạn có chắc muốn thoát không?\nTiến trình của bạn sẽ được lưu lại.",
-                            costIcon: "💾",
-                            costText: "Dữ liệu được lưu",
-                            confirmText: "Đăng xuất",
-                            confirmColor: Colors.red,
-                            onConfirm: () async {
-                              final prefs =
-                                  await SharedPreferences.getInstance();
-                              await prefs.clear();
-
-                              if (context.mounted) {
-                                context.read<UserBloc>().add(LogoutUserEvent());
-                                Navigator.pushAndRemoveUntil(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => const LoginScreen(),
-                                  ),
-                                  (route) => false,
-                                );
-                              }
-                            },
-                          ),
-                      child: Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(18),
-                          border: Border.all(
-                            color: Colors.red.shade200,
-                            width: 1.5,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.red.withOpacity(0.08),
-                              blurRadius: 12,
-                              offset: const Offset(0, 4),
-                            ),
+                    child: Container(
+                      padding: const EdgeInsets.all(18),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            const Color(0xFF6C63FF).withOpacity(0.15),
+                            const Color(0xFF43C6AC).withOpacity(0.15),
                           ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
                         ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.logout_rounded,
-                              color: Colors.red.shade400,
-                              size: 22,
-                            ),
-                            const SizedBox(width: 10),
-                            Text(
-                              "Đăng xuất",
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.red.shade400,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: const Color(0xFF6C63FF).withOpacity(0.2),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          const Text("🎮", style: TextStyle(fontSize: 32)),
+                          const SizedBox(width: 14),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                "Người chơi tích cực",
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 15,
+                                  color: Color(0xFF1E1B4B),
+                                ),
                               ),
-                            ),
-                          ],
-                        ),
+                              const SizedBox(height: 4),
+                              Text(
+                                "Tiếp tục chinh phục các thử thách!",
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey.shade600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
                     ),
                   ),
 
-                const SizedBox(height: 20),
-              ],
-            ),
-          );
-        },
+                  const SizedBox(height: 28),
+
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: _bannerAdManager.buildBannerWidget(),
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  /// LOGOUT
+                  if (state is UserRegistered)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: GestureDetector(
+                        onTap:
+                            () => showGameDialog(
+                              context: context,
+                              icon: "👋",
+                              iconColor: Colors.red,
+                              title: "Đăng xuất?",
+                              description:
+                                  "Bạn có chắc muốn thoát không?\nTiến trình của bạn sẽ được lưu lại.",
+                              costIcon: "💾",
+                              costText: "Dữ liệu được lưu",
+                              confirmText: "Đăng xuất",
+                              confirmColor: Colors.red,
+                              onConfirm: () async {
+                                final prefs =
+                                    await SharedPreferences.getInstance();
+                                await prefs.clear();
+
+                                if (context.mounted) {
+                                  context.read<UserBloc>().add(
+                                    LogoutUserEvent(),
+                                  );
+                                  Navigator.pushAndRemoveUntil(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => const LoginScreen(),
+                                    ),
+                                    (route) => false,
+                                  );
+                                }
+                              },
+                            ),
+                        child: Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(18),
+                            border: Border.all(
+                              color: Colors.red.shade200,
+                              width: 1.5,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.red.withOpacity(0.08),
+                                blurRadius: 12,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.logout_rounded,
+                                color: Colors.red.shade400,
+                                size: 22,
+                              ),
+                              const SizedBox(width: 10),
+                              Text(
+                                "Đăng xuất",
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.red.shade400,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+
+                  const SizedBox(height: 20),
+                ],
+              ),
+            );
+          },
+        ),
       ),
     );
   }

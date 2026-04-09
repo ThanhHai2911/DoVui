@@ -133,7 +133,7 @@ class _AudienceDialogState extends State<AudienceDialog> {
               ),
             ),
 
-            const SizedBox(height: 20),
+            const SizedBox(height: 40),
             // ── Divider ──
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),

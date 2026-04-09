@@ -1,6 +1,6 @@
-import 'package:dovui/data/audio/audio_manager.dart';
 import 'package:dovui/data/models/user_level_model.dart';
 import 'package:dovui/pages/category/widgets/category_shimmer.dart';
+import 'package:dovui/pages/home/widgets/game_dialog.dart';
 import 'package:dovui/pages/level/bloc/level_bloc.dart';
 import 'package:dovui/pages/level/bloc/level_event.dart';
 import 'package:dovui/pages/level/bloc/level_state.dart';
@@ -72,146 +72,197 @@ class _LevelscreenState extends State<Levelscreen> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (_) => LevelBloc()..add(LoadLevels(widget.categoryId)),
-      child: Scaffold(
-        backgroundColor: const Color(0xFFF4F6FF),
-        body: Stack(
-          children: [
-            _buildBackground(),
-            SafeArea(
-              child: Column(
-                children: [
-                  _buildHeader(context),
-                  _buildLegend(),
-                  const SizedBox(height: 8),
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: BlocConsumer<LevelBloc, LevelState>(
-                        listener: (context, state) {
-                          if (state is LevelLoaded && !_hasScrolled) {
-                            final levels = state.levels;
-                            final statuses = state.levelStatuses;
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {},
+      child: BlocProvider(
+        create: (_) => LevelBloc()..add(LoadLevels(widget.categoryId)),
+        child: Scaffold(
+          backgroundColor: const Color(0xFFF4F6FF),
+          body: Stack(
+            children: [
+              _buildBackground(),
+              SafeArea(
+                child: Column(
+                  children: [
+                    _buildHeader(context),
+                    _buildLegend(),
+                    const SizedBox(height: 8),
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: BlocConsumer<LevelBloc, LevelState>(
+                          listener: (context, state) {
+                            if (state is LevelLoaded && !_hasScrolled) {
+                              final levels = state.levels;
+                              final statuses = state.levelStatuses;
 
-                            // Tìm màn tiếp theo chưa completed
-                            int nextIndex = levels.length - 1;
-                            for (int i = 0; i < levels.length; i++) {
-                              final status = statuses[levels[i].id]?.status;
-                              if (status != 'completed') {
-                                nextIndex = i;
-                                break;
+                              // Tìm màn tiếp theo chưa completed
+                              int nextIndex = levels.length - 1;
+                              for (int i = 0; i < levels.length; i++) {
+                                final status = statuses[levels[i].id]?.status;
+                                if (status != 'completed') {
+                                  nextIndex = i;
+                                  break;
+                                }
                               }
+
+                              _scrollToNextLevel(nextIndex);
+                            }
+                          },
+                          builder: (context, state) {
+                            if (state is LevelLoading) {
+                              return const CategoryShimmer();
                             }
 
-                            _scrollToNextLevel(nextIndex);
-                          }
-                        },
-                        builder: (context, state) {
-                          if (state is LevelLoading) {
-                            return const CategoryShimmer();
-                          }
+                            if (state is LevelLoaded) {
+                              final levels = state.levels;
+                              final statuses = state.levelStatuses;
 
-                          if (state is LevelLoaded) {
-                            final levels = state.levels;
-                            final statuses = state.levelStatuses;
+                              return GridView.builder(
+                                controller: _scrollController,
+                                itemCount: levels.length,
+                                padding: const EdgeInsets.only(
+                                  top: 8,
+                                  bottom: 20,
+                                ),
+                                gridDelegate:
+                                    const SliverGridDelegateWithFixedCrossAxisCount(
+                                      crossAxisCount: 2,
+                                      mainAxisSpacing: 16,
+                                      crossAxisSpacing: 16,
+                                      childAspectRatio: 0.88,
+                                    ),
+                                itemBuilder: (context, index) {
+                                  final level = levels[index];
+                                  final UserLevelModel? userLevel =
+                                      statuses[level.id];
+                                  final String status =
+                                      userLevel?.status ?? 'default';
 
-                            return GridView.builder(
-                              controller: _scrollController,
-                              itemCount: levels.length,
-                              padding: const EdgeInsets.only(
-                                top: 8,
-                                bottom: 20,
-                              ),
-                              gridDelegate:
-                                  const SliverGridDelegateWithFixedCrossAxisCount(
-                                    crossAxisCount: 2,
-                                    mainAxisSpacing: 16,
-                                    crossAxisSpacing: 16,
-                                    childAspectRatio: 0.88,
-                                  ),
-                              itemBuilder: (context, index) {
-                                final level = levels[index];
-                                final UserLevelModel? userLevel =
-                                    statuses[level.id];
-                                final String status =
-                                    userLevel?.status ?? 'default';
+                                  bool isUnlocked;
+                                  if (index == 0) {
+                                    isUnlocked = true;
+                                  } else {
+                                    final prevLevel = levels[index - 1];
+                                    final prevStatus =
+                                        statuses[prevLevel.id]?.status;
+                                    isUnlocked = prevStatus == 'completed';
+                                  }
 
-                                bool isUnlocked;
-                                if (index == 0) {
-                                  isUnlocked = true;
-                                } else {
-                                  final prevLevel = levels[index - 1];
-                                  final prevStatus =
-                                      statuses[prevLevel.id]?.status;
-                                  isUnlocked = prevStatus == 'completed';
-                                }
+                                  return _LevelCard(
+                                    index: index,
+                                    status: status,
+                                    isUnlocked: isUnlocked,
+                                    onTap:
+                                        isUnlocked
+                                            ? () async {
+                                              if (status == 'completed') {
+                                                // Đếm số màn bị reset để hiện trong dialog
+                                                final resetCount =
+                                                    levels.length - index;
 
-                                return _LevelCard(
-                                  index: index,
-                                  status: status,
-                                  isUnlocked: isUnlocked,
-                                  onTap:
-                                  
-                                      isUnlocked
-                                          ? () {
-                                            Widget screen;
-                                            switch (widget.type) {
-                                              case "level":
-                                                screen = WordAnswerScreen(
-                                                  categoryId: widget.categoryId,
-                                                  levelId: level.id,
-                                                  type: widget.type,
+                                                final confirm = showGameDialogConfirm(
+                                                  context: context,
+                                                  icon: "🔄",
+                                                  iconColor: const Color(
+                                                    0xFF6C63FF,
+                                                  ),
+                                                  title:
+                                                      "Chơi lại từ màn ${index + 1}?",
+                                                  description:
+                                                      "Màn ${index + 1} → màn ${levels.length} sẽ bị reset.\n"
+                                                      "Bạn phải chinh phục lại từ đầu!",
+                                                  costIcon: "⚠️",
+                                                  costText:
+                                                      "Reset $resetCount màn (${index + 1} → ${levels.length})",
+                                                  confirmText: "Xác nhận",
+                                                  confirmColor: const Color(
+                                                    0xFF6C63FF,
+                                                  ),
                                                 );
-                                                break;
-                                              case "imagequiz":
-                                                screen = QuizImageScreen(
-                                                  categoryId: widget.categoryId,
-                                                  levelId: level.id,
-                                                  type: widget.type,
-                                                );
-                                                break;
-                                              case "man":
-                                                screen = MillionaireScreen(
-                                                  categoryId: widget.categoryId,
-                                                  levelId: level.id,
-                                                  type: widget.type,
-                                                );
-                                                break;
-                                              default:
-                                                screen = QuizScreen(
-                                                  categoryId: widget.categoryId,
-                                                  levelId: level.id,
-                                                  type: widget.type,
-                                                );
+
+                                                if (confirm != true) return;
+
+                                                // ✅ Reset Firestore → stream tự cập nhật UI
+                                                if (context.mounted) {
+                                                  context.read<LevelBloc>().add(
+                                                    ResetLevelsFrom(
+                                                      categoryId:
+                                                          widget.categoryId,
+                                                      fromIndex: index,
+                                                    ),
+                                                  );
+                                                }
+                                              }
+
+                                              Widget screen;
+                                              switch (widget.type) {
+                                                case "level":
+                                                  screen = WordAnswerScreen(
+                                                    categoryId:
+                                                        widget.categoryId,
+                                                    levelId: level.id,
+                                                    type: widget.type,
+                                                  );
+                                                  break;
+                                                case "imagequiz":
+                                                  screen = QuizImageScreen(
+                                                    categoryId:
+                                                        widget.categoryId,
+                                                    levelId: level.id,
+                                                    type: widget.type,
+                                                  );
+                                                  break;
+                                                case "man":
+                                                  screen = MillionaireScreen(
+                                                    categoryId:
+                                                        widget.categoryId,
+                                                    levelId: level.id,
+                                                    type: widget.type,
+                                                  );
+                                                  break;
+                                                case "soman":
+                                                default:
+                                                  screen = QuizScreen(
+                                                    categoryId:
+                                                        widget.categoryId,
+                                                    levelId: level.id,
+                                                    type: widget.type,
+                                                  );
+                                              }
+
+                                              if (context.mounted) {
+                                                Navigator.push(
+                                                  context,
+                                                  MaterialPageRoute(
+                                                    builder: (_) => screen,
+                                                  ),
+                                                ).then((_) {
+                                                  context.read<LevelBloc>().add(
+                                                    LoadLevels(
+                                                      widget.categoryId,
+                                                    ),
+                                                  );
+                                                });
+                                              }
                                             }
+                                            : null,
+                                  );
+                                },
+                              );
+                            }
 
-                                            Navigator.push(
-                                              context,
-                                              MaterialPageRoute(
-                                                builder: (_) => screen,
-                                              ),
-                                            ).then((_) {
-                                              context.read<LevelBloc>().add(
-                                                LoadLevels(widget.categoryId),
-                                              );
-                                            });
-                                          }
-                                          : null,
-                                );
-                              },
-                            );
-                          }
-
-                          return const SizedBox();
-                        },
+                            return const SizedBox();
+                          },
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -592,218 +643,3 @@ class _LevelCard extends StatelessWidget {
     );
   }
 }
-// class _LevelCard extends StatefulWidget {
-//   final int index;
-//   final String status;
-//   final bool isUnlocked;
-//   final VoidCallback? onTap;
-
-//   const _LevelCard({
-//     required this.index,
-//     required this.status,
-//     required this.isUnlocked,
-//     required this.onTap,
-//   });
-
-//   @override
-//   State<_LevelCard> createState() => _LevelCardState();
-// }
-
-// class _LevelCardState extends State<_LevelCard>
-//   with SingleTickerProviderStateMixin {
-//   late AnimationController _controller;
-//   late Animation<double> _scaleAnim;
-//   late Animation<double> _fadeAnim;
-
-//   @override
-//   void initState() {
-//     super.initState();
-//     _controller = AnimationController(
-//       vsync: this,
-//       duration: const Duration(milliseconds: 500),
-//     );
-
-//     _scaleAnim = Tween<double>(
-//       begin: 0.7,
-//       end: 1.0,
-//     ).animate(CurvedAnimation(parent: _controller, curve: Curves.elasticOut));
-
-//     _fadeAnim = Tween<double>(begin: 0.0, end: 1.0).animate(
-//       CurvedAnimation(
-//         parent: _controller,
-//         curve: const Interval(0.0, 0.6, curve: Curves.easeOut),
-//       ),
-//     );
-
-//     Future.delayed(Duration(milliseconds: 80 * widget.index), () {
-//       if (mounted) _controller.forward();
-//     });
-//   }
-
-//   @override
-//   void dispose() {
-//     _controller.dispose();
-//     super.dispose();
-//   }
-
-//   List<Color> _getGradient() {
-//     if (!widget.isUnlocked) {
-//       return [Colors.grey.shade300, Colors.grey.shade400];
-//     }
-//     switch (widget.status) {
-//       case 'completed':
-//         return [const Color(0xFF43C6AC), const Color(0xFF2BB89A)];
-//       case 'failed':
-//         return [const Color(0xFFFF6584), const Color(0xFFE8435A)];
-//       default:
-//         return [const Color(0xFF6C63FF), const Color(0xFF9B8FFF)];
-//     }
-//   }
-
-//   String _getEmoji() {
-//     if (!widget.isUnlocked) return "🔒";
-//     switch (widget.status) {
-//       case 'completed':
-//         return "⭐";
-//       case 'failed':
-//         return "💪";
-//       default:
-//         return "🎯";
-//     }
-//   }
-
-//   String _getStatusText() {
-//     if (!widget.isUnlocked) return "Chưa mở";
-//     switch (widget.status) {
-//       case 'completed':
-//         return "Hoàn thành";
-//       case 'failed':
-//         return "Thử lại";
-//       default:
-//         return "Bắt đầu";
-//     }
-//   }
-
-//   @override
-//   Widget build(BuildContext context) {
-//     final gradient = _getGradient();
-
-//     return FadeTransition(
-//       opacity: _fadeAnim,
-//       child: ScaleTransition(
-//         scale: _scaleAnim,
-//         child: GestureDetector(
-//           onTap: widget.onTap,
-//           child: Container(
-//             decoration: BoxDecoration(
-//               gradient: LinearGradient(
-//                 colors: gradient,
-//                 begin: Alignment.topLeft,
-//                 end: Alignment.bottomRight,
-//               ),
-//               borderRadius: BorderRadius.circular(24),
-//               boxShadow: [
-//                 BoxShadow(
-//                   color: gradient[0].withOpacity(
-//                     widget.isUnlocked ? 0.4 : 0.15,
-//                   ),
-//                   blurRadius: 14,
-//                   offset: const Offset(0, 6),
-//                 ),
-//               ],
-//             ),
-//             child: Stack(
-//               children: [
-//                 Positioned(
-//                   top: -18,
-//                   right: -18,
-//                   child: Container(
-//                     width: 70,
-//                     height: 70,
-//                     decoration: BoxDecoration(
-//                       shape: BoxShape.circle,
-//                       color: Colors.white.withOpacity(0.1),
-//                     ),
-//                   ),
-//                 ),
-//                 Positioned(
-//                   bottom: -10,
-//                   left: -10,
-//                   child: Container(
-//                     width: 50,
-//                     height: 50,
-//                     decoration: BoxDecoration(
-//                       shape: BoxShape.circle,
-//                       color: Colors.white.withOpacity(0.07),
-//                     ),
-//                   ),
-//                 ),
-//                 Positioned(
-//                   top: 6,
-//                   right: 10,
-//                   child: Text(
-//                     "${widget.index + 1}",
-//                     style: TextStyle(
-//                       fontSize: 52,
-//                       fontWeight: FontWeight.w900,
-//                       color: Colors.white.withOpacity(1),
-//                       height: 1,
-//                     ),
-//                   ),
-//                 ),
-//                 Padding(
-//                   padding: const EdgeInsets.all(16),
-//                   child: Column(
-//                     crossAxisAlignment: CrossAxisAlignment.start,
-//                     children: [
-//                       Text(_getEmoji(), style: const TextStyle(fontSize: 32)),
-//                       const Spacer(),
-//                       Text(
-//                         "Màn ${widget.index + 1}",
-//                         style: const TextStyle(
-//                           fontSize: 18,
-//                           fontWeight: FontWeight.bold,
-//                           color: Colors.white,
-//                         ),
-//                       ),
-//                       const SizedBox(height: 5),
-//                       Container(
-//                         padding: const EdgeInsets.symmetric(
-//                           horizontal: 10,
-//                           vertical: 4,
-//                         ),
-//                         decoration: BoxDecoration(
-//                           color: Colors.white.withOpacity(0.22),
-//                           borderRadius: BorderRadius.circular(12),
-//                           border: Border.all(
-//                             color: Colors.white.withOpacity(0.3),
-//                             width: 1,
-//                           ),
-//                         ),
-//                         child: Text(
-//                           _getStatusText(),
-//                           style: const TextStyle(
-//                             fontSize: 11,
-//                             fontWeight: FontWeight.bold,
-//                             color: Colors.white,
-//                           ),
-//                         ),
-//                       ),
-//                     ],
-//                   ),
-//                 ),
-//                 if (!widget.isUnlocked)
-//                   Container(
-//                     decoration: BoxDecoration(
-//                       borderRadius: BorderRadius.circular(24),
-//                       color: Colors.black.withOpacity(0.15),
-//                     ),
-//                   ),
-//               ],
-//             ),
-//           ),
-//         ),
-//       ),
-//     );
-//   }
-// }
