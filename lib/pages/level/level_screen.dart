@@ -1,4 +1,5 @@
 import 'package:dovui/data/models/user_level_model.dart';
+import 'package:dovui/pages/ads/ads_service.dart';
 import 'package:dovui/pages/category/widgets/category_shimmer.dart';
 import 'package:dovui/pages/home/widgets/game_dialog.dart';
 import 'package:dovui/pages/level/bloc/level_bloc.dart';
@@ -23,7 +24,10 @@ class Levelscreen extends StatefulWidget {
 
 class _LevelscreenState extends State<Levelscreen> {
   final ScrollController _scrollController = ScrollController();
-  bool _hasScrolled = false; // ← chỉ cuộn đúng 1 lần
+  bool _hasScrolled = false;
+
+  // Ad xuất hiện sau mỗi N level
+  static const int _adEvery = 10;
 
   @override
   void dispose() {
@@ -32,10 +36,10 @@ class _LevelscreenState extends State<Levelscreen> {
   }
 
   void _scrollToNextLevel(int nextIndex) {
-    if (_hasScrolled) return; // đã cuộn rồi → bỏ qua
+    if (_hasScrolled) return;
     if (nextIndex == 0) {
       _hasScrolled = true;
-      return; // màn 1 → không cần cuộn
+      return;
     }
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -47,17 +51,19 @@ class _LevelscreenState extends State<Levelscreen> {
       const double spacing = 16.0;
       const double topPadding = 8.0;
       const double aspectRatio = 0.88;
+      const double adHeight = 180.0; // chiều cao ad widget
 
-      final double gridWidth =
-          MediaQuery.of(context).size.width - 32; // padding 16*2
+      final double gridWidth = MediaQuery.of(context).size.width - 32;
       final double itemWidth = (gridWidth - spacing) / crossAxisCount;
       final double itemHeight = itemWidth / aspectRatio;
 
+      // Tính offset có tính đến các ad rows đã xuất hiện trước nextIndex
+      final int adsBeforeNext = nextIndex ~/ _adEvery;
       final int row = nextIndex ~/ crossAxisCount;
-      // Cuộn sao cho màn tiếp theo nằm ở giữa màn hình
       final double targetOffset =
           topPadding +
-          row * (itemHeight + spacing) -
+          row * (itemHeight + spacing) +
+          adsBeforeNext * (adHeight + spacing) -
           (MediaQuery.of(context).size.height / 3);
 
       _scrollController.animateTo(
@@ -66,8 +72,20 @@ class _LevelscreenState extends State<Levelscreen> {
         curve: Curves.easeInOut,
       );
 
-      _hasScrolled = true; // đánh dấu đã cuộn
+      _hasScrolled = true;
     });
+  }
+
+  /// Chia levels thành các chunk, mỗi chunk cách nhau bởi 1 ad
+  List<List<int>> _buildChunks(int totalLevels) {
+    final chunks = <List<int>>[];
+    int start = 0;
+    while (start < totalLevels) {
+      final end = (start + _adEvery).clamp(0, totalLevels);
+      chunks.add(List.generate(end - start, (i) => start + i));
+      start = end;
+    }
+    return chunks;
   }
 
   @override
@@ -97,7 +115,6 @@ class _LevelscreenState extends State<Levelscreen> {
                               final levels = state.levels;
                               final statuses = state.levelStatuses;
 
-                              // Tìm màn tiếp theo chưa completed
                               int nextIndex = levels.length - 1;
                               for (int i = 0; i < levels.length; i++) {
                                 final status = statuses[levels[i].id]?.status;
@@ -118,138 +135,63 @@ class _LevelscreenState extends State<Levelscreen> {
                             if (state is LevelLoaded) {
                               final levels = state.levels;
                               final statuses = state.levelStatuses;
+                              final chunks = _buildChunks(levels.length);
 
-                              return GridView.builder(
+                              return CustomScrollView(
                                 controller: _scrollController,
-                                itemCount: levels.length,
-                                padding: const EdgeInsets.only(
-                                  top: 8,
-                                  bottom: 20,
-                                ),
-                                gridDelegate:
-                                    const SliverGridDelegateWithFixedCrossAxisCount(
-                                      crossAxisCount: 2,
-                                      mainAxisSpacing: 16,
-                                      crossAxisSpacing: 16,
-                                      childAspectRatio: 0.88,
+                                slivers: [
+                                  const SliverPadding(
+                                    padding: EdgeInsets.only(top: 8),
+                                  ),
+                                  for (int chunkIdx = 0;
+                                      chunkIdx < chunks.length;
+                                      chunkIdx++) ...[
+                                    // ── Grid của chunk này ──
+                                    SliverGrid(
+                                      delegate: SliverChildBuilderDelegate(
+                                        (context, i) {
+                                          final levelIndex =
+                                              chunks[chunkIdx][i];
+                                          return _buildLevelCard(
+                                            context,
+                                            levelIndex,
+                                            levels,
+                                            statuses,
+                                          );
+                                        },
+                                        childCount: chunks[chunkIdx].length,
+                                      ),
+                                      gridDelegate:
+                                          const SliverGridDelegateWithFixedCrossAxisCount(
+                                            crossAxisCount: 2,
+                                            mainAxisSpacing: 16,
+                                            crossAxisSpacing: 16,
+                                            childAspectRatio: 0.88,
+                                          ),
                                     ),
-                                itemBuilder: (context, index) {
-                                  final level = levels[index];
-                                  final UserLevelModel? userLevel =
-                                      statuses[level.id];
-                                  final String status =
-                                      userLevel?.status ?? 'default';
 
-                                  bool isUnlocked;
-                                  if (index == 0) {
-                                    isUnlocked = true;
-                                  } else {
-                                    final prevLevel = levels[index - 1];
-                                    final prevStatus =
-                                        statuses[prevLevel.id]?.status;
-                                    isUnlocked = prevStatus == 'completed';
-                                  }
+                                    // ── Ad chiếm full width sau mỗi chunk (trừ chunk cuối) ──
+                                    // if (chunkIdx < chunks.length - 1)
+                                    //   SliverToBoxAdapter(
+                                    //     child: Padding(
+                                    //       padding: const EdgeInsets.symmetric(
+                                    //         vertical: 8,
+                                    //       ),
+                                    //       child: RepaintBoundary(
+                                    //         child: NativeAdWidget(),
+                                    //       ),
+                                    //     ),
+                                    //   ),
 
-                                  return _LevelCard(
-                                    index: index,
-                                    status: status,
-                                    isUnlocked: isUnlocked,
-                                    onTap:
-                                        isUnlocked
-                                            ? () async {
-                                              if (status == 'completed') {
-                                                // Đếm số màn bị reset để hiện trong dialog
-                                                final resetCount =
-                                                    levels.length - index;
-
-                                                final confirm = showGameDialogConfirm(
-                                                  context: context,
-                                                  icon: "🔄",
-                                                  iconColor: const Color(
-                                                    0xFF6C63FF,
-                                                  ),
-                                                  title:
-                                                      "Chơi lại từ màn ${index + 1}?",
-                                                  description:
-                                                      "Màn ${index + 1} → màn ${levels.length} sẽ bị reset.\n"
-                                                      "Bạn phải chinh phục lại từ đầu!",
-                                                  costIcon: "⚠️",
-                                                  costText:
-                                                      "Reset $resetCount màn (${index + 1} → ${levels.length})",
-                                                  confirmText: "Xác nhận",
-                                                  confirmColor: const Color(
-                                                    0xFF6C63FF,
-                                                  ),
-                                                );
-
-                                                if (confirm != true) return;
-
-                                                // ✅ Reset Firestore → stream tự cập nhật UI
-                                                if (context.mounted) {
-                                                  context.read<LevelBloc>().add(
-                                                    ResetLevelsFrom(
-                                                      categoryId:
-                                                          widget.categoryId,
-                                                      fromIndex: index,
-                                                    ),
-                                                  );
-                                                }
-                                              }
-
-                                              Widget screen;
-                                              switch (widget.type) {
-                                                case "level":
-                                                  screen = WordAnswerScreen(
-                                                    categoryId:
-                                                        widget.categoryId,
-                                                    levelId: level.id,
-                                                    type: widget.type,
-                                                  );
-                                                  break;
-                                                case "imagequiz":
-                                                  screen = QuizImageScreen(
-                                                    categoryId:
-                                                        widget.categoryId,
-                                                    levelId: level.id,
-                                                    type: widget.type,
-                                                  );
-                                                  break;
-                                                case "man":
-                                                  screen = MillionaireScreen(
-                                                    categoryId:
-                                                        widget.categoryId,
-                                                    levelId: level.id,
-                                                    type: widget.type,
-                                                  );
-                                                  break;
-                                                case "soman":
-                                                default:
-                                                  screen = QuizScreen(
-                                                    categoryId:
-                                                        widget.categoryId,
-                                                    levelId: level.id,
-                                                    type: widget.type,
-                                                  );
-                                              }
-
-                                              if (context.mounted) {
-                                                Navigator.push(
-                                                  context,
-                                                  MaterialPageRoute(
-                                                    builder: (_) => screen,
-                                                  ),
-                                                ).then((_) {
-                                                  context.read<LevelBloc>().add(
-                                                    LoadLevels(
-                                                      widget.categoryId,
-                                                    ),
-                                                  );
-                                                });
-                                              }
-                                            }
-                                            : null,
-                                  );
-                                },
+                                    // spacing giữa các chunk
+                                    const SliverPadding(
+                                      padding: EdgeInsets.only(bottom: 16),
+                                    ),
+                                  ],
+                                  const SliverPadding(
+                                    padding: EdgeInsets.only(bottom: 20),
+                                  ),
+                                ],
                               );
                             }
 
@@ -265,6 +207,95 @@ class _LevelscreenState extends State<Levelscreen> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildLevelCard(
+    BuildContext context,
+    int levelIndex,
+    List levels,
+    Map statuses,
+  ) {
+    final level = levels[levelIndex];
+    final UserLevelModel? userLevel = statuses[level.id];
+    final String status = userLevel?.status ?? 'default';
+
+    bool isUnlocked;
+    if (levelIndex == 0) {
+      isUnlocked = true;
+    } else {
+      final prevLevel = levels[levelIndex - 1];
+      final prevStatus = statuses[prevLevel.id]?.status;
+      final thisStatus = statuses[level.id]?.status;
+      isUnlocked =
+          prevStatus == 'completed' ||
+          (prevStatus == 'failed' && thisStatus != null);
+    }
+
+    return _LevelCard(
+      index: levelIndex,
+      status: status,
+      isUnlocked: isUnlocked,
+      onTap:
+          isUnlocked
+              ? () async {
+                if (status == 'completed') {
+                  final confirm = await showGameDialogConfirm(
+                    context: context,
+                    icon: "🔄",
+                    iconColor: const Color(0xFF6C63FF),
+                    title: "Chơi lại màn ${levelIndex + 1}?",
+                    description: "Bạn muốn chơi lại màn này không?",
+                    costIcon: "⚠️",
+                    costText: "Màn tiếp theo vẫn giữ nguyên",
+                    confirmText: "Xác nhận",
+                    confirmColor: const Color(0xFF6C63FF),
+                  );
+                  if (confirm != true) return;
+                }
+
+                Widget screen;
+                switch (widget.type) {
+                  case "level":
+                    screen = WordAnswerScreen(
+                      categoryId: widget.categoryId,
+                      levelId: level.id,
+                      type: widget.type,
+                    );
+                    break;
+                  case "imagequiz":
+                    screen = QuizImageScreen(
+                      categoryId: widget.categoryId,
+                      levelId: level.id,
+                      type: widget.type,
+                    );
+                    break;
+                  case "man":
+                    screen = MillionaireScreen(
+                      categoryId: widget.categoryId,
+                      levelId: level.id,
+                      type: widget.type,
+                    );
+                    break;
+                  case "soman":
+                  default:
+                    screen = QuizScreen(
+                      categoryId: widget.categoryId,
+                      levelId: level.id,
+                      type: widget.type,
+                    );
+                }
+
+                if (context.mounted) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => screen),
+                  ).then((_) {
+                    context.read<LevelBloc>().add(LoadLevels(widget.categoryId));
+                  });
+                }
+              }
+              : null,
     );
   }
 
@@ -474,9 +505,9 @@ class _LevelscreenState extends State<Levelscreen> {
   }
 }
 
-// // =============================================
-// //  LEVEL CARD với animation
-// // =============================================
+// =============================================
+//  LEVEL CARD
+// =============================================
 class _LevelCard extends StatelessWidget {
   final int index;
   final String status;
@@ -491,9 +522,7 @@ class _LevelCard extends StatelessWidget {
   });
 
   List<Color> _getGradient() {
-    if (!isUnlocked) {
-      return [Colors.grey.shade300, Colors.grey.shade400];
-    }
+    if (!isUnlocked) return [Colors.grey.shade300, Colors.grey.shade400];
     switch (status) {
       case 'completed':
         return [const Color(0xFF43C6AC), const Color(0xFF2BB89A)];

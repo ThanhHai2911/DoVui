@@ -4,16 +4,15 @@
   import 'package:flutter_bloc/flutter_bloc.dart';
   import 'package:dovui/pages/quiz/bloc/quiz_bloc.dart';
   import 'package:dovui/pages/quiz/bloc/quiz_event.dart';
-  import 'package:dovui/pages/quiz/bloc/quiz_state.dart';
   import 'package:dovui/data/models/question_model.dart';
 
   part 'millionaire_event.dart';
   part 'millionaire_state.dart';
 
   const List<int> kPrizeLevels = [
-    10, 20, 30, 50, 100,
-    200, 300, 500, 650, 800,
-    1000, 1200, 1500, 2000, 3000,
+    10, 20, 30, 50, 70,
+    100, 130, 160, 200, 240,
+    300, 360, 420, 480, 580,
   ];
   const List<int> kSafeMilestones = [5, 10];
 

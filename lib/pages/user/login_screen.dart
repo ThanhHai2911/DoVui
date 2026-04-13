@@ -62,7 +62,7 @@ class _LoginScreenState extends State<LoginScreen>
     context.read<UserBloc>().add(CheckUserEvent());
     Navigator.pushReplacement(
       context,
-      MaterialPageRoute(builder: (_) => const HomeBottomNav()),
+      MaterialPageRoute(builder: (_) => const HomeBottomNav(initialIndex: 0)),
     );
   }
 
@@ -203,7 +203,7 @@ class _LoginScreenState extends State<LoginScreen>
             if (state is UserRegistered) {
               Navigator.pushReplacement(
                 context,
-                MaterialPageRoute(builder: (_) => const HomeBottomNav()),
+                MaterialPageRoute(builder: (_) => const HomeBottomNav(initialIndex: 0)),
               );
             }
           },

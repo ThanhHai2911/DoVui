@@ -5,11 +5,12 @@ import 'package:dovui/pages/quiz_image/widgets/quiz_image_input.dart';
 import 'package:dovui/pages/word_answer/widgets/hint_bar.dart';
 import 'package:dovui/resources/color_manager.dart';
 import 'package:dovui/data/repositories/user_level_repository.dart';
-import 'package:dovui/pages/gamecomplete/game_complete_sceen.dart';
+import 'package:dovui/pages/gamecomplete/game_complete_screen.dart';
 import 'package:dovui/pages/quiz_image/bloc/image_question_bloc.dart';
 import 'package:dovui/pages/word_answer/widgets/letter_pool_widget.dart';
 import 'package:dovui/pages/word_answer/widgets/word_answer_shimmer.dart';
 import 'package:dovui/pages/word_answer/widgets/%20word_answer_header.dart';
+import 'package:dovui/services/room_service.dart' show RoomService;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -18,12 +19,14 @@ class QuizImageScreen extends StatefulWidget {
   final String categoryId;
   final String? levelId;
   final String type;
+  final String? roomId;
 
   const QuizImageScreen({
     super.key,
     required this.categoryId,
     required this.type,
     this.levelId,
+    this.roomId,
   });
 
   @override
@@ -148,7 +151,8 @@ class _QuizImageScreenState extends State<QuizImageScreen>
           listener: (context, state) async {
             if (state is QuizImageCompleted) {
               _saveResult(score: state.score, total: state.total);
-              NativeAdManager().loadAd();
+
+              // NativeAdManager().preloadPool();
               Navigator.pushReplacement(
                 context,
                 MaterialPageRoute(
@@ -169,7 +173,7 @@ class _QuizImageScreenState extends State<QuizImageScreen>
 
             if (state is QuizImageTimeUp) {
               _saveResult(score: state.score, total: state.total);
-              NativeAdManager().loadAd();
+              // RepaintBoundary(child: NativeAdWidget());
               Navigator.pushReplacement(
                 context,
                 MaterialPageRoute(

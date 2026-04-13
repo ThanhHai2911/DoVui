@@ -18,9 +18,11 @@ class LoadLevels extends LevelEvent {
 class ResetLevelsFrom extends LevelEvent {
   final String categoryId;
   final int fromIndex; // index của màn được chọn chơi lại
+   final bool resetOnlyOne; 
 
   const ResetLevelsFrom({
     required this.categoryId,
     required this.fromIndex,
+    this.resetOnlyOne = false,
   });
 }

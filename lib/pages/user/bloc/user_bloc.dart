@@ -80,15 +80,8 @@ class UserBloc extends Bloc<UserEvent, UserState> {
         event.email,
       );
 
-      final prefs = await SharedPreferences.getInstance();
-
-      await prefs.setString("userId", user.id);
-
       // ✅ THÊM DÒNG NÀY
       emit(UserRegistered(user));
-
-      // rồi mới stream lại
-      add(CheckUserEvent());
     } catch (e) {
       final error = e.toString();
 

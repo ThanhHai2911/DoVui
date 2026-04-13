@@ -1,19 +1,27 @@
+
+import 'package:dovui/pages/adddulieu/adddulieu.dart';
 import 'package:dovui/pages/category/categories_screen.dart';
 import 'package:dovui/pages/home/home_screen.dart';
 import 'package:dovui/pages/leaderboard/Leaderboard_screen.dart';
 import 'package:dovui/pages/profile/profile_screen.dart';
 import 'package:flutter/material.dart';
 import 'dart:ui';
+import 'package:dovui/data/audio/audio_manager.dart';
 
 class HomeBottomNav extends StatefulWidget {
-  const HomeBottomNav({super.key});
+  final int initialIndex; // ✅ đúng
+
+  const HomeBottomNav({
+    super.key,
+    this.initialIndex = 0,
+  });
 
   @override
   State<HomeBottomNav> createState() => _HomeBottomNavState();
 }
 
 class _HomeBottomNavState extends State<HomeBottomNav> {
-  int _currentIndex = 0;
+  late int _currentIndex;
 
   final List<Widget> _pages = [
     HomeScreen(),
@@ -21,6 +29,14 @@ class _HomeBottomNavState extends State<HomeBottomNav> {
     LeaderboardScreen(),
     ProfileScreen(),
   ];
+  
+  @override
+  void initState() {
+    super.initState();
+    _currentIndex = widget.initialIndex.clamp(0, _pages.length - 1); // ✅ QUAN TRỌNG
+    //CultureRiddleSetup.setup();
+    //FoodDataSetup.setup();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -73,12 +89,9 @@ class _HomeBottomNavState extends State<HomeBottomNav> {
         onTap: () {
           setState(() {
             _currentIndex = index;
-            //await FoodDataSetup.setup();
-            //VietnamLandmarkSetup.setupVietnamLandmarks();
-            //VietnamLandmarkSetupExtra.setupLevels5to50();
-            //VietnamMixedSetup.setupLevels5to50();
-            //MillionaireDataSetup.run();
-            //RiddleDataSetup.setup();
+            if (isSelected) {
+              AudioManager().playClick();
+            }
           });
         },
         child: Center(

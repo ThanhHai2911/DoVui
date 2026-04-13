@@ -24,7 +24,9 @@ void main() async {
   // Load ads sau khi init xong
   RewardedAdManager().loadAd();
   InterstitialAdManager().loadAd();
-  NativeAdManager().loadAd(); 
+  // await MobileAds.instance.initialize().then((_) {
+  //   NativeAdManager().preloadPool();
+  // });
 
   runApp(const MyApp());
 }

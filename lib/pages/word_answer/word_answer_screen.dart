@@ -2,9 +2,8 @@ import 'package:dovui/pages/ads/ads_service.dart';
 import 'package:dovui/pages/home/widgets/check_score.dart';
 import 'package:dovui/pages/home/widgets/game_dialog.dart';
 import 'package:dovui/pages/word_answer/widgets/hint_bar.dart';
-import 'package:dovui/resources/color_manager.dart';
 import 'package:dovui/data/repositories/user_level_repository.dart';
-import 'package:dovui/pages/gamecomplete/game_complete_sceen.dart';
+import 'package:dovui/pages/gamecomplete/game_complete_screen.dart';
 import 'package:dovui/pages/word_answer/bloc/word_answer_bloc.dart';
 import 'package:dovui/pages/word_answer/bloc/word_answer_event.dart';
 import 'package:dovui/pages/word_answer/bloc/word_answer_state.dart';
@@ -20,6 +19,7 @@ class WordAnswerScreen extends StatefulWidget {
   final String categoryId;
   final String? levelId;
   final String type;
+
 
   const WordAnswerScreen({
     super.key,
@@ -171,7 +171,7 @@ class _WordAnswerScreenState extends State<WordAnswerScreen>
           listener: (context, state) async {
             if (state is WordAnswerCompleted) {
               _saveResult(score: state.score, total: state.total);
-              NativeAdManager().loadAd();
+              // NativeAdManager().preloadPool();
               Navigator.pushReplacement(
                 context,
                 MaterialPageRoute(
@@ -191,7 +191,7 @@ class _WordAnswerScreenState extends State<WordAnswerScreen>
             }
             if (state is WordAnswerTimeUp) {
               _saveResult(score: state.score, total: state.total);
-              NativeAdManager().loadAd();
+              // RepaintBoundary(child: NativeAdWidget());
               Navigator.pushReplacement(
                 context,
                 MaterialPageRoute(

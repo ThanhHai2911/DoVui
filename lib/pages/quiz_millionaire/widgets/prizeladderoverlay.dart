@@ -376,7 +376,7 @@ class _LadderRow extends StatelessWidget {
     if (pts >= 1000) {
       final thousands  = pts ~/ 1000;
       final remainder  = pts % 1000;
-      if (remainder == 0) return '$thousands.000 Sao';
+      if (remainder == 0) return '$thousands Sao';
       return '$thousands.${remainder.toString().padLeft(3, '0')} Sao';
     }
     return '$pts Sao';

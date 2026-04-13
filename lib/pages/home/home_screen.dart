@@ -1,4 +1,5 @@
 import 'package:dovui/data/audio/audio_manager.dart';
+import 'package:dovui/pages/ads/ads_service.dart';
 import 'package:dovui/resources/color_manager.dart';
 import 'package:dovui/pages/home/bloc/home_bloc.dart';
 import 'package:dovui/pages/home/bloc/home_event.dart';
@@ -145,6 +146,43 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                   child: CategoriesSection(),
                                 ),
                                 const SizedBox(height: 30),
+                                // Row(
+                                //   children: [
+                                //     Container(
+                                //       width: 4,
+                                //       height: 22,
+                                //       decoration: BoxDecoration(
+                                //         color: const Color(0xFF6C63FF),
+                                //         borderRadius: BorderRadius.circular(4),
+                                //       ),
+                                //     ),
+                                //     const SizedBox(width: 10),
+                                //     const Text(
+                                //       "Quảng cáo",
+                                //       style: TextStyle(
+                                //         fontSize: 20,
+                                //         fontWeight: FontWeight.bold,
+                                //         color: Color(0xFF1E1B4B),
+                                //         letterSpacing: 0.3,
+                                //       ),
+                                //     ),
+                                //     const Spacer(),
+                                //     // Badge số lượng
+                                //     Container(
+                                //       padding: const EdgeInsets.symmetric(
+                                //         horizontal: 10,
+                                //         vertical: 4,
+                                //       ),
+                                //       decoration: BoxDecoration(
+                                //         color: const Color(
+                                //           0xFF6C63FF,
+                                //         ).withOpacity(0.1),
+                                //         borderRadius: BorderRadius.circular(20),
+                                //       ),
+                                //     ),
+                                //   ],
+                                // ),
+                                //RepaintBoundary(child: NativeAdWidget()),
                               ],
                             ),
                           ),

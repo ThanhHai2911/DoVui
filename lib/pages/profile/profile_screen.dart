@@ -1,7 +1,6 @@
 import 'package:dovui/data/audio/audio_manager.dart';
 import 'package:dovui/pages/ads/ads_service.dart';
-import 'package:dovui/pages/home/widgets/game_dialog.dart';
-import 'package:dovui/pages/user/login_screen.dart';
+import 'package:dovui/pages/settings/settings_screen.dart';
 import 'package:dovui/resources/color_manager.dart';
 import 'package:dovui/pages/profile/widgets/profile_shimmer.dart';
 import 'package:dovui/pages/user/bloc/user_bloc.dart';
@@ -21,14 +20,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool _canCheckIn = true;
   bool _videoWatched = false;
   bool _isAdmin = false;
-  final BannerAdManager _bannerAdManager = BannerAdManager();
 
   @override
   void initState() {
     super.initState();
     _loadCheckInStatus();
     _applySavedSoundSetting();
-    _bannerAdManager.loadAd(onLoaded: () => setState(() {}));
     AudioManager().init().then((_) {
       AudioManager().playBackgroundMusic();
     });
@@ -36,11 +33,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   void dispose() {
-    _bannerAdManager.dispose();
     super.dispose();
   }
 
-  /// Đọc và áp dụng trạng thái âm thanh đã lưu
   Future<void> _applySavedSoundSetting() async {
     final prefs = await SharedPreferences.getInstance();
     final isSoundOn = prefs.getBool('sound_enabled') ?? true;
@@ -54,32 +49,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _loadCheckInStatus() async {
     final prefs = await SharedPreferences.getInstance();
-
-    // Admin
     _isAdmin = prefs.getBool("isAdmin") ?? false;
 
-    // Check in
     final lastCheckIn = prefs.getString('last_check_in');
     if (lastCheckIn == null) {
       _canCheckIn = true;
     } else {
       final last = DateTime.parse(lastCheckIn);
       final now = DateTime.now();
-      _canCheckIn =
-          !(last.year == now.year &&
-              last.month == now.month &&
-              last.day == now.day);
+      _canCheckIn = !(last.year == now.year &&
+          last.month == now.month &&
+          last.day == now.day);
     }
 
-    // Video
     final lastVideo = prefs.getString('last_video_watch');
     if (lastVideo == null) {
       _videoWatched = false;
     } else {
       final last = DateTime.parse(lastVideo);
       final now = DateTime.now();
-      _videoWatched =
-          last.year == now.year &&
+      _videoWatched = last.year == now.year &&
           last.month == now.month &&
           last.day == now.day;
     }
@@ -119,19 +108,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     RewardedAdManager().showAd(
       onRewarded: () async {
-        // Lưu trạng thái đã xem video hôm nay
         final prefs = await SharedPreferences.getInstance();
-        await prefs.setString(
-          'last_video_watch',
-          DateTime.now().toIso8601String(),
-        );
-
-        // Cộng điểm
+        await prefs.setString('last_video_watch', DateTime.now().toIso8601String());
         await UserRepository().updateScore(userId, score + 10);
-
         setState(() => _videoWatched = true);
         setStateDialog(() {});
-
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -155,297 +136,91 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void _showMissionDialog(BuildContext context, String userId, int score) {
     showDialog(
       context: context,
-      builder:
-          (ctx) => StatefulBuilder(
-            builder: (ctx, setStateDialog) {
-              AudioManager().playClick();
-              return Dialog(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(24),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Text(
-                        "🎯 Nhiệm vụ hàng ngày",
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF1E1B4B),
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-
-                      // Điểm danh
-                      _buildMissionRow(
-                        icon: "📅",
-                        title: "Điểm danh hàng ngày",
-                        reward: "+10 ⭐",
-                        color: const Color(0xFF43C6AC),
-                        done: !_canCheckIn,
-                        onTap:
-                            !_canCheckIn
-                                ? null
-                                : () async {
-                                  await _doCheckIn(userId, score);
-                                  setStateDialog(() {});
-                                  if (context.mounted) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text(
-                                          '✅ Điểm danh thành công! +10 ⭐',
-                                        ),
-                                        backgroundColor: Color(0xFF43C6AC),
-                                      ),
-                                    );
-                                  }
-                                },
-                      ),
-
-                      const SizedBox(height: 12),
-
-                      _buildMissionRow(
-                        icon: "🎬",
-                        title: "Xem video nhận thưởng",
-                        reward: "+10 ⭐",
-                        color: const Color(0xFF6C63FF),
-                        done: _videoWatched, // ✅ đọc trạng thái thật
-                        onTap:
-                            _videoWatched
-                                ? null
-                                : () => _doWatchVideo(
-                                  context,
-                                  userId,
-                                  score,
-                                  setStateDialog,
-                                ), // ✅ gọi ad thật
-                      ),
-
-                      const SizedBox(height: 24),
-
-                      SizedBox(
-                        width: double.infinity,
-                        child: TextButton(
-                          onPressed: () {
-                            AudioManager()
-                                .playBackgroundMusic(); // 🔊 phát âm thanh
-                            Navigator.pop(ctx); // đóng dialog
-                          },
-                          style: TextButton.styleFrom(
-                            backgroundColor: Colors.grey.shade100,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                          ),
-                          child: const Text(
-                            "Đóng",
-                            style: TextStyle(
-                              color: Colors.grey,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setStateDialog) {
+          AudioManager().playClick();
+          return Dialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    "🎯 Nhiệm vụ hàng ngày",
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF1E1B4B),
+                    ),
                   ),
-                ),
-              );
-            },
-          ),
+                  const SizedBox(height: 20),
+                  _buildMissionRow(
+                    icon: "📅",
+                    title: "Điểm danh hàng ngày",
+                    reward: "+10 ⭐",
+                    color: const Color(0xFF43C6AC),
+                    done: !_canCheckIn,
+                    onTap: !_canCheckIn
+                        ? null
+                        : () async {
+                            await _doCheckIn(userId, score);
+                            setStateDialog(() {});
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('✅ Điểm danh thành công! +10 ⭐'),
+                                  backgroundColor: Color(0xFF43C6AC),
+                                ),
+                              );
+                            }
+                          },
+                  ),
+                  const SizedBox(height: 12),
+                  _buildMissionRow(
+                    icon: "🎬",
+                    title: "Xem video nhận thưởng",
+                    reward: "+10 ⭐",
+                    color: const Color(0xFF6C63FF),
+                    done: _videoWatched,
+                    onTap: _videoWatched
+                        ? null
+                        : () => _doWatchVideo(context, userId, score, setStateDialog),
+                  ),
+                  const SizedBox(height: 24),
+                  SizedBox(
+                    width: double.infinity,
+                    child: TextButton(
+                      onPressed: () {
+                        AudioManager().playBackgroundMusic();
+                        Navigator.pop(ctx);
+                      },
+                      style: TextButton.styleFrom(
+                        backgroundColor: Colors.grey.shade100,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                      child: const Text(
+                        "Đóng",
+                        style: TextStyle(color: Colors.grey, fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
     );
   }
 
-  // ── FIX: đọc trạng thái âm thanh từ SharedPreferences ──
-  void _showSettingsDialog(BuildContext context) async {
-    final prefs = await SharedPreferences.getInstance();
-    bool isMusicOn = prefs.getBool('music_enabled') ?? true;
-    bool isSfxOn = prefs.getBool('sfx_enabled') ?? true;
-
-    if (!context.mounted) return;
+  void _openSettings() {
     AudioManager().playClick();
-    showDialog(
-      context: context,
-      builder: (ctx) {
-        return StatefulBuilder(
-          builder: (ctx, setStateDialog) {
-            return Dialog(
-              backgroundColor: Colors.transparent,
-              child: Container(
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(28),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.deepPurple.withOpacity(0.15),
-                      blurRadius: 24,
-                      spreadRadius: 2,
-                      offset: const Offset(0, 10),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // ── ICON ──
-                    Container(
-                      width: 84,
-                      height: 84,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: LinearGradient(
-                          colors: [
-                            Colors.deepPurple.withOpacity(0.15),
-                            Colors.deepPurple.withOpacity(0.05),
-                          ],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        border: Border.all(
-                          color: Colors.deepPurple.withOpacity(0.35),
-                          width: 2,
-                        ),
-                      ),
-                      child: const Center(
-                        child: Text('⚙️', style: TextStyle(fontSize: 38)),
-                      ),
-                    ),
-
-                    const SizedBox(height: 16),
-
-                    // ── TITLE ──
-                    const Text(
-                      'Cài Đặt',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF1E1B4B),
-                      ),
-                    ),
-
-                    const SizedBox(height: 24),
-
-                    // ── NHẠC NỀN ──
-                    _buildSoundRow(
-                      icon: isMusicOn ? '🎵' : '🔕',
-                      label: 'Nhạc nền',
-                      value: isMusicOn,
-                      activeColor: Colors.deepPurple,
-                      onChanged: (value) async {
-                        setStateDialog(() => isMusicOn = value);
-                        await prefs.setBool('music_enabled', value);
-                        if (value) {
-                          await AudioManager().init();
-                          AudioManager().playBackgroundMusic();
-                        } else {
-                          AudioManager().stopBackgroundMusic();
-                        }
-                      },
-                    ),
-
-                    const SizedBox(height: 12),
-
-                    // ── HIỆU ỨNG ──
-                    _buildSoundRow(
-                      icon: isSfxOn ? '🔊' : '🔇',
-                      label: 'Hiệu ứng',
-                      value: isSfxOn,
-                      activeColor: const Color(0xFF43C6AC),
-                      onChanged: (value) async {
-                        setStateDialog(() => isSfxOn = value);
-                        await prefs.setBool('sfx_enabled', value);
-                        if (!value) {
-                          AudioManager().stopSfx();
-                        }
-                      },
-                    ),
-
-                    const SizedBox(height: 24),
-
-                    // ── BUTTON ĐÓNG ──
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: () {
-                          if (isMusicOn) AudioManager().playBackgroundMusic();
-                          Navigator.pop(ctx);
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.deepPurple,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                        ),
-                        child: const Text(
-                          'Đóng',
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-
-  // ── HELPER WIDGET ──
-  Widget _buildSoundRow({
-    required String icon,
-    required String label,
-    required bool value,
-    required Color activeColor,
-    required ValueChanged<bool> onChanged,
-  }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      decoration: BoxDecoration(
-        color: Colors.grey.shade50,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade200),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color:
-                  value
-                      ? activeColor.withOpacity(0.1)
-                      : Colors.grey.withOpacity(0.1),
-              shape: BoxShape.circle,
-            ),
-            child: Center(
-              child: Text(icon, style: const TextStyle(fontSize: 18)),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              label,
-              style: const TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w500,
-                color: Color(0xFF1E1B4B),
-              ),
-            ),
-          ),
-          Switch(value: value, activeColor: activeColor, onChanged: onChanged),
-        ],
-      ),
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const SettingsScreen()),
     );
   }
 
@@ -476,39 +251,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 child: Text(
                   title,
                   style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF1E1B4B),
-                  ),
+                      fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF1E1B4B)),
                 ),
               ),
               done
-                  ? const Text(
-                    "✅ Hoàn thành",
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  )
+                  ? const Text("✅ Hoàn thành",
+                      style: TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.w500))
                   : Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 4,
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                          color: color.withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(20)),
+                      child: Text(reward,
+                          style: TextStyle(
+                              fontSize: 12, fontWeight: FontWeight.bold, color: color)),
                     ),
-                    decoration: BoxDecoration(
-                      color: color.withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      reward,
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: color,
-                      ),
-                    ),
-                  ),
             ],
           ),
         ),
@@ -544,7 +301,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
             String name = "Admin";
             int score = 0;
-            String correct = "0%";
             int rank = 0;
             String userId = '';
 
@@ -553,7 +309,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
               score = state.user.score;
               rank = state.user.rank;
               userId = state.user.id;
-              correct = "0%";
             }
 
             final avatarColor = _getColorByName(name);
@@ -583,71 +338,43 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           child: Stack(
                             children: [
                               Positioned(
-                                top: -20,
-                                right: -20,
-                                child: Container(
-                                  width: 120,
-                                  height: 120,
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    color: Colors.white.withOpacity(0.08),
-                                  ),
-                                ),
+                                top: -20, right: -20,
+                                child: Container(width: 120, height: 120,
+                                  decoration: BoxDecoration(shape: BoxShape.circle,
+                                      color: Colors.white.withOpacity(0.08))),
                               ),
                               Positioned(
-                                top: 30,
-                                right: 50,
-                                child: Container(
-                                  width: 60,
-                                  height: 60,
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    color: Colors.white.withOpacity(0.08),
-                                  ),
-                                ),
+                                top: 30, right: 50,
+                                child: Container(width: 60, height: 60,
+                                  decoration: BoxDecoration(shape: BoxShape.circle,
+                                      color: Colors.white.withOpacity(0.08))),
                               ),
                               Positioned(
-                                bottom: 10,
-                                left: 20,
-                                child: Container(
-                                  width: 80,
-                                  height: 80,
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    color: Colors.white.withOpacity(0.06),
-                                  ),
-                                ),
+                                bottom: 10, left: 20,
+                                child: Container(width: 80, height: 80,
+                                  decoration: BoxDecoration(shape: BoxShape.circle,
+                                      color: Colors.white.withOpacity(0.06))),
                               ),
                               const Padding(
                                 padding: EdgeInsets.only(top: 20),
                                 child: Center(
-                                  child: Text(
-                                    "Hồ Sơ",
-                                    style: TextStyle(
-                                      fontSize: 26,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.white,
-                                      letterSpacing: 1,
-                                    ),
-                                  ),
+                                  child: Text("Hồ Sơ",
+                                    style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold,
+                                        color: Colors.white, letterSpacing: 1)),
                                 ),
                               ),
+                              // ── NÚT CÀI ĐẶT ──
                               Positioned(
-                                top: 20,
-                                right: 16,
+                                top: 20, right: 16,
                                 child: GestureDetector(
-                                  onTap: () => _showSettingsDialog(context),
+                                  onTap: _openSettings,
                                   child: Container(
                                     padding: const EdgeInsets.all(10),
                                     decoration: BoxDecoration(
                                       color: Colors.white.withOpacity(0.15),
                                       shape: BoxShape.circle,
                                     ),
-                                    child: const Icon(
-                                      Icons.settings,
-                                      color: Colors.white,
-                                      size: 22,
-                                    ),
+                                    child: const Icon(Icons.settings, color: Colors.white, size: 22),
                                   ),
                                 ),
                               ),
@@ -656,9 +383,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ),
                       ),
                       Positioned(
-                        bottom: -55,
-                        left: 0,
-                        right: 0,
+                        bottom: -55, left: 0, right: 0,
                         child: Center(
                           child: Container(
                             padding: const EdgeInsets.all(4),
@@ -666,11 +391,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               shape: BoxShape.circle,
                               color: Colors.white,
                               boxShadow: [
-                                BoxShadow(
-                                  color: avatarColor.withOpacity(0.4),
-                                  blurRadius: 20,
-                                  spreadRadius: 2,
-                                ),
+                                BoxShadow(color: avatarColor.withOpacity(0.4),
+                                    blurRadius: 20, spreadRadius: 2)
                               ],
                             ),
                             child: CircleAvatar(
@@ -678,11 +400,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               backgroundColor: avatarColor,
                               child: Text(
                                 name.isNotEmpty ? name[0].toUpperCase() : "A",
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 42,
-                                ),
+                                style: const TextStyle(color: Colors.white,
+                                    fontWeight: FontWeight.bold, fontSize: 42),
                               ),
                             ),
                           ),
@@ -693,32 +412,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                   const SizedBox(height: 70),
 
-                  Text(
-                    name,
-                    style: const TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF1E1B4B),
-                    ),
-                  ),
+                  Text(name,
+                    style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold,
+                        color: Color(0xFF1E1B4B))),
                   const SizedBox(height: 6),
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 5,
-                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
                     decoration: BoxDecoration(
                       color: ColorManager.primaryColor.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(20),
                     ),
-                    child: Text(
-                      "@${name.toLowerCase()}",
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: ColorManager.primaryColor,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
+                    child: Text("@${name.toLowerCase()}",
+                      style: TextStyle(fontSize: 14, color: ColorManager.primaryColor,
+                          fontWeight: FontWeight.w500)),
                   ),
 
                   const SizedBox(height: 30),
@@ -729,27 +435,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     child: Row(
                       children: [
                         _buildStatCard(
-                          value: _missionPercent,
-                          label: "Nhiệm vụ",
-                          icon: "📋",
+                          value: _missionPercent, label: "Nhiệm vụ", icon: "📋",
                           color: const Color(0xFF43C6AC),
-                          onTap:
-                              () => _showMissionDialog(context, userId, score),
+                          onTap: () => _showMissionDialog(context, userId, score),
                         ),
                         const SizedBox(width: 12),
-                        _buildStatCard(
-                          value: "$score",
-                          label: "Điểm số",
-                          icon: "⭐",
-                          color: const Color(0xFFFFB347),
-                        ),
+                        _buildStatCard(value: "$score", label: "Điểm số",
+                            icon: "⭐", color: const Color(0xFFFFB347)),
                         const SizedBox(width: 12),
-                        _buildStatCard(
-                          value: "#$rank",
-                          label: "Xếp hạng",
-                          icon: "🏆",
-                          color: const Color(0xFF6C63FF),
-                        ),
+                        _buildStatCard(value: "#$rank", label: "Xếp hạng",
+                            icon: "🏆", color: const Color(0xFF6C63FF)),
                       ],
                     ),
                   ),
@@ -771,9 +466,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           end: Alignment.bottomRight,
                         ),
                         borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                          color: const Color(0xFF6C63FF).withOpacity(0.2),
-                        ),
+                        border: Border.all(color: const Color(0xFF6C63FF).withOpacity(0.2)),
                       ),
                       child: Row(
                         children: [
@@ -782,22 +475,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text(
-                                "Người chơi tích cực",
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 15,
-                                  color: Color(0xFF1E1B4B),
-                                ),
-                              ),
+                              const Text("Người chơi tích cực",
+                                style: TextStyle(fontWeight: FontWeight.bold,
+                                    fontSize: 15, color: Color(0xFF1E1B4B))),
                               const SizedBox(height: 4),
-                              Text(
-                                "Tiếp tục chinh phục các thử thách!",
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.grey.shade600,
-                                ),
-                              ),
+                              Text("Tiếp tục chinh phục các thử thách!",
+                                style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
                             ],
                           ),
                         ],
@@ -805,93 +488,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                   ),
 
-                  const SizedBox(height: 28),
+                  // const SizedBox(height: 28),
 
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    child: _bannerAdManager.buildBannerWidget(),
-                  ),
-
-                  const SizedBox(height: 12),
-
-                  /// LOGOUT
-                  if (state is UserRegistered)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      child: GestureDetector(
-                        onTap:
-                            () => showGameDialog(
-                              context: context,
-                              icon: "👋",
-                              iconColor: Colors.red,
-                              title: "Đăng xuất?",
-                              description:
-                                  "Bạn có chắc muốn thoát không?\nTiến trình của bạn sẽ được lưu lại.",
-                              costIcon: "💾",
-                              costText: "Dữ liệu được lưu",
-                              confirmText: "Đăng xuất",
-                              confirmColor: Colors.red,
-                              onConfirm: () async {
-                                final prefs =
-                                    await SharedPreferences.getInstance();
-                                await prefs.clear();
-
-                                if (context.mounted) {
-                                  context.read<UserBloc>().add(
-                                    LogoutUserEvent(),
-                                  );
-                                  Navigator.pushAndRemoveUntil(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (_) => const LoginScreen(),
-                                    ),
-                                    (route) => false,
-                                  );
-                                }
-                              },
-                            ),
-                        child: Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(18),
-                            border: Border.all(
-                              color: Colors.red.shade200,
-                              width: 1.5,
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.red.withOpacity(0.08),
-                                blurRadius: 12,
-                                offset: const Offset(0, 4),
-                              ),
-                            ],
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.logout_rounded,
-                                color: Colors.red.shade400,
-                                size: 22,
-                              ),
-                              const SizedBox(width: 10),
-                              Text(
-                                "Đăng xuất",
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.red.shade400,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
+                  // // Native Ad
+                  // Padding(
+                  //   padding: const EdgeInsets.symmetric(horizontal: 20),
+                  //   child: RepaintBoundary(child: NativeAdWidget()),
+                  // ),
 
                   const SizedBox(height: 20),
+                  // ── Nút đăng xuất đã chuyển sang SettingsScreen ──
                 ],
               ),
             );
@@ -917,11 +523,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             color: Colors.white,
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
-              BoxShadow(
-                color: color.withOpacity(0.15),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
-              ),
+              BoxShadow(color: color.withOpacity(0.15), blurRadius: 12, offset: const Offset(0, 4))
             ],
             border: Border.all(color: color.withOpacity(0.2)),
           ),
@@ -930,20 +532,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
             children: [
               Text(icon, style: const TextStyle(fontSize: 24)),
               const SizedBox(height: 8),
-              Text(
-                value,
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: color,
-                ),
-              ),
+              Text(value,
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: color)),
               const SizedBox(height: 4),
-              Text(
-                label,
+              Text(label,
                 style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
-                textAlign: TextAlign.center,
-              ),
+                textAlign: TextAlign.center),
             ],
           ),
         ),

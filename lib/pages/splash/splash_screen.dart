@@ -71,7 +71,9 @@ class _SplashScreenState extends State<SplashScreen>
 
     /// Check user after splash
     Future.delayed(const Duration(seconds: 2), () {
-      context.read<UserBloc>().add(CheckUserEvent());
+      if (mounted) {
+        context.read<UserBloc>().add(CheckUserEvent());
+      }
     });
   }
 
@@ -91,7 +93,7 @@ class _SplashScreenState extends State<SplashScreen>
           if (state is UserRegistered) {
             Navigator.pushReplacement(
               context,
-              MaterialPageRoute(builder: (_) => const HomeBottomNav()),
+              MaterialPageRoute(builder: (_) => const HomeBottomNav(initialIndex: 0)),
             );
           }
 
@@ -159,6 +161,8 @@ class _SplashScreenState extends State<SplashScreen>
                               width: 220,
                               height: 220,
                               fit: BoxFit.cover,
+                              cacheHeight: 220,
+                              cacheWidth: 220,
                             ),
                           ),
                         ),

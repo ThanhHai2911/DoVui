@@ -13,60 +13,59 @@ class LevelBloc extends Bloc<LevelEvent, LevelState> {
 
   LevelBloc() : super(LevelLoading()) {
     on<LoadLevels>(_onLoadLevels);
-    on<ResetLevelsFrom>(_onResetLevelsFrom); 
+    on<ResetLevelsFrom>(_onResetLevelsFrom);
   }
-  
 
-  Future<void> _onLoadLevels(
-  LoadLevels event,
-  Emitter<LevelState> emit,
-) async {
-  emit(LevelLoading());
+  Future<void> _onLoadLevels(LoadLevels event, Emitter<LevelState> emit) async {
+    emit(LevelLoading());
 
-  try {
-    final levelsStream = QuizService.getLevels(event.categoryId);
-    final statusStream = _repo.getLevelStatusesStream();
+    try {
+      final levelsStream = QuizService.getLevels(event.categoryId);
+      final statusStream = _repo.getLevelStatusesStream();
 
-    await emit.forEach(
-      Rx.combineLatest2(
-        levelsStream,
-        statusStream,
-        (List<LevelModel> levels,
-            Map<String, UserLevelModel> statuses) {
-          return LevelLoaded(
-            levels,
-            levelStatuses: statuses,
-          );
+      await emit.forEach(
+        Rx.combineLatest2(levelsStream, statusStream, (
+          List<LevelModel> levels,
+          Map<String, UserLevelModel> statuses,
+        ) {
+          return LevelLoaded(levels, levelStatuses: statuses);
+        }),
+        onData: (state) => state,
+        onError: (error, stackTrace) {
+          return LevelError(error.toString());
         },
-      ),
-      onData: (state) => state,
-      onError: (error, stackTrace) {
-        return LevelError(error.toString());
-      },
-    );
-  } catch (e) {
-    emit(LevelError(e.toString()));
+      );
+    } catch (e) {
+      emit(LevelError(e.toString()));
+    }
   }
-}
-Future<void> _onResetLevelsFrom(
-  ResetLevelsFrom event,
-  Emitter<LevelState> emit,
-) async {
-  final currentState = state;
-  if (currentState is! LevelLoaded) return;
 
-  final uid = FirebaseAuth.instance.currentUser?.uid;
-  if (uid == null) return;
+  Future<void> _onResetLevelsFrom(
+    ResetLevelsFrom event,
+    Emitter<LevelState> emit,
+  ) async {
+    final currentState = state;
+    if (currentState is! LevelLoaded) return;
 
-  final levels = currentState.levels;
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
 
-  // ✅ Đổi tên biến thành levelIds để tránh trùng
-  final levelIds = levels.map((l) => l.id as String).toList();
+    final levels = currentState.levels;
+    final levelIds = levels.map((l) => l.id as String).toList();
 
-  await _repo.resetLevelsFrom(
-    allLevelIds: levelIds,   // ← dùng levelIds
-    startIndex: event.fromIndex,
-    userId: uid,
-  );
-}
+    if (event.resetOnlyOne) {
+      // Chỉ reset đúng màn được chọn
+      await _repo.resetLevelsFrom(
+        allLevelIds: [levelIds[event.fromIndex]],
+        startIndex: 0,
+        userId: uid,
+      );
+    } else {
+      await _repo.resetLevelsFrom(
+        allLevelIds: levelIds,
+        startIndex: event.fromIndex,
+        userId: uid,
+      );
+    }
+  }
 }

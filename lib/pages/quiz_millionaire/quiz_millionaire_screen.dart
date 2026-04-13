@@ -3,9 +3,10 @@ import 'package:dovui/data/repositories/user_level_repository.dart';
 import 'package:dovui/pages/ads/ads_service.dart';
 import 'package:dovui/pages/quiz_millionaire/widgets/askcontinue_dialog.dart';
 import 'package:dovui/pages/quiz_millionaire/widgets/prizeladderoverlay.dart';
+import 'package:dovui/services/room_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:dovui/pages/gamecomplete/game_complete_sceen.dart';
+import 'package:dovui/pages/gamecomplete/game_complete_screen.dart';
 import 'package:dovui/pages/quiz/bloc/quiz_bloc.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -187,7 +188,7 @@ class _MillionaireViewState extends State<_MillionaireView> {
     final isWin =
         state.questions.isNotEmpty &&
         (state.finalScore / (state.questions.length * 10)) >= 0.6;
-    NativeAdManager().loadAd();
+    // RepaintBoundary(child: NativeAdWidget());
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(

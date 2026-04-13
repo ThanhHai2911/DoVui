@@ -106,23 +106,9 @@ class _RegisterScreenState extends State<RegisterScreen>
 
     final name = _nameController.text.trim();
     final password = _passwordController.text.trim();
-    final email = _emailController.text.trim(); // ✅ FIX
+    final email = _emailController.text.trim();
 
-    final adminQuery =
-        await FirebaseFirestore.instance
-            .collection('admin')
-            .where('Name', isEqualTo: name)
-            .limit(1)
-            .get();
-
-    if (!context.mounted) return;
-
-    if (adminQuery.docs.isNotEmpty) {
-      setState(() => _nameError = "Tên này không thể sử dụng");
-      return;
-    }
-
-    context.read<UserBloc>().add(RegisterUserEvent(name, password, email));
+    // ✅ check email TRƯỚC
     final emailCheck =
         await FirebaseFirestore.instance
             .collection('users')
@@ -130,87 +116,28 @@ class _RegisterScreenState extends State<RegisterScreen>
             .limit(1)
             .get();
 
+    if (!context.mounted) return;
+
     if (emailCheck.docs.isNotEmpty) {
       setState(() => _emailError = "Email đã được sử dụng");
       return;
     }
-  }
 
-  // ─── Thông báo thành công → chuyển Login ────────────────────────────────────
-  void _showSuccessAndNavigate() {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder:
-          (ctx) => AlertDialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(24),
-            ),
-            backgroundColor: Colors.white,
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const SizedBox(height: 8),
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF43C6AC).withOpacity(0.12),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Text("🎉", style: TextStyle(fontSize: 40)),
-                ),
-                const SizedBox(height: 16),
-                const Text(
-                  "Đăng ký thành công!",
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF1E1B4B),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  "Tài khoản của bạn đã được tạo.\nHãy đăng nhập để bắt đầu!",
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey.shade600,
-                    height: 1.5,
-                  ),
-                ),
-                const SizedBox(height: 24),
-                SizedBox(
-                  width: double.infinity,
-                  height: 50,
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF43C6AC),
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                    ),
-                    onPressed: () {
-                      Navigator.pop(ctx);
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(builder: (_) => const LoginScreen()),
-                      );
-                    },
-                    child: const Text(
-                      "Đăng nhập ngay",
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-    );
+    // ✅ check admin name
+    final adminQuery =
+        await FirebaseFirestore.instance
+            .collection('admin')
+            .where('Name', isEqualTo: name)
+            .limit(1)
+            .get();
+
+    if (adminQuery.docs.isNotEmpty) {
+      setState(() => _nameError = "Tên này không thể sử dụng");
+      return;
+    }
+
+    // 👉 CUỐI CÙNG mới gọi register
+    context.read<UserBloc>().add(RegisterUserEvent(name, password, email));
   }
 
   @override
@@ -223,9 +150,34 @@ class _RegisterScreenState extends State<RegisterScreen>
         body: BlocListener<UserBloc, UserState>(
           listener: (context, state) {
             if (state is UserRegistered) {
-              _showSuccessAndNavigate();
+              // ✅ HIỆN THÔNG BÁO
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text("🎉 Đăng ký thành công! Hãy đăng nhập."),
+                  backgroundColor: Colors.green,
+                  duration: Duration(seconds: 2),
+                ),
+              );
+
+              // ✅ delay 1 chút cho user thấy
+              Future.delayed(const Duration(milliseconds: 800), () {
+                if (!context.mounted) return;
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (_) => const LoginScreen()),
+                );
+              });
             }
+
             if (state is UserError) {
+              // ❌ THÔNG BÁO LỖI
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(state.message),
+                  backgroundColor: Colors.red,
+                ),
+              );
+
               if (state.message.contains("tồn tại") ||
                   state.message.contains("EXISTS")) {
                 setState(() => _nameError = "Tên người dùng đã được sử dụng");
@@ -488,6 +440,17 @@ class _RegisterScreenState extends State<RegisterScreen>
                       },
                     ),
                   ),
+                ),
+                BlocBuilder<UserBloc, UserState>(
+                  builder: (context, state) {
+                    if (state is UserLoading) {
+                      return Container(
+                        color: Colors.black.withOpacity(0.3),
+                        child: const Center(child: CircularProgressIndicator()),
+                      );
+                    }
+                    return const SizedBox.shrink();
+                  },
                 ),
               ],
             ),

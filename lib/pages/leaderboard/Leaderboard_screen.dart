@@ -1,4 +1,10 @@
 import 'package:dovui/data/audio/audio_manager.dart';
+import 'package:dovui/pages/ads/ads_service.dart';
+import 'package:dovui/pages/home/widgets/game_dialog.dart';
+import 'package:dovui/pages/room/bloc/room_bloc.dart';
+import 'package:dovui/pages/room/bloc/room_event.dart';
+import 'package:dovui/pages/room/create_room_screen.dart';
+import 'package:dovui/pages/user/bloc/user_bloc.dart' hide LeaderboardLoaded;
 import 'package:dovui/resources/color_manager.dart';
 import 'package:dovui/data/repositories/leaderboard_repository.dart';
 import 'package:dovui/pages/leaderboard/bloc/leaderboard_bloc.dart';
@@ -10,6 +16,7 @@ import 'package:dovui/pages/leaderboard/widgets/topusercard.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter/widgets.dart';
+import 'dart:math';
 
 class LeaderboardScreen extends StatefulWidget {
   const LeaderboardScreen({super.key});
@@ -55,8 +62,68 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
 
     _entryCtrl.forward();
     AudioManager().init().then((_) {
-      AudioManager().playBackgroundMusic();
+      if (mounted) {
+        AudioManager().playBackgroundMusic();
+      }
     });
+  }
+
+  void _onTapScore(BuildContext context) {
+    showGameDialog(
+      context: context,
+      icon: '🎮',
+      iconColor: Colors.amber,
+      title: 'Tạo phòng chơi',
+      description: 'Xem 1 quảng cáo ngắn để tạo phòng \n chơi cùng bạn bè!',
+      costIcon: '🕹️',
+      costText: 'Hãy tạo phòng ngay!',
+      confirmText: 'Xem ngay',
+      confirmColor: Colors.amber.shade600,
+      showCancel: true,
+      onConfirm: () {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _showRewardedAd(context);
+        });
+      },
+    );
+  }
+
+  void _showRewardedAd(BuildContext context) {
+    if (!RewardedAdManager().isAdLoaded) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('⏳ Quảng cáo chưa sẵn sàng, thử lại sau!'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    RewardedAdManager().showAd(
+      onRewarded: () {
+        if (!mounted) return;
+        context.read<UserBloc>().add(AddScoreEvent(10));
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder:
+                (_) => BlocProvider(
+                  create: (_) => RoomBloc()..add(LoadCategories()),
+                  child: const CreateRoomScreen(),
+                ),
+          ),
+        );
+      },
+      onFailed: () {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('❌ Không tải được quảng cáo, thử lại sau!'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      },
+    );
   }
 
   @override
@@ -127,22 +194,53 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
                         child: SlideTransition(
                           position: _slide,
                           child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 20),
+                            padding: const EdgeInsets.symmetric(horizontal: 15),
                             child: Column(
                               children: [
-                                const SizedBox(height: 20),
-
-                                /// TITLE
-                                const Text(
-                                  "Bảng xếp hạng",
-                                  style: TextStyle(
-                                    fontSize: 36,
-                                    fontWeight: FontWeight.bold,
-                                    color: ColorManager.primaryDark,
-                                  ),
+                                const SizedBox(height: 10),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: Center(
+                                        child: Text(
+                                          "Bảng xếp hạng",
+                                          style: TextStyle(
+                                            fontSize: 36,
+                                            fontWeight: FontWeight.bold,
+                                            color: ColorManager.primaryDark,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    IconButton(
+                                      icon: Center(
+                                        child: Text(
+                                          "🏠🎮",
+                                          style: TextStyle(fontSize: 26),
+                                        ),
+                                      ),
+                                      onPressed:
+                                          () => Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder:
+                                                  (_) => BlocProvider(
+                                                    create:
+                                                        (_) =>
+                                                            RoomBloc()..add(
+                                                              LoadCategories(),
+                                                            ),
+                                                    child:
+                                                        const CreateRoomScreen(),
+                                                  ),
+                                            ),
+                                          ),
+                                    ),
+                                  ],
                                 ),
 
-                                const SizedBox(height: 30),
+                                /// TITLE
+                                const SizedBox(height: 10),
 
                                 /// 🏆 TOP 3
                                 if (users.isNotEmpty)
@@ -249,11 +347,9 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
                                           80,
                                     ),
                                     itemCount:
-                                        users.length >= 8
-                                            ? 4
-                                            : (users.length > 3
-                                                ? users.length - 3
-                                                : 0),
+                                        users.length > 3
+                                            ? min(users.length - 3, 4)
+                                            : 0,
                                     itemBuilder: (context, index) {
                                       final user = users[index + 3];
 

@@ -11,90 +11,89 @@ class UserRepository {
 
   /// ================= REGISTER USER =================
   Future<AppUser> registerUser(
-  String name,
-  String password,
-  String email,
-) async {
-  final trimmedName = name.trim();
-  final trimmedEmail = email.trim();
+    String name,
+    String password,
+    String email,
+  ) async {
+    final trimmedName = name.trim();
+    final trimmedEmail = email.trim();
 
-  // check username
-  final existing = await _firestore
-      .collection("users")
-      .where("name", isEqualTo: trimmedName)
-      .limit(1)
-      .get();
+    // check username
+    final existing =
+        await _firestore
+            .collection("users")
+            .where("name", isEqualTo: trimmedName)
+            .limit(1)
+            .get();
 
-  if (existing.docs.isNotEmpty) {
-    throw Exception("USERNAME_EXISTS");
+    if (existing.docs.isNotEmpty) {
+      throw Exception("USERNAME_EXISTS");
+    }
+
+    // 🔥 Firebase Auth
+    final credential = await _auth.createUserWithEmailAndPassword(
+      email: trimmedEmail,
+      password: password,
+    );
+
+    final uid = credential.user!.uid;
+
+    final user = AppUser(
+      id: uid,
+      name: trimmedName,
+      score: 300,
+      createdAt: DateTime.now(),
+    );
+
+    // 🔥 Firestore (KHÔNG lưu password)
+    await _firestore.collection("users").doc(uid).set({
+      ...user.toJson(),
+      "email": trimmedEmail,
+    });
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_userKey, uid);
+
+    return user;
   }
-
-  // 🔥 Firebase Auth
-  final credential = await _auth.createUserWithEmailAndPassword(
-    email: trimmedEmail,
-    password: password,
-  );
-
-  final uid = credential.user!.uid;
-
-  final user = AppUser(
-    id: uid,
-    name: trimmedName,
-    score: 300,
-    createdAt: DateTime.now(),
-  );
-
-  // 🔥 Firestore (KHÔNG lưu password)
-  await _firestore.collection("users").doc(uid).set({
-    ...user.toJson(),
-    "email": trimmedEmail,
-  });
-
-  final prefs = await SharedPreferences.getInstance();
-  await prefs.setString(_userKey, uid);
-
-  return user;
-}
 
   /// ================= STREAM USER BY ID =================
   Stream<AppUser?> streamUserById(String id) {
     return _firestore.collection("users").doc(id).snapshots().map((doc) {
       if (!doc.exists) return null;
-      return AppUser.fromJson({
-        ...doc.data()!,
-        "id": doc.id,
-      });
+      return AppUser.fromJson({...doc.data()!, "id": doc.id});
     });
   }
 
   Future<String?> getCurrentUserId() async {
-  final firebaseUser = _auth.currentUser;
-  if (firebaseUser != null) return firebaseUser.uid;
+    final firebaseUser = _auth.currentUser;
+    if (firebaseUser != null) return firebaseUser.uid;
 
-  // Fallback SharedPreferences
-  final prefs = await SharedPreferences.getInstance();
-  return prefs.getString(_userKey);
-}
+    // Fallback SharedPreferences
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_userKey);
+  }
 
   /// ================= UPDATE SCORE =================
   Future<void> updateScore(String id, int newScore) async {
-  await _firestore.collection("users").doc(id).update({"score": newScore});
-  // ❌ Bỏ await updateRanks() ở đây
-}
-
-// Gọi updateRanks riêng, ví dụ chỉ gọi khi vào màn leaderboard
-Future<void> updateRanks() async {
-  final snapshot = await _firestore
-      .collection('users')
-      .orderBy('score', descending: true)
-      .get();
-
-  final batch = _firestore.batch();
-  for (int i = 0; i < snapshot.docs.length; i++) {
-    batch.update(snapshot.docs[i].reference, {'rank': i + 1});
+    await _firestore.collection("users").doc(id).update({"score": newScore});
+    // ❌ Bỏ await updateRanks() ở đây
   }
-  await batch.commit();
-}
+
+  // Gọi updateRanks riêng, ví dụ chỉ gọi khi vào màn leaderboard
+  Future<void> updateRanks() async {
+    final snapshot =
+        await _firestore
+            .collection('users')
+            .orderBy('score', descending: true)
+            .get();
+
+    final batch = _firestore.batch();
+    for (int i = 0; i < snapshot.docs.length; i++) {
+      batch.update(snapshot.docs[i].reference, {'rank': i + 1});
+    }
+    await batch.commit();
+  }
 
   /// ================= STREAM LEADERBOARD =================
   Stream<List<AppUser>> streamTopUsers() {
@@ -103,9 +102,12 @@ Future<void> updateRanks() async {
         .orderBy("score", descending: true)
         .limit(10)
         .snapshots()
-        .map((snapshot) => snapshot.docs.map((doc) {
-              return AppUser.fromJson({...doc.data(), "id": doc.id});
-            }).toList());
+        .map(
+          (snapshot) =>
+              snapshot.docs.map((doc) {
+                return AppUser.fromJson({...doc.data(), "id": doc.id});
+              }).toList(),
+        );
   }
 
   /// ================= LOGOUT =================
@@ -115,7 +117,6 @@ Future<void> updateRanks() async {
     await prefs.remove("isRegistered");
     await prefs.remove("isAdmin");
   }
-
 
   Stream<int> getTotalUsersStream() {
     return _firestore
@@ -142,4 +143,23 @@ Future<void> updateRanks() async {
       "levelResults": {levelId: correct},
     }, SetOptions(merge: true));
   }
+
+  /// ================= DELETE USER (ADMIN) =================
+  Future<void> deleteUserData() async {
+    final user = FirebaseAuth.instance.currentUser;
+
+    if (user != null) {
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .delete();
+    }
+  }
+  Future<void> deleteAuthUser() async {
+  final user = FirebaseAuth.instance.currentUser;
+
+  if (user != null) {
+    await user.delete();
+  }
+}
 }

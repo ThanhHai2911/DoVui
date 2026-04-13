@@ -6,7 +6,6 @@ import 'quiz_event.dart';
 import 'quiz_state.dart';
 
 class QuizBloc extends Bloc<QuizEvent, QuizState> {
-  StreamSubscription? _subscription;
   Timer? _timer;
   List<int> usedIndexes = [];
 
@@ -19,6 +18,8 @@ class QuizBloc extends Bloc<QuizEvent, QuizState> {
     on<UseHint5050>(_onUseHint5050);
     on<UseHintEliminate>(_onUseHintEliminate);
     on<UseHintFree>(_onUseHintFree);
+    on<PauseTimer>(_onPauseTimer);
+    on<ResumeTimer>(_onResumeTimer);
   }
 
   Future<void> _onLoadQuiz(LoadQuiz event, Emitter<QuizState> emit) async {
@@ -84,7 +85,9 @@ class QuizBloc extends Bloc<QuizEvent, QuizState> {
     emit(state.copyWith(lives: newLives, showResult: true));
 
     Future.delayed(const Duration(seconds: 1), () {
-      add(NextQuestion());
+      if (!isClosed) {  // ← Add this check
+        add(NextQuestion());
+      }
     });
   }
 
@@ -114,7 +117,7 @@ class QuizBloc extends Bloc<QuizEvent, QuizState> {
           selectedIndex: event.index,
           showResult: true,
           lives: newLives,
-          score: newScore, // ← fix bug thiếu newScore
+          score: newScore,
           isGameOver: true,
         ),
       );
@@ -131,7 +134,9 @@ class QuizBloc extends Bloc<QuizEvent, QuizState> {
     );
 
     Future.delayed(const Duration(seconds: 1), () {
-      add(NextQuestion());
+      if (!isClosed) {  // ← Add this check
+        add(NextQuestion());
+      }
     });
   }
 
@@ -173,7 +178,6 @@ class QuizBloc extends Bloc<QuizEvent, QuizState> {
 
   @override
   Future<void> close() {
-    _subscription?.cancel();
     _timer?.cancel();
     return super.close();
   }
@@ -234,5 +238,14 @@ class QuizBloc extends Bloc<QuizEvent, QuizState> {
     if (correct == null) return;
     final wrongIndexes = [0, 1, 2, 3].where((i) => i != correct).toList();
     emit(state.copyWith(eliminatedIndexes: wrongIndexes));
+  }
+
+  // Thêm 2 handler
+  void _onPauseTimer(PauseTimer event, Emitter<QuizState> emit) {
+    _timer?.cancel();
+  }
+
+  void _onResumeTimer(ResumeTimer event, Emitter<QuizState> emit) {
+    _startTimer();
   }
 }

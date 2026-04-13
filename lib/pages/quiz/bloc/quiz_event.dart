@@ -1,4 +1,3 @@
-import 'package:dovui/pages/word_answer/bloc/word_answer_event.dart';
 import 'package:equatable/equatable.dart';
 
 abstract class QuizEvent extends Equatable {
@@ -31,7 +30,8 @@ class TimeTick extends QuizEvent {}
 
 class TimeUp extends QuizEvent {}
 
-class Tick extends WordAnswerEvent {}
-class UseHint5050 extends QuizEvent {}    
+class UseHint5050 extends QuizEvent {}
 class UseHintEliminate extends QuizEvent {}
-class UseHintFree extends QuizEvent {} 
+class UseHintFree extends QuizEvent {}
+class PauseTimer extends QuizEvent {}
+class ResumeTimer extends QuizEvent {}
