@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../bloc/room_bloc.dart';
 import '../bloc/room_event.dart';
 import '../bloc/room_state.dart';
 import '../room_lobby_screen.dart';
-import '../../../services/room_service.dart';
 
 class JoinRoomSheet extends StatefulWidget {
   final String currentUserId;
@@ -94,7 +92,25 @@ class _JoinRoomSheetState extends State<JoinRoomSheet> {
 
         if (transitionToWaiting && !_navigating && state.room != null) {
           _navigating = true;
-          _updatePresenceAndNavigate(context, state);
+          // Navigate tới RoomLobbyScreen
+          Navigator.pop(context); // Close bottom sheet
+          Future.delayed(const Duration(milliseconds: 100), () {
+            if (context.mounted) {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => BlocProvider.value(
+                    value: context.read<RoomBloc>(),
+                    child: RoomLobbyScreen(
+                      currentUserId: widget.currentUserId,
+                      initialRoomId: state.room!.roomId,
+                      justJoined: true,
+                    ),
+                  ),
+                ),
+              );
+            }
+          });
         }
 
         if (state.status == RoomStatus.error &&
@@ -382,33 +398,6 @@ class _JoinRoomSheetState extends State<JoinRoomSheet> {
     );
   }
 
-  Future<void> _updatePresenceAndNavigate(
-    BuildContext context,
-    RoomState state,
-  ) async {
-    final bloc = context.read<RoomBloc>();
-    final prefs = await SharedPreferences.getInstance();
-    final userId = prefs.getString('userId') ?? widget.currentUserId;
-    final isPlaying = state.room?.status == 'playing';
-
-    RoomService.updatePresence(state.room!.roomId, userId).then((_) {
-      if (!mounted) return;
-      Navigator.pop(context);
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => BlocProvider.value(
-            value: bloc,
-            child: RoomLobbyScreen(
-              currentUserId: widget.currentUserId,
-              initialRoomId: state.room!.roomId,
-              justJoined: isPlaying,
-            ),
-          ),
-        ),
-      ).then((_) => _navigating = false);
-    });
-  }
 }
 
 class _UpperCaseFormatter extends TextInputFormatter {

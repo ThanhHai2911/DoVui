@@ -22,6 +22,9 @@ class _CreateRoomScreenState extends State<CreateRoomScreen>
   late Animation<double> _fadeAnim;
   String _currentUserId = '';
 
+  // ── Guard: chỉ navigate sang lobby 1 lần duy nhất ──
+  bool _navigated = false;
+
   @override
   void initState() {
     super.initState();
@@ -31,6 +34,10 @@ class _CreateRoomScreenState extends State<CreateRoomScreen>
     )..forward();
     _fadeAnim = CurvedAnimation(parent: _fadeCtrl, curve: Curves.easeOut);
     _loadUserId();
+    // Load categories only once when entering this screen
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<RoomBloc>().add(LoadCategories());
+    });
   }
 
   Future<void> _loadUserId() async {
@@ -47,23 +54,44 @@ class _CreateRoomScreenState extends State<CreateRoomScreen>
 
   @override
   Widget build(BuildContext context) {
-    // ── KHÔNG có BlocProvider ở đây nữa ──
     return BlocConsumer<RoomBloc, RoomState>(
+      listenWhen: (prev, curr) {
+        // Lắng nghe khi trạng thái thay đổi sang waiting (vừa tạo phòng xong)
+        // hoặc khi có lỗi mới
+        final becameWaiting =
+            prev.status != RoomStatus.waiting &&
+            curr.status == RoomStatus.waiting &&
+            curr.room != null;
+        final isNewError =
+            curr.status == RoomStatus.error && curr.errorMessage != null;
+        return becameWaiting || isNewError;
+      },
       listener: (context, state) {
-        if (state.status == RoomStatus.waiting && state.room != null) {
+        // ── Chỉ navigate 1 lần duy nhất kể từ khi vào màn hình này ──
+        if (state.status == RoomStatus.waiting &&
+            state.room != null &&
+            !_navigated) {
+          _navigated = true;
           final bloc = context.read<RoomBloc>();
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder:
-                  (_) => BlocProvider.value(
-                    value: bloc,
-                    child: RoomLobbyScreen(currentUserId: _currentUserId,initialRoomId: state.room!.roomId,),
-                  ),
+              builder: (_) => BlocProvider.value(
+                value: bloc,
+                child: RoomLobbyScreen(
+                  currentUserId: _currentUserId,
+                  initialRoomId: state.room!.roomId,
+                ),
+              ),
             ),
-          );
+          ).then((_) {
+            // Reset flag khi quay lại màn hình này (người dùng pop lobby)
+            _navigated = false;
+          });
         }
-        if (state.status == RoomStatus.error && state.errorMessage != null) {
+
+        if (state.status == RoomStatus.error &&
+            state.errorMessage != null) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(state.errorMessage!),
@@ -83,14 +111,13 @@ class _CreateRoomScreenState extends State<CreateRoomScreen>
                 children: [
                   _buildTopBar(context),
                   Expanded(
-                    child:
-                        state.status == RoomStatus.loading
-                            ? const Center(
-                              child: CircularProgressIndicator(
-                                color: Color(0xFF6C63FF),
-                              ),
-                            )
-                            : _buildContent(context, state),
+                    child: state.status == RoomStatus.loading
+                        ? const Center(
+                            child: CircularProgressIndicator(
+                              color: Color(0xFF6C63FF),
+                            ),
+                          )
+                        : _buildContent(context, state),
                   ),
                 ],
               ),
@@ -183,13 +210,13 @@ class _CreateRoomScreenState extends State<CreateRoomScreen>
   }
 
   Widget _sectionTitle(String title) => Text(
-    title,
-    style: const TextStyle(
-      fontSize: 15,
-      fontWeight: FontWeight.bold,
-      color: Color(0xFF1E1B4B),
-    ),
-  );
+        title,
+        style: const TextStyle(
+          fontSize: 15,
+          fontWeight: FontWeight.bold,
+          color: Color(0xFF1E1B4B),
+        ),
+      );
 
   Widget _buildCategoryGrid(BuildContext context, RoomState state) {
     if (state.categories.isEmpty) {
@@ -216,12 +243,11 @@ class _CreateRoomScreenState extends State<CreateRoomScreen>
         final isSelected = cat.id == state.selectedCategoryId;
 
         return GestureDetector(
-          onTap:
-              () => context.read<RoomBloc>().add(
+          onTap: () => context.read<RoomBloc>().add(
                 SelectCategory(
                   categoryId: cat.id,
                   categoryName: cat.name,
-                  categoryType: cat.type, // ← truyền type
+                  categoryType: cat.type,
                 ),
               ),
           child: AnimatedContainer(
@@ -230,20 +256,20 @@ class _CreateRoomScreenState extends State<CreateRoomScreen>
               color: isSelected ? const Color(0xFF6C63FF) : Colors.white,
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                color:
-                    isSelected ? const Color(0xFF6C63FF) : Colors.grey.shade200,
+                color: isSelected
+                    ? const Color(0xFF6C63FF)
+                    : Colors.grey.shade200,
                 width: isSelected ? 2 : 1,
               ),
-              boxShadow:
-                  isSelected
-                      ? [
-                        BoxShadow(
-                          color: const Color(0xFF6C63FF).withOpacity(0.25),
-                          blurRadius: 8,
-                          offset: const Offset(0, 4),
-                        ),
-                      ]
-                      : [],
+              boxShadow: isSelected
+                  ? [
+                      BoxShadow(
+                        color: const Color(0xFF6C63FF).withOpacity(0.25),
+                        blurRadius: 8,
+                        offset: const Offset(0, 4),
+                      ),
+                    ]
+                  : [],
             ),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -258,7 +284,9 @@ class _CreateRoomScreenState extends State<CreateRoomScreen>
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
-                    color: isSelected ? Colors.white : const Color(0xFF1E1B4B),
+                    color: isSelected
+                        ? Colors.white
+                        : const Color(0xFF1E1B4B),
                   ),
                 ),
               ],
@@ -303,21 +331,20 @@ class _CreateRoomScreenState extends State<CreateRoomScreen>
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton(
-        onPressed:
-            canCreate
-                ? () {
-                  context.read<RoomBloc>().add(
-                    CreateRoom(
-                      categoryId: state.selectedCategoryId,
-                      categoryName: state.selectedCategoryName,
-                      type: state.selectedCategoryType, // ← truyền type
-                      password: _passwordCtrl.text.trim(),
-                      questionCount: state.questionCount,
-                      timePerQuestion: state.timePerQuestion,
-                    ),
-                  );
-                }
-                : null,
+        onPressed: canCreate
+            ? () {
+                context.read<RoomBloc>().add(
+                      CreateRoom(
+                        categoryId: state.selectedCategoryId,
+                        categoryName: state.selectedCategoryName,
+                        type: state.selectedCategoryType,
+                        password: _passwordCtrl.text.trim(),
+                        questionCount: state.questionCount,
+                        timePerQuestion: state.timePerQuestion,
+                      ),
+                    );
+              }
+            : null,
         style: ElevatedButton.styleFrom(
           backgroundColor: const Color(0xFF6C63FF),
           disabledBackgroundColor: Colors.grey.shade200,
@@ -340,16 +367,15 @@ class _CreateRoomScreenState extends State<CreateRoomScreen>
   }
 
   void _showJoinSheet(BuildContext context) {
-    final bloc = context.read<RoomBloc>(); // ← lưu trước
+    final bloc = context.read<RoomBloc>();
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder:
-          (_) => BlocProvider.value(
-            value: bloc,
-            child: JoinRoomSheet(currentUserId: _currentUserId),
-          ),
+      builder: (_) => BlocProvider.value(
+        value: bloc,
+        child: JoinRoomSheet(currentUserId: _currentUserId),
+      ),
     );
   }
 }

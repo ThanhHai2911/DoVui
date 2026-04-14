@@ -38,18 +38,15 @@ class _RoomLobbyScreenState extends State<RoomLobbyScreen>
   StreamSubscription? _presenceSub;
   Map<String, int> _presenceMap = {};
 
-  // ── FIX: dùng 1 flag duy nhất, atomic ────────────────────────────────────
-  bool _myFinished = false;
-  bool _dialogOpen = false;   // guard tuyệt đối, không reset cho đến khi dialog đóng hẳn
-  bool _justJoined = true;
+  bool _myFinishedShowing = false;
   RoomStatus? _prevStatus;
   String? _prevRoomId;
   List<RoomPlayer>? _prevPlayers;
+  bool _shouldStayInRoom = false; // Flag để giữ người chơi ở phòng sau khi finish
 
   @override
   void initState() {
     super.initState();
-    _justJoined = widget.justJoined;
     _pulseCtrl = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1000),
@@ -58,17 +55,17 @@ class _RoomLobbyScreenState extends State<RoomLobbyScreen>
       CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut),
     );
 
+    // ✅ Init _prevStatus từ state hiện tại ngay lập tức
+    _prevStatus = context.read<RoomBloc>().state.status;
+
     final roomId =
         widget.initialRoomId ?? context.read<RoomBloc>().state.room?.roomId;
     if (roomId != null) {
       _startPresenceStream(roomId);
-      _sendHeartbeatWithRoomId(roomId);
     }
 
     _heartbeatTimer = Timer.periodic(const Duration(seconds: 5), (_) {
-      final id =
-          widget.initialRoomId ?? context.read<RoomBloc>().state.room?.roomId;
-      if (id != null) _sendHeartbeatWithRoomId(id);
+      // heartbeat placeholder
     });
   }
 
@@ -81,23 +78,8 @@ class _RoomLobbyScreenState extends State<RoomLobbyScreen>
     });
   }
 
-  Future<void> _sendHeartbeatWithRoomId(String roomId) async {
-    final prefs = await SharedPreferences.getInstance();
-    final userId = prefs.getString('userId') ?? '';
-    RoomService.updatePresence(roomId, userId);
-  }
-
-  Future<void> _setOffline(String roomId) async {
-    final prefs = await SharedPreferences.getInstance();
-    final userId = prefs.getString('userId') ?? '';
-    await RoomService.removePresence(roomId, userId);
-  }
-
   @override
   void dispose() {
-    final roomId =
-        widget.initialRoomId ?? context.read<RoomBloc>().state.room?.roomId;
-    if (roomId != null) _setOffline(roomId);
     _presenceSub?.cancel();
     _heartbeatTimer?.cancel();
     _pulseCtrl.dispose();
@@ -118,72 +100,57 @@ class _RoomLobbyScreenState extends State<RoomLobbyScreen>
     }
     bool changed = false;
     for (int i = 0; i < prev.length; i++) {
-      if (i >= curr.length) { changed = true; break; }
-      final p = prev[i]; final c = curr[i];
-      if (p.userId != c.userId || p.score != c.score ||
-          p.isFinished != c.isFinished || p.isHost != c.isHost) {
-        changed = true; break;
+      if (i >= curr.length) {
+        changed = true;
+        break;
+      }
+      final p = prev[i];
+      final c = curr[i];
+      if (p.userId != c.userId ||
+          p.score != c.score ||
+          p.isFinished != c.isFinished ||
+          p.isHost != c.isHost) {
+        changed = true;
+        break;
       }
     }
     if (changed) _prevPlayers = curr;
     return changed;
   }
 
-  // ─── FIX: _onPlayerFinished với guard tuyệt đối ──────────────────────────
   Future<void> _onPlayerFinished(RoomModel room) async {
-    // Guard: chỉ chạy 1 lần duy nhất, ngay cả khi widget rebuild nhiều lần
-    if (_myFinished || _dialogOpen) return;
+    if (_myFinishedShowing) return;
 
     final currentStatus = context.read<RoomBloc>().state.status;
     if (currentStatus != RoomStatus.playing) return;
 
-    // Đặt cờ TRƯỚC mọi thứ (sync, không await)
-    setState(() {
-      _myFinished = true;
-      _dialogOpen = true;
-    });
+    // ✅ Set flag SYNCHRONOUSLY trước mọi await
+    // Để builder render waitingLobby ngay lập tức, không chờ Firestore
+    _myFinishedShowing = true;
+    _shouldStayInRoom = true; // Giữ flag này để không pop về home
+    if (mounted) setState(() {});
 
-    debugPrint('[Lobby] onPlayerFinished → marking & showing dialog');
+    debugPrint('[Lobby] onPlayerFinished → marking player as finished');
 
-    // Cập nhật Firestore
+    // ✅ Chỉ mark finished, KHÔNG gọi finishGame ở đây
+    // RoomBloc._onRoomUpdated đã tự detect allFinished và gọi finishGame
     await RoomService.markPlayerFinished(room.roomId, widget.currentUserId);
 
-    // Kiểm tra allFinished sau khi mark xong — FIX: gọi finishGame
-    final updatedDoc = await FirebaseFirestore.instance
-        .collection('rooms')
-        .doc(room.roomId)
-        .get();
-    if (updatedDoc.exists) {
-      final updatedRoom = RoomModel.fromMap(updatedDoc.data()!);
-      final allFinished = updatedRoom.players.every((p) => p.isFinished);
-      if (allFinished) {
-        debugPrint('[Lobby] All players finished → calling finishGame');
-        await RoomService.finishGame(
-          roomId: room.roomId,
-          players: updatedRoom.players,
-        );
-      }
-    }
+    if (!mounted) return;
 
-    // Hiển thị dialog nếu vẫn đang trong playing state
-    if (!mounted) {
-      _dialogOpen = false;
-      return;
-    }
-    final stillPlaying =
-        context.read<RoomBloc>().state.status == RoomStatus.playing;
-    if (stillPlaying) {
-      _showCompletionDialog(room);
-    } else {
-      _dialogOpen = false;
-    }
+    // Show dialog chờ người khác - tự đóng khi BLoC emit waiting
+    _showCompletionDialog(room);
   }
 
-  // ─── FIX: Dialog mới — nền trắng, sinh động, game style ─────────────────
   void _showCompletionDialog(RoomModel room) {
-    final currentPlayer = room.players.firstWhere(
+    // Lấy điểm mới nhất từ BLoC state
+    final latestRoom = context.read<RoomBloc>().state.room ?? room;
+    final currentPlayer = latestRoom.players.firstWhere(
       (p) => p.userId == widget.currentUserId,
-      orElse: () => room.players.first,
+      orElse: () => room.players.firstWhere(
+        (p) => p.userId == widget.currentUserId,
+        orElse: () => room.players.first,
+      ),
     );
 
     showDialog(
@@ -196,7 +163,7 @@ class _RoomLobbyScreenState extends State<RoomLobbyScreen>
       ),
     );
 
-    // Auto close sau 3s
+    // Tự đóng sau 3 giây nếu BLoC chưa kịp trigger
     Future.delayed(const Duration(milliseconds: 3000), () {
       if (mounted) {
         try {
@@ -204,7 +171,6 @@ class _RoomLobbyScreenState extends State<RoomLobbyScreen>
             Navigator.of(context, rootNavigator: false).pop();
           }
         } catch (_) {}
-        // _dialogOpen sẽ được reset khi game chuyển sang waiting (listener)
       }
     });
   }
@@ -246,9 +212,22 @@ class _RoomLobbyScreenState extends State<RoomLobbyScreen>
             prev.room?.players,
             curr.room?.players,
           );
-          return statusChanged || isHostChanged || roomIdChanged || playersChanged;
+          return statusChanged ||
+              isHostChanged ||
+              roomIdChanged ||
+              playersChanged;
         },
         listener: (context, state) {
+          // ✅ Nếu tôi vừa finish game, LUÔN LUÔN ở lại phòng - bỏ qua mọi logic khác
+          if (_shouldStayInRoom) {
+            debugPrint('[Lobby] _shouldStayInRoom=true → staying in room, ignoring status changes');
+            // Luôn update _prevStatus để theo dõi
+            if (state.status != _prevStatus) {
+              _prevStatus = state.status;
+            }
+            return;
+          }
+
           if (state.room?.roomId != _prevRoomId) {
             _prevRoomId = state.room?.roomId;
             _prevPlayers = state.room?.players;
@@ -256,9 +235,11 @@ class _RoomLobbyScreenState extends State<RoomLobbyScreen>
 
           if (state.room != null && _presenceSub == null) {
             _startPresenceStream(state.room!.roomId);
-            _sendHeartbeatWithRoomId(state.room!.roomId);
           }
 
+          // ✅ Chỉ pop về home khi phòng bị đóng bởi người khác (host thoát)
+          debugPrint('[Lobby] listener: status=${state.status}, _shouldStayInRoom=$_shouldStayInRoom, room=${state.room != null}');
+          
           if (state.status == RoomStatus.initial &&
               _prevStatus != RoomStatus.initial) {
             Navigator.pop(context);
@@ -270,45 +251,45 @@ class _RoomLobbyScreenState extends State<RoomLobbyScreen>
             );
           }
 
-          // playing → waiting: reset TẤT CẢ flags
-          final transitionToWaiting =
-              _prevStatus == RoomStatus.playing &&
+          // ✅ playing → waiting: BLoC đã gọi finishGame xong, về lobby
+          final transitionToWaiting = _prevStatus == RoomStatus.playing &&
               state.status == RoomStatus.waiting;
 
           if (transitionToWaiting) {
-            debugPrint('[Lobby] playing→waiting: reset all finished flags');
-            // Đóng dialog nếu đang mở
-            if (_dialogOpen) {
-              try {
-                if (Navigator.of(context, rootNavigator: false).canPop()) {
-                  Navigator.of(context, rootNavigator: false).pop();
-                }
-              } catch (_) {}
-            }
-            setState(() {
-              _myFinished = false;
-              _dialogOpen = false;
-            });
+            debugPrint('[Lobby] playing→waiting: đóng dialog & reset flags');
+            // Đóng completion dialog nếu đang mở
+            try {
+              if (Navigator.of(context, rootNavigator: false).canPop()) {
+                Navigator.of(context, rootNavigator: false).pop();
+              }
+            } catch (_) {}
+            // Reset flag để sẵn sàng cho ván mới (nhưng giữ _shouldStayInRoom)
+            _myFinishedShowing = false;
           }
 
-          // initial/waiting → playing: reset để chơi round mới
-          final transitionToPlaying =
-              (_prevStatus == RoomStatus.initial ||
-                  _prevStatus == RoomStatus.waiting) &&
-              state.status == RoomStatus.playing;
-
-          if (transitionToPlaying) {
-            setState(() {
-              _myFinished = false;
-              _dialogOpen = false;
-              _justJoined = false;
-            });
-          }
-
+          // ✅ Luôn update _prevStatus ở CUỐI listener
           _prevStatus = state.status;
         },
         builder: (context, state) {
           final room = state.room;
+          
+          // ✅ Nếu room = null nhưng _shouldStayInRoom = true, show loading
+          // vì có thể stream tạm thời null nhưng chúng ta sẽ ở lại
+          if (room == null && _shouldStayInRoom) {
+            return const Scaffold(
+              body: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    CircularProgressIndicator(),
+                    SizedBox(height: 16),
+                    Text('Đang kết nối phòng...')
+                  ],
+                ),
+              ),
+            );
+          }
+          
           if (room == null) {
             return const Scaffold(
               body: Center(child: CircularProgressIndicator()),
@@ -320,8 +301,15 @@ class _RoomLobbyScreenState extends State<RoomLobbyScreen>
                 (p) => p.userId == widget.currentUserId && p.isHost,
               );
 
+          // Kiểm tra từ Firestore state xem mình đã finish chưa
+          final playerMatch =
+              room.players.where((p) => p.userId == widget.currentUserId);
+          final myFinished =
+              playerMatch.isEmpty ? false : playerMatch.first.isFinished;
+
           if (state.status == RoomStatus.playing) {
-            if (_myFinished || _justJoined) {
+            // Nếu đã finish (Firestore hoặc local flag) → show waiting lobby
+            if (myFinished || _myFinishedShowing) {
               return _buildWaitingLobby(context, room, isHost);
             }
             return _buildPlayingView(context, room);
@@ -382,7 +370,8 @@ class _RoomLobbyScreenState extends State<RoomLobbyScreen>
   }
 
   Widget _buildPlayingHeader(RoomModel room) {
-    final sorted = [...room.players]..sort((a, b) => b.score.compareTo(a.score));
+    final sorted = [...room.players]
+      ..sort((a, b) => b.score.compareTo(a.score));
     final remaining = room.players.where((p) => !p.isFinished).length;
     final allDone = room.players.every((p) => p.isFinished);
 
@@ -445,7 +434,8 @@ class _RoomLobbyScreenState extends State<RoomLobbyScreen>
                           if (p.isFinished)
                             const Text('✓ ',
                                 style: TextStyle(
-                                    fontSize: 10, color: Color(0xFF2E7D32))),
+                                    fontSize: 10,
+                                    color: Color(0xFF2E7D32))),
                           Text(
                             '${p.displayName.split(' ').last}: ${p.score}⭐',
                             style: TextStyle(
@@ -468,7 +458,8 @@ class _RoomLobbyScreenState extends State<RoomLobbyScreen>
           ),
           const SizedBox(width: 8),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
               color: allDone
                   ? const Color(0xFFE8F5E9)
@@ -524,7 +515,7 @@ class _RoomLobbyScreenState extends State<RoomLobbyScreen>
       child: Row(
         children: [
           GestureDetector(
-            onTap: () => _confirmLeave(context),
+            onTap: () => _confirmLeave(context, room),
             child: Container(
               width: 40,
               height: 40,
@@ -549,15 +540,15 @@ class _RoomLobbyScreenState extends State<RoomLobbyScreen>
                       color: Color(0xFF1E1B4B)),
                 ),
                 Text(room.categoryName,
-                    style:
-                        TextStyle(fontSize: 12, color: Colors.grey.shade500)),
+                    style: TextStyle(
+                        fontSize: 12, color: Colors.grey.shade500)),
               ],
             ),
           ),
           if (isHost)
             Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              padding: const EdgeInsets.symmetric(
+                  horizontal: 10, vertical: 5),
               decoration: BoxDecoration(
                 color: const Color(0xFFFAEEDA),
                 borderRadius: BorderRadius.circular(12),
@@ -623,7 +614,9 @@ class _RoomLobbyScreenState extends State<RoomLobbyScreen>
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               _codeActionBtn(
-                icon: _codeCopied ? Icons.check_rounded : Icons.copy_rounded,
+                icon: _codeCopied
+                    ? Icons.check_rounded
+                    : Icons.copy_rounded,
                 label: _codeCopied ? 'Đã sao chép' : 'Sao chép',
                 onTap: () {
                   Clipboard.setData(ClipboardData(text: room.roomId));
@@ -677,7 +670,8 @@ class _RoomLobbyScreenState extends State<RoomLobbyScreen>
   }
 
   Widget _buildLeaderboard(RoomModel room) {
-    final sorted = [...room.players]..sort((a, b) => b.score.compareTo(a.score));
+    final sorted = [...room.players]
+      ..sort((a, b) => b.score.compareTo(a.score));
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -691,7 +685,8 @@ class _RoomLobbyScreenState extends State<RoomLobbyScreen>
                     color: Color(0xFF1E1B4B))),
             const Spacer(),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              padding: const EdgeInsets.symmetric(
+                  horizontal: 10, vertical: 4),
               decoration: BoxDecoration(
                 color: const Color(0xFFEEEDFE),
                 borderRadius: BorderRadius.circular(10),
@@ -753,8 +748,8 @@ class _RoomLobbyScreenState extends State<RoomLobbyScreen>
                 final rank = entry.key;
                 final player = entry.value;
                 final isMe = player.userId == widget.currentUserId;
-                final isLast =
-                    rank == sorted.length - 1 && room.players.length >= 4;
+                final isLast = rank == sorted.length - 1 &&
+                    room.players.length >= 4;
                 return _buildPlayerRow(
                   rank: rank,
                   player: player,
@@ -765,7 +760,8 @@ class _RoomLobbyScreenState extends State<RoomLobbyScreen>
               ...List.generate(
                 (4 - room.players.length).clamp(0, 4),
                 (i) => _buildEmptySlot(
-                    isLast: i == (4 - room.players.length - 1).clamp(0, 3)),
+                    isLast: i ==
+                        (4 - room.players.length - 1).clamp(0, 3)),
               ),
             ],
           ),
@@ -800,7 +796,6 @@ class _RoomLobbyScreenState extends State<RoomLobbyScreen>
       [const Color(0xFFE6F1FB), const Color(0xFF0C447C)],
     ];
     final colors = avatarColors[rank % avatarColors.length];
-    final online = _isOnline(player);
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -824,78 +819,46 @@ class _RoomLobbyScreenState extends State<RoomLobbyScreen>
                   style: const TextStyle(fontSize: 16),
                   textAlign: TextAlign.center)),
           const SizedBox(width: 10),
-          Stack(
-            children: [
-              Container(
-                width: 38,
-                height: 38,
-                decoration: BoxDecoration(
-                    color: colors[0], shape: BoxShape.circle),
-                child: Center(
-                  child: Text(initials,
-                      style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.bold,
-                          color: colors[1])),
-                ),
-              ),
-              Positioned(
-                bottom: 0,
-                right: 0,
-                child: Container(
-                  width: 11,
-                  height: 11,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: online
-                        ? const Color(0xFF1D9E75)
-                        : Colors.grey.shade400,
-                    border: Border.all(color: Colors.white, width: 1.5),
-                  ),
-                ),
-              ),
-            ],
+          Container(
+            width: 38,
+            height: 38,
+            decoration:
+                BoxDecoration(color: colors[0], shape: BoxShape.circle),
+            child: Center(
+              child: Text(initials,
+                  style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                      color: colors[1])),
+            ),
           ),
           const SizedBox(width: 10),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            child: Row(
               children: [
-                Row(
-                  children: [
-                    Flexible(
-                      child: Text(
-                        isMe
-                            ? '${player.displayName} (Tôi)'
-                            : player.displayName,
-                        style: TextStyle(
-                            fontSize: 14,
-                            fontWeight:
-                                isMe ? FontWeight.bold : FontWeight.w500,
-                            color: const Color(0xFF1E1B4B)),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    if (player.isHost) ...[
-                      const SizedBox(width: 4),
-                      const Text('👑', style: TextStyle(fontSize: 10)),
-                    ],
-                  ],
+                Flexible(
+                  child: Text(
+                    isMe
+                        ? '${player.displayName} (Tôi)'
+                        : player.displayName,
+                    style: TextStyle(
+                        fontSize: 14,
+                        fontWeight:
+                            isMe ? FontWeight.bold : FontWeight.w500,
+                        color: const Color(0xFF1E1B4B)),
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  online ? 'Trực tuyến' : 'Ngoại tuyến',
-                  style: TextStyle(
-                      fontSize: 10,
-                      color: online
-                          ? const Color(0xFF1D9E75)
-                          : Colors.grey.shade400),
-                ),
+                if (player.isHost) ...[
+                  const SizedBox(width: 4),
+                  const Text('👑', style: TextStyle(fontSize: 10)),
+                ],
               ],
             ),
           ),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            padding: const EdgeInsets.symmetric(
+                horizontal: 10, vertical: 4),
             decoration: BoxDecoration(
               gradient: rank == 0
                   ? const LinearGradient(
@@ -909,7 +872,9 @@ class _RoomLobbyScreenState extends State<RoomLobbyScreen>
               style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.bold,
-                  color: rank == 0 ? Colors.white : const Color(0xFF534AB7)),
+                  color: rank == 0
+                      ? Colors.white
+                      : const Color(0xFF534AB7)),
             ),
           ),
         ],
@@ -943,15 +908,15 @@ class _RoomLobbyScreenState extends State<RoomLobbyScreen>
           ),
           const SizedBox(width: 10),
           Text('Đang chờ người chơi...',
-              style: TextStyle(fontSize: 13, color: Colors.grey.shade400)),
+              style: TextStyle(
+                  fontSize: 13, color: Colors.grey.shade400)),
         ],
       ),
     );
   }
 
   Widget _buildStartButton(BuildContext context, RoomModel room) {
-    final onlineCount = room.players.where((p) => _isOnline(p)).length;
-    final canStart = onlineCount >= 2;
+    final canStart = room.players.length >= 2;
 
     return Column(
       children: [
@@ -962,6 +927,9 @@ class _RoomLobbyScreenState extends State<RoomLobbyScreen>
                 ? () {
                     final bloc = context.read<RoomBloc>();
                     if (bloc.isClosed) return;
+                    // Reset flags khi bắt đầu ván mới
+                    _myFinishedShowing = false;
+                    _shouldStayInRoom = false;
                     bloc.add(StartGame());
                   }
                 : null,
@@ -976,18 +944,22 @@ class _RoomLobbyScreenState extends State<RoomLobbyScreen>
             child: Text(
               canStart
                   ? 'Bắt đầu chơi 🚀'
-                  : 'Cần ít nhất 2 người trực tuyến',
+                  : 'Cần ít nhất 2 người trong phòng',
               style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
-                  color: canStart ? Colors.white : Colors.grey.shade400),
+                  color:
+                      canStart ? Colors.white : Colors.grey.shade400),
             ),
           ),
         ),
         if (!canStart) ...[
           const SizedBox(height: 8),
-          Text('$onlineCount/2 người trực tuyến',
-              style: TextStyle(fontSize: 12, color: Colors.grey.shade400)),
+          Text(
+            '${room.players.length}/2 người trong phòng',
+            style:
+                TextStyle(fontSize: 12, color: Colors.grey.shade400),
+          ),
         ],
       ],
     );
@@ -1000,8 +972,8 @@ class _RoomLobbyScreenState extends State<RoomLobbyScreen>
       decoration: BoxDecoration(
         color: const Color(0xFFF8F7FF),
         borderRadius: BorderRadius.circular(20),
-        border:
-            Border.all(color: const Color(0xFF6C63FF).withOpacity(0.2)),
+        border: Border.all(
+            color: const Color(0xFF6C63FF).withOpacity(0.2)),
       ),
       child: const Column(
         children: [
@@ -1020,55 +992,314 @@ class _RoomLobbyScreenState extends State<RoomLobbyScreen>
     );
   }
 
-  void _confirmLeave(BuildContext context) {
+  void _confirmLeave(BuildContext context, RoomModel room) {
+    final isHost = room.players.any(
+      (p) => p.userId == widget.currentUserId && p.isHost,
+    );
+
     showDialog(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Rời phòng?'),
-        content: const Text('Bạn có chắc muốn rời phòng không?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: Text('Huỷ',
-                style: TextStyle(color: Colors.grey.shade600)),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              final roomId =
-                  context.read<RoomBloc>().state.room?.roomId;
-              if (roomId != null) await _setOffline(roomId);
-              Navigator.pop(dialogContext);
-              Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute(
-                    builder: (_) =>
-                        const HomeBottomNav(initialIndex: 2)),
-                (route) => false,
-              );
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFE24B4A),
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
-            ),
-            child: const Text('Thoát',
-                style: TextStyle(color: Colors.white)),
-          ),
-        ],
+      builder: (dialogContext) => _ConfirmLeaveDialog(
+        isHost: isHost,
+        onConfirm: () async {
+          Navigator.pop(dialogContext);
+          final roomId = room.roomId;
+          await RoomService.leaveAndWipePlayer(
+              roomId, widget.currentUserId);
+          if (!mounted) return;
+          // Reset flags khi thoát phòng
+          _shouldStayInRoom = false;
+          _myFinishedShowing = false;
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(
+                builder: (_) =>
+                    const HomeBottomNav(initialIndex: 2)),
+            (route) => false,
+          );
+        },
+        onCancel: () => Navigator.pop(dialogContext),
       ),
     );
   }
 }
 
-// ─── Completion Dialog — white bg, game-style, animated ──────────────────────
+// ─── Confirm Leave Dialog ────────────────────────────────────────────────────
+
+class _ConfirmLeaveDialog extends StatefulWidget {
+  final bool isHost;
+  final VoidCallback onConfirm;
+  final VoidCallback onCancel;
+
+  const _ConfirmLeaveDialog({
+    required this.isHost,
+    required this.onConfirm,
+    required this.onCancel,
+  });
+
+  @override
+  State<_ConfirmLeaveDialog> createState() => _ConfirmLeaveDialogState();
+}
+
+class _ConfirmLeaveDialogState extends State<_ConfirmLeaveDialog>
+    with TickerProviderStateMixin {
+  late AnimationController _enterCtrl;
+  late AnimationController _shakeCtrl;
+  late Animation<double> _scaleAnim;
+  late Animation<double> _fadeAnim;
+  late Animation<Offset> _shakeAnim;
+
+  @override
+  void initState() {
+    super.initState();
+    _enterCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
+    _shakeCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 500),
+    );
+
+    _scaleAnim = Tween<double>(begin: 0.7, end: 1.0).animate(
+      CurvedAnimation(parent: _enterCtrl, curve: Curves.elasticOut),
+    );
+    _fadeAnim = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _enterCtrl, curve: Curves.easeOut),
+    );
+    _shakeAnim = Tween<Offset>(begin: const Offset(-0.02, 0), end: Offset.zero)
+        .animate(CurvedAnimation(parent: _shakeCtrl, curve: Curves.elasticIn));
+
+    _enterCtrl.forward();
+  }
+
+  @override
+  void dispose() {
+    _enterCtrl.dispose();
+    _shakeCtrl.dispose();
+    super.dispose();
+  }
+
+  void _triggerShake() {
+    _shakeCtrl.forward(from: 0);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeTransition(
+      opacity: _fadeAnim,
+      child: ScaleTransition(
+        scale: _scaleAnim,
+        child: Dialog(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          insetPadding: const EdgeInsets.symmetric(horizontal: 20),
+          child: SlideTransition(
+            position: _shakeAnim,
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(28),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFFE24B4A).withOpacity(0.15),
+                    blurRadius: 40,
+                    offset: const Offset(0, 16),
+                    spreadRadius: 8,
+                  ),
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.08),
+                    blurRadius: 20,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Header dengan icon
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(vertical: 24),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: widget.isHost
+                            ? [const Color(0xFFE24B4A), const Color(0xFFE67B7B)]
+                            : [const Color(0xFFF59E0B), const Color(0xFFF5B840)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(28),
+                      ),
+                    ),
+                    child: Column(
+                      children: [
+                        Container(
+                          width: 64,
+                          height: 64,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Colors.white.withOpacity(0.2),
+                            border: Border.all(
+                              color: Colors.white.withOpacity(0.3),
+                              width: 2,
+                            ),
+                          ),
+                          child: Center(
+                            child: Text(
+                              widget.isHost ? '👑' : '👋',
+                              style: const TextStyle(fontSize: 32),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        const Text(
+                          'Rời phòng?',
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.w900,
+                            color: Colors.white,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Content
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+                    child: Column(
+                      children: [
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: widget.isHost
+                                ? const Color(0xFFFFF3F3)
+                                : const Color(0xFFFFF8F0),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: widget.isHost
+                                  ? const Color(0xFFE24B4A).withOpacity(0.2)
+                                  : const Color(0xFFF59E0B).withOpacity(0.2),
+                              width: 1.5,
+                            ),
+                          ),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                widget.isHost ? '⚠️' : 'ℹ️',
+                                style: const TextStyle(fontSize: 20),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  widget.isHost
+                                      ? 'Bạn là chủ phòng. Thoát sẽ xóa phòng và dữ liệu tất cả người chơi!'
+                                      : 'Bạn sẽ mất toàn bộ điểm số và thông tin trong phòng này.',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                    color: widget.isHost
+                                        ? const Color(0xFFB71C1C)
+                                        : const Color(0xFFB8860B),
+                                    height: 1.5,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Buttons
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: SizedBox(
+                            height: 48,
+                            child: OutlinedButton(
+                              onPressed: () {
+                                widget.onCancel();
+                              },
+                              style: OutlinedButton.styleFrom(
+                                side: const BorderSide(
+                                  color: Color(0xFFE0E0E0),
+                                  width: 1.5,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                                foregroundColor: const Color(0xFF757575),
+                              ),
+                              child: const Text(
+                                'Huỷ',
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w600,
+                                  letterSpacing: 0.3,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: SizedBox(
+                            height: 48,
+                            child: ElevatedButton(
+                              onPressed: () {
+                                widget.onConfirm();
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: widget.isHost
+                                    ? const Color(0xFFE24B4A)
+                                    : const Color(0xFFF59E0B),
+                                elevation: 0,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                              ),
+                              child: Text(
+                                widget.isHost ? 'Thoát phòng' : 'Rời khỏi',
+                                style: const TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.white,
+                                  letterSpacing: 0.3,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Completion Dialog ────────────────────────────────────────────────────────
 
 class _CompletionDialog extends StatefulWidget {
   final int score;
   final String playerName;
 
-  const _CompletionDialog({required this.score, required this.playerName});
+  const _CompletionDialog(
+      {required this.score, required this.playerName});
 
   @override
   State<_CompletionDialog> createState() => _CompletionDialogState();
@@ -1103,22 +1334,26 @@ class _CompletionDialogState extends State<_CompletionDialog>
         vsync: this, duration: const Duration(milliseconds: 1500))
       ..repeat();
 
-    _scaleAnim = CurvedAnimation(parent: _enterCtrl, curve: Curves.elasticOut)
-        .drive(Tween(begin: 0.5, end: 1.0));
-    _fadeAnim = CurvedAnimation(parent: _enterCtrl, curve: Curves.easeOut)
-        .drive(Tween(begin: 0.0, end: 1.0));
-    _slideAnim = CurvedAnimation(parent: _enterCtrl, curve: Curves.easeOut)
-        .drive(Tween(begin: const Offset(0, 0.3), end: Offset.zero));
+    _scaleAnim =
+        CurvedAnimation(parent: _enterCtrl, curve: Curves.elasticOut)
+            .drive(Tween(begin: 0.5, end: 1.0));
+    _fadeAnim =
+        CurvedAnimation(parent: _enterCtrl, curve: Curves.easeOut)
+            .drive(Tween(begin: 0.0, end: 1.0));
+    _slideAnim =
+        CurvedAnimation(parent: _enterCtrl, curve: Curves.easeOut).drive(
+            Tween(begin: const Offset(0, 0.3), end: Offset.zero));
     _starScaleAnim =
         CurvedAnimation(parent: _starCtrl, curve: Curves.elasticOut)
             .drive(Tween(begin: 0.0, end: 1.0));
-    _pulseAnim = CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut)
-        .drive(Tween(begin: 1.0, end: 1.08));
+    _pulseAnim =
+        CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut)
+            .drive(Tween(begin: 1.0, end: 1.08));
     _shimmerAnim = _shimmerCtrl;
 
     _enterCtrl.forward();
-    Future.delayed(const Duration(milliseconds: 300),
-        () => _starCtrl.forward());
+    Future.delayed(
+        const Duration(milliseconds: 300), () => _starCtrl.forward());
   }
 
   @override
@@ -1157,7 +1392,6 @@ class _CompletionDialogState extends State<_CompletionDialog>
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // ── Header strip ─────────────────────────────────────────────
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(vertical: 24),
@@ -1175,7 +1409,6 @@ class _CompletionDialogState extends State<_CompletionDialog>
                     position: _slideAnim,
                     child: Column(
                       children: [
-                        // Trophy icon with glow
                         ScaleTransition(
                           scale: _pulseAnim,
                           child: Container(
@@ -1221,8 +1454,6 @@ class _CompletionDialogState extends State<_CompletionDialog>
                     ),
                   ),
                 ),
-
-                // ── Score section ─────────────────────────────────────────────
                 Padding(
                   padding: const EdgeInsets.fromLTRB(24, 28, 24, 8),
                   child: Column(
@@ -1237,7 +1468,6 @@ class _CompletionDialogState extends State<_CompletionDialog>
                         ),
                       ),
                       const SizedBox(height: 16),
-                      // Animated score badge
                       ScaleTransition(
                         scale: _starScaleAnim,
                         child: AnimatedBuilder(
@@ -1248,10 +1478,10 @@ class _CompletionDialogState extends State<_CompletionDialog>
                                   horizontal: 32, vertical: 18),
                               decoration: BoxDecoration(
                                 gradient: LinearGradient(
-                                  colors: [
-                                    const Color(0xFFFFF8E1),
-                                    const Color(0xFFFFF3CD),
-                                    const Color(0xFFFFF8E1),
+                                  colors: const [
+                                    Color(0xFFFFF8E1),
+                                    Color(0xFFFFF3CD),
+                                    Color(0xFFFFF8E1),
                                   ],
                                   stops: [
                                     0.0,
@@ -1309,7 +1539,6 @@ class _CompletionDialogState extends State<_CompletionDialog>
                         ),
                       ),
                       const SizedBox(height: 20),
-                      // Waiting indicator
                       Container(
                         padding: const EdgeInsets.symmetric(
                             horizontal: 16, vertical: 10),
@@ -1343,8 +1572,6 @@ class _CompletionDialogState extends State<_CompletionDialog>
                     ],
                   ),
                 ),
-
-                // ── Stars row ─────────────────────────────────────────────────
                 Padding(
                   padding: const EdgeInsets.fromLTRB(24, 4, 24, 24),
                   child: _buildStarRating(widget.score),
@@ -1358,7 +1585,6 @@ class _CompletionDialogState extends State<_CompletionDialog>
   }
 
   Widget _buildStarRating(int score) {
-    // Hiển thị 5 sao dựa vào điểm (mỗi sao = 2 điểm)
     final filled = (score / 2).round().clamp(0, 5);
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,

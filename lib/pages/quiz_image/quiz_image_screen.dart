@@ -10,7 +10,6 @@ import 'package:dovui/pages/quiz_image/bloc/image_question_bloc.dart';
 import 'package:dovui/pages/word_answer/widgets/letter_pool_widget.dart';
 import 'package:dovui/pages/word_answer/widgets/word_answer_shimmer.dart';
 import 'package:dovui/pages/word_answer/widgets/%20word_answer_header.dart';
-import 'package:dovui/services/room_service.dart' show RoomService;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -262,62 +261,34 @@ class _QuizImageScreenState extends State<QuizImageScreen>
                                         ),
                                         SizedBox(height: screenWidth * 0.05),
                                         ClipRRect(
-                                          borderRadius: BorderRadius.circular(
-                                            12,
-                                          ),
-                                          child: SizedBox(
-                                            height: 150,
-                                            width: double.infinity,
-                                            child: Image.network(
-                                              question.image,
-                                              height: 150,
-                                              width: double.infinity,
-                                              fit: BoxFit.contain,
-                                              loadingBuilder: (
-                                                context,
-                                                child,
-                                                loadingProgress,
-                                              ) {
-                                                if (loadingProgress == null)
-                                                  return child;
-                                                return Container(
-                                                  color: Colors.grey.shade100,
-                                                  child: const Center(
-                                                    child:
-                                                        CircularProgressIndicator(
-                                                          strokeWidth: 2,
-                                                        ),
-                                                  ),
-                                                );
-                                              },
-                                              errorBuilder: (
-                                                context,
-                                                error,
-                                                stackTrace,
-                                              ) {
-                                                return Container(
-                                                  color: Colors.grey.shade200,
-                                                  child: const Column(
-                                                    mainAxisAlignment:
-                                                        MainAxisAlignment
-                                                            .center,
-                                                    children: [
-                                                      Icon(
-                                                        Icons.broken_image,
-                                                        color: Colors.grey,
-                                                        size: 40,
-                                                      ),
-                                                      SizedBox(height: 8),
-                                                      Text(
-                                                        "Không tải được ảnh",
-                                                      ),
-                                                    ],
-                                                  ),
-                                                );
-                                              },
-                                            ),
-                                          ),
-                                        ),
+  borderRadius: BorderRadius.circular(16),
+  child: Container(
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(16),
+      border: Border.all(
+        color: Colors.grey.shade300, // viền nhẹ
+        width: 1.5,
+      ),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black12,
+          blurRadius: 6,
+          offset: Offset(0, 2),
+        ),
+      ],
+    ),
+    child: ClipRRect(
+      borderRadius: BorderRadius.circular(14),
+      child: Image.network(
+        question.image,
+        height: 150,
+        width: double.infinity,
+        fit: BoxFit.cover, // 👈 QUAN TRỌNG (đẹp hơn contain)
+      ),
+    ),
+  ),
+),
                                       ],
                                     ),
                                   );

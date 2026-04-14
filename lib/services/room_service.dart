@@ -114,6 +114,8 @@ class RoomService {
     }
   }
 
+  /// Rời phòng bình thường (không xóa điểm).
+  /// Nếu là host hoặc phòng trống → xóa phòng.
   static Future<void> leaveRoom(String roomId, String userId) async {
     try {
       final doc = await _roomsRef.doc(roomId).get();
@@ -133,20 +135,49 @@ class RoomService {
     } catch (_) {}
   }
 
+  /// Rời phòng VÀ xóa toàn bộ điểm tích lũy của player này trong phòng.
+  /// - Xóa player khỏi danh sách players trong room document.
+  /// - Nếu là host hoặc phòng trống sau khi rời → xóa toàn bộ room document.
+  /// - Không hoàn lại stars đã cộng vào user document (stars là phần thưởng đã nhận).
+  static Future<void> leaveAndWipePlayer(
+      String roomId, String userId) async {
+    try {
+      final doc = await _roomsRef.doc(roomId).get();
+      if (!doc.exists) return;
+
+      final room = RoomModel.fromMap(doc.data()!);
+      final updatedPlayers =
+          room.players.where((p) => p.userId != userId).toList();
+
+      if (updatedPlayers.isEmpty || room.hostId == userId) {
+        // Host thoát hoặc phòng rỗng → xóa toàn bộ phòng
+        await _roomsRef.doc(roomId).delete();
+        debugPrint('[RoomService] leaveAndWipe: room $roomId deleted');
+      } else {
+        // Xóa player ra khỏi danh sách (kéo theo điểm của họ biến mất)
+        await _roomsRef.doc(roomId).update({
+          'players': updatedPlayers.map((p) => p.toMap()).toList(),
+        });
+        debugPrint(
+            '[RoomService] leaveAndWipe: player $userId removed from $roomId');
+      }
+    } catch (e) {
+      debugPrint('[RoomService] leaveAndWipe error: $e');
+    }
+  }
+
   // ✅ Gộp reset isFinished + set playing thành 1 write duy nhất
-  // Tránh race condition giữa 2 write riêng biệt
   static Future<void> startGameWithReset(String roomId) async {
     final doc = await _roomsRef.doc(roomId).get();
     if (!doc.exists) return;
 
     final room = RoomModel.fromMap(doc.data()!);
 
-    // Reset isFinished cho tất cả players
+    // Reset isFinished cho tất cả players, GIỮ điểm (điểm cộng dồn)
     final updatedPlayers = room.players
         .map((p) => p.copyWith(isFinished: false))
         .toList();
 
-    // Tìm level đầu tiên nếu cần
     String? firstLevelId;
     if (['level', 'imagequiz', 'man', 'soman'].contains(room.type)) {
       final subcollection = _subcollectionOf(room.type);
@@ -165,7 +196,6 @@ class RoomService {
     final newStartedAt = DateTime.now().millisecondsSinceEpoch;
     debugPrint('[RoomService] startGameWithReset: newStartedAt=$newStartedAt');
 
-    // ✅ 1 write duy nhất: reset isFinished + set playing + startedAt mới
     await _roomsRef.doc(roomId).update({
       'status': 'playing',
       'startedAt': newStartedAt,
@@ -213,17 +243,18 @@ class RoomService {
     String userId,
   ) async {
     try {
-      print('[RoomService] markPlayerFinished called - roomId=$roomId, userId=$userId');
+      debugPrint(
+          '[RoomService] markPlayerFinished called - roomId=$roomId, userId=$userId');
       final doc = await _roomsRef.doc(roomId).get();
       if (!doc.exists) {
-        print('[RoomService] Room not found!');
+        debugPrint('[RoomService] Room not found!');
         return;
       }
 
       final room = RoomModel.fromMap(doc.data()!);
       final updated = room.players.map((p) {
         if (p.userId == userId) {
-          print('[RoomService] Setting player $userId as finished');
+          debugPrint('[RoomService] Setting player $userId as finished');
           return p.copyWith(isFinished: true);
         }
         return p;
@@ -232,13 +263,12 @@ class RoomService {
       await _roomsRef.doc(roomId).update({
         'players': updated.map((p) => p.toMap()).toList(),
       });
-      print('[RoomService] markPlayerFinished completed');
+      debugPrint('[RoomService] markPlayerFinished completed');
     } catch (e) {
-      print('[RoomService] markPlayerFinished error: $e');
+      debugPrint('[RoomService] markPlayerFinished error: $e');
     }
   }
 
-  // Giữ lại để dùng nếu cần, nhưng startGameWithReset đã gộp logic này
   static Future<void> resetFinishedFlags(String roomId) async {
     try {
       final doc = await _roomsRef.doc(roomId).get();
@@ -259,19 +289,19 @@ class RoomService {
     required List<RoomPlayer> players,
   }) async {
     try {
-      print('[RoomService] 🎮 finishGame called for room=$roomId');
-      
+      debugPrint('[RoomService] 🎮 finishGame called for room=$roomId');
+
       final batch = _db.batch();
 
-      // ✅ Set status to 'waiting' ngay khi tất cả finish, quay về lobby
-      print('[RoomService] 📝 Updating room status to "waiting"');
+      // Set status về waiting → quay về lobby
       batch.update(_roomsRef.doc(roomId), {'status': 'waiting'});
 
-      // Update stars for each player
+      // Cộng stars cho từng player dựa trên điểm ván này
       int starCount = 0;
       for (final p in players) {
         if (p.score > 0) {
-          print('[RoomService] ⭐ Adding ${p.score} stars to ${p.displayName}');
+          debugPrint(
+              '[RoomService] ⭐ Adding ${p.score} stars to ${p.displayName}');
           batch.update(_db.collection('users').doc(p.userId), {
             'stars': FieldValue.increment(p.score),
           });
@@ -279,16 +309,18 @@ class RoomService {
         }
       }
 
-      print('[RoomService] 💾 Committing batch... (status + $starCount stars)');
+      debugPrint(
+          '[RoomService] 💾 Committing batch... (status + $starCount stars)');
       await batch.commit();
-      print('[RoomService] ✅ finishGame completed - status updated to waiting');
+      debugPrint(
+          '[RoomService] ✅ finishGame completed - status updated to waiting');
     } catch (e) {
-      print('[RoomService] ❌ finishGame error: $e');
-      rethrow; // Make error visible
+      debugPrint('[RoomService] ❌ finishGame error: $e');
+      rethrow;
     }
   }
 
-  // ✅ Reset phòng về waiting, GIỮ điểm, reset isFinished
+  /// Reset phòng về waiting, GIỮ điểm tích lũy, reset isFinished
   static Future<void> resetRoom(String roomId) async {
     final doc = await _roomsRef.doc(roomId).get();
     if (!doc.exists) return;
@@ -312,13 +344,6 @@ class RoomService {
     });
   }
 
-  static Future<void> updatePresence(String roomId, String userId) async {
-    try {
-      await _roomsRef.doc(roomId).collection('presence').doc(userId).set({
-        'lastSeen': DateTime.now().millisecondsSinceEpoch,
-      });
-    } catch (_) {}
-  }
 
   static Stream<Map<String, int>> presenceStream(String roomId) {
     return _roomsRef
@@ -334,12 +359,4 @@ class RoomService {
     });
   }
 
-  static Future<void> removePresence(String roomId, String userId) async {
-    await FirebaseFirestore.instance
-        .collection('rooms')
-        .doc(roomId)
-        .collection('presence')
-        .doc(userId)
-        .delete();
-  }
 }
