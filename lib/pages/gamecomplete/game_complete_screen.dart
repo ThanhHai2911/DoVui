@@ -256,6 +256,13 @@ class _GameCompleteScreenState extends State<GameCompleteScreen>
                     ),
                   ),
                   const SizedBox(height: 32),
+                  // Native Ad
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: RepaintBoundary(child: NativeAdWidget()),
+                  ),
+
+                  const SizedBox(height: 20),
 
                   // ── Buttons ───────────────────────────────────────────
                   Row(

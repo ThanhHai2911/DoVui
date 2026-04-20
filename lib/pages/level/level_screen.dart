@@ -1,33 +1,39 @@
-import 'package:dovui/data/models/user_level_model.dart';
-import 'package:dovui/pages/ads/ads_service.dart';
 import 'package:dovui/pages/category/widgets/category_shimmer.dart';
 import 'package:dovui/pages/home/widgets/game_dialog.dart';
 import 'package:dovui/pages/level/bloc/level_bloc.dart';
 import 'package:dovui/pages/level/bloc/level_event.dart';
 import 'package:dovui/pages/level/bloc/level_state.dart';
+import 'package:dovui/pages/level/widgets/level_card.dart';
+import 'package:dovui/pages/level/widgets/level_header.dart';
+import 'package:dovui/pages/level/widgets/level_legend.dart';
 import 'package:dovui/pages/quiz/quiz_screen.dart';
 import 'package:dovui/pages/quiz_image/quiz_image_screen.dart';
 import 'package:dovui/pages/quiz_millionaire/quiz_millionaire_screen.dart';
 import 'package:dovui/pages/word_answer/word_answer_screen.dart';
+import 'package:dovui/widgets/blob_background.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-class Levelscreen extends StatefulWidget {
+class LevelScreen extends StatefulWidget {
   final String categoryId;
   final String type;
 
-  const Levelscreen({super.key, required this.categoryId, required this.type});
+  const LevelScreen({super.key, required this.categoryId, required this.type});
 
   @override
-  State<Levelscreen> createState() => _LevelscreenState();
+  State<LevelScreen> createState() => _LevelScreenState();
 }
 
-class _LevelscreenState extends State<Levelscreen> {
+class _LevelScreenState extends State<LevelScreen> {
   final ScrollController _scrollController = ScrollController();
   bool _hasScrolled = false;
 
-  // Ad xuất hiện sau mỗi N level
   static const int _adEvery = 10;
+  static const int _crossAxisCount = 2;
+  static const double _spacing = 16.0;
+  static const double _topPadding = 8.0;
+  static const double _aspectRatio = 0.88;
+  static const double _adHeight = 180.0;
 
   @override
   void dispose() {
@@ -36,34 +42,23 @@ class _LevelscreenState extends State<Levelscreen> {
   }
 
   void _scrollToNextLevel(int nextIndex) {
-    if (_hasScrolled) return;
-    if (nextIndex == 0) {
+    if (_hasScrolled || nextIndex == 0) {
       _hasScrolled = true;
       return;
     }
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      if (!_scrollController.hasClients) return;
+      if (!mounted || !_scrollController.hasClients) return;
       if (!_scrollController.position.hasContentDimensions) return;
 
-      const int crossAxisCount = 2;
-      const double spacing = 16.0;
-      const double topPadding = 8.0;
-      const double aspectRatio = 0.88;
-      const double adHeight = 180.0; // chiều cao ad widget
-
       final double gridWidth = MediaQuery.of(context).size.width - 32;
-      final double itemWidth = (gridWidth - spacing) / crossAxisCount;
-      final double itemHeight = itemWidth / aspectRatio;
-
-      // Tính offset có tính đến các ad rows đã xuất hiện trước nextIndex
+      final double itemHeight = (gridWidth - _spacing) / _crossAxisCount / _aspectRatio;
       final int adsBeforeNext = nextIndex ~/ _adEvery;
-      final int row = nextIndex ~/ crossAxisCount;
+      final int row = nextIndex ~/ _crossAxisCount;
       final double targetOffset =
-          topPadding +
-          row * (itemHeight + spacing) +
-          adsBeforeNext * (adHeight + spacing) -
+          _topPadding +
+          row * (itemHeight + _spacing) +
+          adsBeforeNext * (_adHeight + _spacing) -
           (MediaQuery.of(context).size.height / 3);
 
       _scrollController.animateTo(
@@ -76,7 +71,6 @@ class _LevelscreenState extends State<Levelscreen> {
     });
   }
 
-  /// Chia levels thành các chunk, mỗi chunk cách nhau bởi 1 ad
   List<List<int>> _buildChunks(int totalLevels) {
     final chunks = <List<int>>[];
     int start = 0;
@@ -88,23 +82,97 @@ class _LevelscreenState extends State<Levelscreen> {
     return chunks;
   }
 
+  bool _isUnlocked(int index, List levels, Map statuses) {
+    if (index == 0) return true;
+    final prevStatus = statuses[levels[index - 1].id]?.status;
+    final thisStatus = statuses[levels[index].id]?.status;
+    return prevStatus == 'completed' ||
+        (prevStatus == 'failed' && thisStatus != null);
+  }
+
+  Future<void> _onLevelTap(
+    BuildContext context,
+    int levelIndex,
+    List levels,
+    Map statuses,
+  ) async {
+    final level = levels[levelIndex];
+    final String status = statuses[level.id]?.status ?? 'default';
+
+    if (status == 'completed') {
+      final confirm = await showGameDialogConfirm(
+        context: context,
+        icon: "🔄",
+        iconColor: const Color(0xFF6C63FF),
+        title: "Chơi lại màn ${levelIndex + 1}?",
+        description: "Bạn muốn chơi lại màn này không?",
+        costIcon: "⚠️",
+        costText: "Màn tiếp theo vẫn giữ nguyên",
+        confirmText: "Xác nhận",
+        confirmColor: const Color(0xFF6C63FF),
+      );
+      if (confirm != true) return;
+    }
+
+    final screen = _buildGameScreen(level);
+
+    if (context.mounted) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => screen),
+      ).then((_) {
+        context.read<LevelBloc>().add(LoadLevels(widget.categoryId));
+      });
+    }
+  }
+
+  Widget _buildGameScreen(dynamic level) {
+    switch (widget.type) {
+      case "level":
+        return WordAnswerScreen(
+          categoryId: widget.categoryId,
+          levelId: level.id,
+          type: widget.type,
+        );
+      case "imagequiz":
+        return QuizImageScreen(
+          categoryId: widget.categoryId,
+          levelId: level.id,
+          type: widget.type,
+        );
+      case "man":
+        return MillionaireScreen(
+          categoryId: widget.categoryId,
+          levelId: level.id,
+          type: widget.type,
+        );
+      case "soman":
+      default:
+        return QuizScreen(
+          categoryId: widget.categoryId,
+          levelId: level.id,
+          type: widget.type,
+        );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return PopScope(
       canPop: false,
-      onPopInvokedWithResult: (didPop, result) {},
+      onPopInvokedWithResult: (_, __) {},
       child: BlocProvider(
         create: (_) => LevelBloc()..add(LoadLevels(widget.categoryId)),
         child: Scaffold(
           backgroundColor: const Color(0xFFF4F6FF),
           body: Stack(
             children: [
-              _buildBackground(),
+              const BlobBackground(),
               SafeArea(
                 child: Column(
                   children: [
-                    _buildHeader(context),
-                    _buildLegend(),
+                    const LevelHeader(),
+                    const LevelLegend(),
                     const SizedBox(height: 8),
                     Expanded(
                       child: Padding(
@@ -114,16 +182,13 @@ class _LevelscreenState extends State<Levelscreen> {
                             if (state is LevelLoaded && !_hasScrolled) {
                               final levels = state.levels;
                               final statuses = state.levelStatuses;
-
                               int nextIndex = levels.length - 1;
                               for (int i = 0; i < levels.length; i++) {
-                                final status = statuses[levels[i].id]?.status;
-                                if (status != 'completed') {
+                                if (statuses[levels[i].id]?.status != 'completed') {
                                   nextIndex = i;
                                   break;
                                 }
                               }
-
                               _scrollToNextLevel(nextIndex);
                             }
                           },
@@ -131,71 +196,22 @@ class _LevelscreenState extends State<Levelscreen> {
                             if (state is LevelLoading) {
                               return const CategoryShimmer();
                             }
-
                             if (state is LevelLoaded) {
-                              final levels = state.levels;
-                              final statuses = state.levelStatuses;
-                              final chunks = _buildChunks(levels.length);
-
-                              return CustomScrollView(
-                                controller: _scrollController,
-                                slivers: [
-                                  const SliverPadding(
-                                    padding: EdgeInsets.only(top: 8),
-                                  ),
-                                  for (int chunkIdx = 0;
-                                      chunkIdx < chunks.length;
-                                      chunkIdx++) ...[
-                                    // ── Grid của chunk này ──
-                                    SliverGrid(
-                                      delegate: SliverChildBuilderDelegate(
-                                        (context, i) {
-                                          final levelIndex =
-                                              chunks[chunkIdx][i];
-                                          return _buildLevelCard(
-                                            context,
-                                            levelIndex,
-                                            levels,
-                                            statuses,
-                                          );
-                                        },
-                                        childCount: chunks[chunkIdx].length,
-                                      ),
-                                      gridDelegate:
-                                          const SliverGridDelegateWithFixedCrossAxisCount(
-                                            crossAxisCount: 2,
-                                            mainAxisSpacing: 16,
-                                            crossAxisSpacing: 16,
-                                            childAspectRatio: 0.88,
-                                          ),
-                                    ),
-
-                                    // ── Ad chiếm full width sau mỗi chunk (trừ chunk cuối) ──
-                                    // if (chunkIdx < chunks.length - 1)
-                                    //   SliverToBoxAdapter(
-                                    //     child: Padding(
-                                    //       padding: const EdgeInsets.symmetric(
-                                    //         vertical: 8,
-                                    //       ),
-                                    //       child: RepaintBoundary(
-                                    //         child: NativeAdWidget(),
-                                    //       ),
-                                    //     ),
-                                    //   ),
-
-                                    // spacing giữa các chunk
-                                    const SliverPadding(
-                                      padding: EdgeInsets.only(bottom: 16),
-                                    ),
-                                  ],
-                                  const SliverPadding(
-                                    padding: EdgeInsets.only(bottom: 20),
-                                  ),
-                                ],
+                              return _LevelGrid(
+                                levels: state.levels,
+                                statuses: state.levelStatuses,
+                                scrollController: _scrollController,
+                                chunks: _buildChunks(state.levels.length),
+                                isUnlocked: _isUnlocked,
+                                onLevelTap: (idx) => _onLevelTap(
+                                  context,
+                                  idx,
+                                  state.levels,
+                                  state.levelStatuses,
+                                ),
                               );
                             }
-
-                            return const SizedBox();
+                            return const SizedBox.shrink();
                           },
                         ),
                       ),
@@ -209,466 +225,62 @@ class _LevelscreenState extends State<Levelscreen> {
       ),
     );
   }
-
-  Widget _buildLevelCard(
-    BuildContext context,
-    int levelIndex,
-    List levels,
-    Map statuses,
-  ) {
-    final level = levels[levelIndex];
-    final UserLevelModel? userLevel = statuses[level.id];
-    final String status = userLevel?.status ?? 'default';
-
-    bool isUnlocked;
-    if (levelIndex == 0) {
-      isUnlocked = true;
-    } else {
-      final prevLevel = levels[levelIndex - 1];
-      final prevStatus = statuses[prevLevel.id]?.status;
-      final thisStatus = statuses[level.id]?.status;
-      isUnlocked =
-          prevStatus == 'completed' ||
-          (prevStatus == 'failed' && thisStatus != null);
-    }
-
-    return _LevelCard(
-      index: levelIndex,
-      status: status,
-      isUnlocked: isUnlocked,
-      onTap:
-          isUnlocked
-              ? () async {
-                if (status == 'completed') {
-                  final confirm = await showGameDialogConfirm(
-                    context: context,
-                    icon: "🔄",
-                    iconColor: const Color(0xFF6C63FF),
-                    title: "Chơi lại màn ${levelIndex + 1}?",
-                    description: "Bạn muốn chơi lại màn này không?",
-                    costIcon: "⚠️",
-                    costText: "Màn tiếp theo vẫn giữ nguyên",
-                    confirmText: "Xác nhận",
-                    confirmColor: const Color(0xFF6C63FF),
-                  );
-                  if (confirm != true) return;
-                }
-
-                Widget screen;
-                switch (widget.type) {
-                  case "level":
-                    screen = WordAnswerScreen(
-                      categoryId: widget.categoryId,
-                      levelId: level.id,
-                      type: widget.type,
-                    );
-                    break;
-                  case "imagequiz":
-                    screen = QuizImageScreen(
-                      categoryId: widget.categoryId,
-                      levelId: level.id,
-                      type: widget.type,
-                    );
-                    break;
-                  case "man":
-                    screen = MillionaireScreen(
-                      categoryId: widget.categoryId,
-                      levelId: level.id,
-                      type: widget.type,
-                    );
-                    break;
-                  case "soman":
-                  default:
-                    screen = QuizScreen(
-                      categoryId: widget.categoryId,
-                      levelId: level.id,
-                      type: widget.type,
-                    );
-                }
-
-                if (context.mounted) {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => screen),
-                  ).then((_) {
-                    context.read<LevelBloc>().add(LoadLevels(widget.categoryId));
-                  });
-                }
-              }
-              : null,
-    );
-  }
-
-  Widget _buildBackground() {
-    return Stack(
-      children: [
-        Positioned(
-          top: -60,
-          left: -60,
-          child: Container(
-            width: 200,
-            height: 200,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: const Color(0xFF6C63FF).withOpacity(0.08),
-            ),
-          ),
-        ),
-        Positioned(
-          top: 100,
-          right: -40,
-          child: Container(
-            width: 150,
-            height: 150,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: const Color(0xFFFF6584).withOpacity(0.07),
-            ),
-          ),
-        ),
-        Positioned(
-          bottom: 200,
-          left: -30,
-          child: Container(
-            width: 120,
-            height: 120,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: const Color(0xFF43C6AC).withOpacity(0.07),
-            ),
-          ),
-        ),
-        Positioned(
-          bottom: 80,
-          right: -50,
-          child: Container(
-            width: 180,
-            height: 180,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: const Color(0xFFFFB347).withOpacity(0.07),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildHeader(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 18),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF6C63FF), Color(0xFF9B8FFF)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(28),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF6C63FF).withOpacity(0.4),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Stack(
-        children: [
-          Positioned(
-            top: -10,
-            right: 20,
-            child: Text(
-              "🎮",
-              style: TextStyle(
-                fontSize: 50,
-                color: Colors.white.withOpacity(0.15),
-              ),
-            ),
-          ),
-          Positioned(
-            bottom: -8,
-            right: 70,
-            child: Text(
-              "⭐",
-              style: TextStyle(
-                fontSize: 30,
-                color: Colors.white.withOpacity(0.12),
-              ),
-            ),
-          ),
-          Column(
-            children: [
-              Row(
-                children: [
-                  GestureDetector(
-                    onTap: () => Navigator.pop(context),
-                    child: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Icon(
-                        Icons.arrow_back_ios_new_rounded,
-                        color: Colors.white,
-                        size: 18,
-                      ),
-                    ),
-                  ),
-                  const Expanded(
-                    child: Center(
-                      child: Text(
-                        "Chọn màn chơi",
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 0.5,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 36),
-                ],
-              ),
-              const SizedBox(height: 14),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 10,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(
-                    color: Colors.white.withOpacity(0.2),
-                    width: 1,
-                  ),
-                ),
-                child: const Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text("🏆", style: TextStyle(fontSize: 16)),
-                    SizedBox(width: 8),
-                    Text(
-                      "Hoàn thành màn trước để mở khoá!",
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildLegend() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          _legendDot(const Color(0xFF43C6AC), "✅ Đạt"),
-          const SizedBox(width: 14),
-          _legendDot(const Color(0xFFFF6584), "❌ Chưa đạt"),
-          const SizedBox(width: 14),
-          _legendDot(const Color(0xFF6C63FF).withOpacity(0.2), "🎯 Mới"),
-          const SizedBox(width: 14),
-          _legendDot(Colors.grey.shade300, "🔒 Khóa"),
-        ],
-      ),
-    );
-  }
-
-  Widget _legendDot(Color color, String label) {
-    return Row(
-      children: [
-        Container(
-          width: 10,
-          height: 10,
-          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-        ),
-        const SizedBox(width: 4),
-        Text(
-          label,
-          style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
-        ),
-      ],
-    );
-  }
 }
 
-// =============================================
-//  LEVEL CARD
-// =============================================
-class _LevelCard extends StatelessWidget {
-  final int index;
-  final String status;
-  final bool isUnlocked;
-  final VoidCallback? onTap;
+// ── Private grid widget ───────────────────────────────────────────────────────
 
-  const _LevelCard({
-    required this.index,
-    required this.status,
+class _LevelGrid extends StatelessWidget {
+  final List levels;
+  final Map statuses;
+  final ScrollController scrollController;
+  final List<List<int>> chunks;
+  final bool Function(int, List, Map) isUnlocked;
+  final void Function(int) onLevelTap;
+
+  const _LevelGrid({
+    required this.levels,
+    required this.statuses,
+    required this.scrollController,
+    required this.chunks,
     required this.isUnlocked,
-    required this.onTap,
+    required this.onLevelTap,
   });
-
-  List<Color> _getGradient() {
-    if (!isUnlocked) return [Colors.grey.shade300, Colors.grey.shade400];
-    switch (status) {
-      case 'completed':
-        return [const Color(0xFF43C6AC), const Color(0xFF2BB89A)];
-      case 'failed':
-        return [const Color(0xFFFF6584), const Color(0xFFE8435A)];
-      default:
-        return [const Color(0xFF6C63FF), const Color(0xFF9B8FFF)];
-    }
-  }
-
-  String _getEmoji() {
-    if (!isUnlocked) return "🔒";
-    switch (status) {
-      case 'completed':
-        return "⭐";
-      case 'failed':
-        return "💪";
-      default:
-        return "🎯";
-    }
-  }
-
-  String _getStatusText() {
-    if (!isUnlocked) return "Chưa mở";
-    switch (status) {
-      case 'completed':
-        return "Hoàn thành";
-      case 'failed':
-        return "Thử lại";
-      default:
-        return "Bắt đầu";
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
-    final gradient = _getGradient();
+    return CustomScrollView(
+      controller: scrollController,
+      slivers: [
+        const SliverPadding(padding: EdgeInsets.only(top: 8)),
+        for (final chunk in chunks) ...[
+          SliverGrid(
+            delegate: SliverChildBuilderDelegate(
+              (context, i) {
+                final levelIndex = chunk[i];
+                final level = levels[levelIndex];
+                final String status = statuses[level.id]?.status ?? 'default';
+                final unlocked = isUnlocked(levelIndex, levels, statuses);
 
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: gradient,
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
+                return LevelCard(
+                  index: levelIndex,
+                  status: status,
+                  isUnlocked: unlocked,
+                  onTap: unlocked ? () => onLevelTap(levelIndex) : null,
+                );
+              },
+              childCount: chunk.length,
+            ),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              mainAxisSpacing: 16,
+              crossAxisSpacing: 16,
+              childAspectRatio: 0.88,
+            ),
           ),
-          borderRadius: BorderRadius.circular(24),
-          boxShadow: [
-            BoxShadow(
-              color: gradient[0].withOpacity(isUnlocked ? 0.4 : 0.15),
-              blurRadius: 14,
-              offset: const Offset(0, 6),
-            ),
-          ],
-        ),
-        child: Stack(
-          children: [
-            Positioned(
-              top: -18,
-              right: -18,
-              child: Container(
-                width: 70,
-                height: 70,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Colors.white.withOpacity(0.1),
-                ),
-              ),
-            ),
-            Positioned(
-              bottom: -10,
-              left: -10,
-              child: Container(
-                width: 50,
-                height: 50,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Colors.white.withOpacity(0.07),
-                ),
-              ),
-            ),
-            Positioned(
-              top: 6,
-              right: 10,
-              child: Text(
-                "${index + 1}",
-                style: TextStyle(
-                  fontSize: 52,
-                  fontWeight: FontWeight.w900,
-                  color: Colors.white.withOpacity(1),
-                  height: 1,
-                ),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(_getEmoji(), style: const TextStyle(fontSize: 32)),
-                  const Spacer(),
-                  Text(
-                    "Màn ${index + 1}",
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                  const SizedBox(height: 5),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.22),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: Colors.white.withOpacity(0.3),
-                        width: 1,
-                      ),
-                    ),
-                    child: Text(
-                      _getStatusText(),
-                      style: const TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            if (!isUnlocked)
-              Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(24),
-                  color: Colors.black.withOpacity(0.15),
-                ),
-              ),
-          ],
-        ),
-      ),
+          const SliverPadding(padding: EdgeInsets.only(bottom: 16)),
+        ],
+        const SliverPadding(padding: EdgeInsets.only(bottom: 20)),
+      ],
     );
   }
 }

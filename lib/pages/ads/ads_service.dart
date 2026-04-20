@@ -242,183 +242,183 @@ class InterstitialAdManager {
 }
 
 
-// // ═══════════════════════════════════════════
-// //  NATIVE AD MANAGER (Singleton)
-// // ═══════════════════════════════════════════
-// class NativeAdManager {
-//   static final NativeAdManager _instance = NativeAdManager._internal();
-//   factory NativeAdManager() => _instance;
-//   NativeAdManager._internal();
+// ═══════════════════════════════════════════
+//  NATIVE AD MANAGER (Singleton)
+// ═══════════════════════════════════════════
+class NativeAdManager {
+  static final NativeAdManager _instance = NativeAdManager._internal();
+  factory NativeAdManager() => _instance;
+  NativeAdManager._internal();
 
-//   final List<NativeAd> _adPool = [];
-//   int _loadingCount = 0; // ✅ đếm thay vì boolean
-//   bool _initialized = false;
+  final List<NativeAd> _adPool = [];
+  int _loadingCount = 0; // ✅ đếm thay vì boolean
+  bool _initialized = false;
 
-//   static const int _poolSize = 2;
-//   final List<VoidCallback> _listeners = [];
+  static const int _poolSize = 2;
+  final List<VoidCallback> _listeners = [];
 
-//   static const String _adUnitId = kDebugMode
-//         ? 'ca-app-pub-3766615924961894/8788265127'
-//         : 'ca-app-pub-3766615924961894/8788265127';
+  static const String _adUnitId = kDebugMode
+        ? 'ca-app-pub-3940256099942544/2247696110'
+        : 'ca-app-pub-3766615924961894/8788265127';
 
-//   bool get isReady => _adPool.isNotEmpty;
+  bool get isReady => _adPool.isNotEmpty;
 
-//   void preloadPool() {
-//     if (_initialized) return; // ✅ chỉ chạy 1 lần dù gọi nhiều nơi
-//     _initialized = true;
-//     _fillPool();
-//   }
+  void preloadPool() {
+    if (_initialized) return; // ✅ chỉ chạy 1 lần dù gọi nhiều nơi
+    _initialized = true;
+    _fillPool();
+  }
 
-//   void _fillPool() {
-//     final needed = _poolSize - _adPool.length - _loadingCount;
-//     for (int i = 0; i < needed; i++) {
-//       _loadOne();
-//     }
-//   }
+  void _fillPool() {
+    final needed = _poolSize - _adPool.length - _loadingCount;
+    for (int i = 0; i < needed; i++) {
+      _loadOne();
+    }
+  }
 
-//   void _loadOne() {
-//     if (_loadingCount + _adPool.length >= _poolSize) return; // ✅ không load thừa
-//     _loadingCount++;
+  void _loadOne() {
+    if (_loadingCount + _adPool.length >= _poolSize) return; // ✅ không load thừa
+    _loadingCount++;
 
-//     NativeAd(
-//       adUnitId: _adUnitId,
-//       request: const AdRequest(),
-//       listener: NativeAdListener(
-//         onAdLoaded: (ad) {
-//           _adPool.add(ad as NativeAd);
-//           _loadingCount--;
+    NativeAd(
+      adUnitId: _adUnitId,
+      request: const AdRequest(),
+      listener: NativeAdListener(
+        onAdLoaded: (ad) {
+          _adPool.add(ad as NativeAd);
+          _loadingCount--;
 
-//           for (final cb in List.of(_listeners)) {
-//             cb();
-//           }
+          for (final cb in List.of(_listeners)) {
+            cb();
+          }
 
-//           _fillPool(); // ✅ fill lại nếu còn thiếu
-//         },
-//         onAdFailedToLoad: (ad, error) {
-//           ad.dispose();
-//           _loadingCount--;
-//           if (kDebugMode) debugPrint('[NativeAdManager] Failed: ${error.message}');
-//           Future.delayed(const Duration(seconds: 30), _fillPool);
-//         },
-//       ),
-//       nativeTemplateStyle: NativeTemplateStyle(
-//         templateType: TemplateType.medium,
-//         mainBackgroundColor: Colors.white,
-//         cornerRadius: 16,
-//         callToActionTextStyle: NativeTemplateTextStyle(
-//           textColor: Colors.white,
-//           backgroundColor: const Color(0xFFFF9800),
-//           style: NativeTemplateFontStyle.bold,
-//           size: 14,
-//         ),
-//       ),
-//     ).load();
-//   }
+          _fillPool(); // ✅ fill lại nếu còn thiếu
+        },
+        onAdFailedToLoad: (ad, error) {
+          ad.dispose();
+          _loadingCount--;
+          if (kDebugMode) debugPrint('[NativeAdManager] Failed: ${error.message}');
+          Future.delayed(const Duration(seconds: 30), _fillPool);
+        },
+      ),
+      nativeTemplateStyle: NativeTemplateStyle(
+        templateType: TemplateType.medium,
+        mainBackgroundColor: Colors.white,
+        cornerRadius: 16,
+        callToActionTextStyle: NativeTemplateTextStyle(
+          textColor: Colors.white,
+          backgroundColor: const Color(0xFFFF9800),
+          style: NativeTemplateFontStyle.bold,
+          size: 14,
+        ),
+      ),
+    ).load();
+  }
 
-//   void addListener(VoidCallback cb) => _listeners.add(cb);
-//   void removeListener(VoidCallback cb) => _listeners.remove(cb);
+  void addListener(VoidCallback cb) => _listeners.add(cb);
+  void removeListener(VoidCallback cb) => _listeners.remove(cb);
 
-//   NativeAd? takeAd() {
-//     if (_adPool.isEmpty) return null;
-//     final ad = _adPool.removeAt(0);
-//     _fillPool(); // ✅ bù ngay
-//     return ad;
-//   }
-// }
+  NativeAd? takeAd() {
+    if (_adPool.isEmpty) return null;
+    final ad = _adPool.removeAt(0);
+    _fillPool(); // ✅ bù ngay
+    return ad;
+  }
+}
 
-// // ═══════════════════════════════════════════
-// //  NATIVE AD WIDGET
-// // ═══════════════════════════════════════════
-// class NativeAdWidget extends StatefulWidget {
-//   final Color backgroundColor;
-//   final Color ctaColor;
+// ═══════════════════════════════════════════
+//  NATIVE AD WIDGET
+// ═══════════════════════════════════════════
+class NativeAdWidget extends StatefulWidget {
+  final Color backgroundColor;
+  final Color ctaColor;
 
-//   const NativeAdWidget({
-//     super.key,
-//     this.backgroundColor = Colors.white,
-//     this.ctaColor = const Color(0xFFFF9800),
-//   });
+  const NativeAdWidget({
+    super.key,
+    this.backgroundColor = Colors.white,
+    this.ctaColor = const Color(0xFFFF9800),
+  });
 
-//   @override
-//   State<NativeAdWidget> createState() => _NativeAdWidgetState();
-// }
+  @override
+  State<NativeAdWidget> createState() => _NativeAdWidgetState();
+}
 
-// class _NativeAdWidgetState extends State<NativeAdWidget> {
-//   NativeAd? _nativeAd;
+class _NativeAdWidgetState extends State<NativeAdWidget> {
+  NativeAd? _nativeAd;
 
-//   @override
-//   void initState() {
-//     super.initState();
-//     // ✅ Đợi frame đầu render xong → tránh jank trên Samsung
-//     WidgetsBinding.instance.addPostFrameCallback((_) {
-//       if (!mounted) return;
-//       _tryTakeAd();
-//     });
-//   }
+  @override
+  void initState() {
+    super.initState();
+    // ✅ Đợi frame đầu render xong → tránh jank trên Samsung
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _tryTakeAd();
+    });
+  }
 
-//   void _tryTakeAd() {
-//     final manager = NativeAdManager();
-//     if (manager.isReady) {
-//       setState(() => _nativeAd = manager.takeAd());
-//     } else {
-//       manager.addListener(_onAdReady);
-//     }
-//   }
+  void _tryTakeAd() {
+    final manager = NativeAdManager();
+    if (manager.isReady) {
+      setState(() => _nativeAd = manager.takeAd());
+    } else {
+      manager.addListener(_onAdReady);
+    }
+  }
 
-//   void _onAdReady() {
-//     if (!mounted) return;
-//     final ad = NativeAdManager().takeAd();
-//     if (ad == null) return;
-//     NativeAdManager().removeListener(_onAdReady);
-//     setState(() => _nativeAd = ad);
-//   }
+  void _onAdReady() {
+    if (!mounted) return;
+    final ad = NativeAdManager().takeAd();
+    if (ad == null) return;
+    NativeAdManager().removeListener(_onAdReady);
+    setState(() => _nativeAd = ad);
+  }
 
-//   @override
-//   void dispose() {
-//     NativeAdManager().removeListener(_onAdReady);
-//     _nativeAd?.dispose();
-//     super.dispose();
-//   }
+  @override
+  void dispose() {
+    NativeAdManager().removeListener(_onAdReady);
+    _nativeAd?.dispose();
+    super.dispose();
+  }
 
-//   @override
-//   Widget build(BuildContext context) {
-//     if (_nativeAd == null) {
-//       return const SizedBox(height: 160);
-//     }
+  @override
+  Widget build(BuildContext context) {
+    if (_nativeAd == null) {
+      return const SizedBox(height: 160);
+    }
 
-//     return RepaintBoundary( // ✅ isolate render layer, giảm repaint trên Samsung
-//       child: Container(
-//         margin: const EdgeInsets.symmetric(vertical: 4),
-//         decoration: BoxDecoration(
-//           color: widget.backgroundColor,
-//           borderRadius: BorderRadius.circular(18),
-//           border: Border.all(color: const Color(0xFFEEEEEE)),
-//         ),
-//         child: Column(
-//           crossAxisAlignment: CrossAxisAlignment.start,
-//           children: [
-//             Container(
-//               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-//               decoration: BoxDecoration(
-//                 color: widget.ctaColor.withOpacity(0.15),
-//                 borderRadius: const BorderRadius.only(
-//                   topLeft: Radius.circular(18),
-//                   bottomRight: Radius.circular(10),
-//                 ),
-//               ),
-//               child: Text(
-//                 'Quảng cáo',
-//                 style: TextStyle(
-//                   fontSize: 11,
-//                   color: widget.ctaColor,
-//                   fontWeight: FontWeight.w600,
-//                 ),
-//               ),
-//             ),
-//             SizedBox(height: 160, child: AdWidget(ad: _nativeAd!)),
-//           ],
-//         ),
-//       ),
-//     );
-//   }
-// }
+    return RepaintBoundary( // ✅ isolate render layer, giảm repaint trên Samsung
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 4),
+        decoration: BoxDecoration(
+          color: widget.backgroundColor,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: const Color(0xFFEEEEEE)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: widget.ctaColor.withOpacity(0.15),
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(18),
+                  bottomRight: Radius.circular(10),
+                ),
+              ),
+              child: Text(
+                'Quảng cáo',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: widget.ctaColor,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            SizedBox(height: 160, child: AdWidget(ad: _nativeAd!)),
+          ],
+        ),
+      ),
+    );
+  }
+}

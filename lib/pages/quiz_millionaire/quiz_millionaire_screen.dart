@@ -1,9 +1,7 @@
 import 'package:dovui/data/audio/audio_manager.dart';
 import 'package:dovui/data/repositories/user_level_repository.dart';
-import 'package:dovui/pages/ads/ads_service.dart';
 import 'package:dovui/pages/quiz_millionaire/widgets/askcontinue_dialog.dart';
 import 'package:dovui/pages/quiz_millionaire/widgets/prizeladderoverlay.dart';
-import 'package:dovui/services/room_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:dovui/pages/gamecomplete/game_complete_screen.dart';
@@ -17,6 +15,8 @@ import 'widgets/millionaire_top_bar.dart';
 import 'widgets/question_card.dart';
 import 'widgets/answer_grid.dart';
 import 'widgets/timer_bar.dart';
+// New extracted widgets:
+import 'widgets/millionaire_loading_view.dart';
 
 class MillionaireScreen extends StatefulWidget {
   final String categoryId;
@@ -40,39 +40,44 @@ class _MillionaireScreenState extends State<MillionaireScreen> {
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create:
-          (_) => MillionaireBloc(quizBloc: QuizBloc())..add(
-            LoadMillionaire(
-              categoryId: widget.categoryId,
-              levelId: widget.levelId,
-              type: widget.type,
-            ),
-          ),
-      child: const _MillionaireView(),
+      create: (_) => MillionaireBloc(quizBloc: QuizBloc())
+        ..add(LoadMillionaire(
+          categoryId: widget.categoryId,
+          levelId: widget.levelId,
+          type: widget.type,
+        )),
+      child: _MillionaireView(
+        categoryId: widget.categoryId,
+        levelId: widget.levelId,
+        type: widget.type,
+        onSaveResult: _saveResult,
+      ),
     );
   }
 
   Future<void> _saveResult({required int score, required int total}) async {
     if (widget.levelId == null) return;
-
     final prefs = await SharedPreferences.getInstance();
-    final userId = prefs.getString("userId");
-
+    final userId = prefs.getString('userId');
     if (userId == null) return;
-
     final maxScore = total * 10;
     final percent = maxScore > 0 ? ((score / maxScore) * 10).round() : 0;
-
-    _userLevelRepo.saveLevel(
-      userId: userId,
-      levelId: widget.levelId!,
-      score: percent,
-    );
+    _userLevelRepo.saveLevel(userId: userId, levelId: widget.levelId!, score: percent);
   }
 }
 
 class _MillionaireView extends StatefulWidget {
-  const _MillionaireView();
+  final String categoryId;
+  final String? levelId;
+  final String type;
+  final Future<void> Function({required int score, required int total}) onSaveResult;
+
+  const _MillionaireView({
+    required this.categoryId,
+    required this.levelId,
+    required this.type,
+    required this.onSaveResult,
+  });
 
   @override
   State<_MillionaireView> createState() => _MillionaireViewState();
@@ -84,9 +89,7 @@ class _MillionaireViewState extends State<_MillionaireView> {
   @override
   void initState() {
     super.initState();
-
     AudioManager().stopBackgroundMusic();
-
     AudioManager().stopSfx();
   }
 
@@ -94,32 +97,25 @@ class _MillionaireViewState extends State<_MillionaireView> {
   Widget build(BuildContext context) {
     return PopScope(
       canPop: false,
-      onPopInvokedWithResult: (didPop, result) {},
+      onPopInvokedWithResult: (_, __) {},
       child: BlocConsumer<MillionaireBloc, MillionaireState>(
         listenWhen: (prev, curr) => prev.status != curr.status,
         listener: (context, state) async {
           if (!_isNavigated && (state.isGameOver || state.isFinished)) {
             _isNavigated = true;
-            _navigateToResult(context, state);
+            await _navigateToResult(context, state);
           }
-
-          if (state.isAskContinue) {
-            _showAskContinue(context);
-          }
+          if (state.isAskContinue) _showAskContinue(context);
         },
         builder: (context, state) {
-          if (state.isLoading) return const _LoadingView();
-
-          if (state.currentQuestion == null && !state.isLoading) {
-            return const _EmptyView();
-          }
+          if (state.isLoading) return const MillionaireLoadingView();
+          if (state.currentQuestion == null) return const MillionaireEmptyView();
 
           return Scaffold(
             backgroundColor: MillionaireColors.bgPage,
             body: Stack(
               children: [
                 const StarfieldBackground(),
-
                 SafeArea(
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -129,16 +125,10 @@ class _MillionaireViewState extends State<_MillionaireView> {
                           children: [
                             Expanded(
                               child: SingleChildScrollView(
-                                padding: const EdgeInsets.fromLTRB(
-                                  14,
-                                  10,
-                                  8,
-                                  20,
-                                ),
-                                child: Column(
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.stretch,
-                                  children: const [
+                                padding: const EdgeInsets.fromLTRB(14, 10, 8, 20),
+                                child: const Column(
+                                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                                  children: [
                                     TimerBar(),
                                     SizedBox(height: 40),
                                     QuestionCard(),
@@ -155,7 +145,6 @@ class _MillionaireViewState extends State<_MillionaireView> {
                     ],
                   ),
                 ),
-
                 if (state.isShowPrizeLadder)
                   BlocProvider.value(
                     value: context.read<MillionaireBloc>(),
@@ -169,38 +158,24 @@ class _MillionaireViewState extends State<_MillionaireView> {
     );
   }
 
-  // ✅ NAVIGATE + SAVE RESULT
-  Future<void> _navigateToResult(
-    BuildContext context,
-    MillionaireState state,
-  ) async {
-    final screen = context.findAncestorWidgetOfExactType<MillionaireScreen>();
+  Future<void> _navigateToResult(BuildContext context, MillionaireState state) async {
+    await widget.onSaveResult(score: state.finalScore, total: state.questions.length);
 
-    final stateful = context.findAncestorStateOfType<_MillionaireScreenState>();
-
-    if (stateful != null) {
-      stateful._saveResult(
-        score: state.finalScore,
-        total: state.questions.length,
-      );
-    }
-
-    final isWin =
-        state.questions.isNotEmpty &&
+    if (!context.mounted) return;
+    final isWin = state.questions.isNotEmpty &&
         (state.finalScore / (state.questions.length * 10)) >= 0.6;
-    // RepaintBoundary(child: NativeAdWidget());
+
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
-        builder:
-            (_) => GameCompleteScreen(
-              score: state.finalScore,
-              totalQuestions: state.questions.length,
-              isWin: isWin,
-              categoryId: screen?.categoryId ?? '',
-              levelId: screen?.levelId,
-              type: screen?.type ?? '',
-            ),
+        builder: (_) => GameCompleteScreen(
+          score: state.finalScore,
+          totalQuestions: state.questions.length,
+          isWin: isWin,
+          categoryId: widget.categoryId,
+          levelId: widget.levelId,
+          type: widget.type,
+        ),
       ),
     );
   }
@@ -209,38 +184,10 @@ class _MillionaireViewState extends State<_MillionaireView> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder:
-          (_) => BlocProvider.value(
-            value: context.read<MillionaireBloc>(),
-            child: const AskContinueDialog(),
-          ),
+      builder: (_) => BlocProvider.value(
+        value: context.read<MillionaireBloc>(),
+        child: const AskContinueDialog(),
+      ),
     );
   }
-}
-
-class _LoadingView extends StatelessWidget {
-  const _LoadingView();
-
-  @override
-  Widget build(BuildContext context) => const Scaffold(
-    backgroundColor: MillionaireColors.bgDeep,
-    body: Center(
-      child: CircularProgressIndicator(color: MillionaireColors.gold),
-    ),
-  );
-}
-
-class _EmptyView extends StatelessWidget {
-  const _EmptyView();
-
-  @override
-  Widget build(BuildContext context) => const Scaffold(
-    backgroundColor: MillionaireColors.bgDeep,
-    body: Center(
-      child: Text(
-        'Chưa có câu hỏi cho chuyên đề này',
-        style: TextStyle(color: Colors.white70, fontSize: 16),
-      ),
-    ),
-  );
 }

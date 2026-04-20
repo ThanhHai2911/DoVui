@@ -1,10 +1,9 @@
 import 'dart:async';
-import 'dart:math';
+import 'package:dovui/pages/splash/widgets/Particle.dart';
 import 'package:dovui/pages/user/login_screen.dart';
 import 'package:dovui/resources/color_manager.dart';
 import 'package:dovui/pages/home/widgets/home_bottom_nav.dart';
 import 'package:dovui/pages/user/bloc/user_bloc.dart';
-import 'package:dovui/pages/user/register_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -122,7 +121,7 @@ class _SplashScreenState extends State<SplashScreen>
             ),
 
             /// Floating particles
-            const _Particles(),
+            const Particles(),
 
             /// Main content
             Center(
@@ -218,60 +217,3 @@ class _SplashScreenState extends State<SplashScreen>
   }
 }
 
-class _Particles extends StatefulWidget {
-  const _Particles();
-
-  @override
-  State<_Particles> createState() => _ParticlesState();
-}
-
-class _ParticlesState extends State<_Particles>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  final Random random = Random();
-
-  @override
-  void initState() {
-    super.initState();
-
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 6),
-    )..repeat();
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose(); // 🔥 QUAN TRỌNG
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _controller,
-      builder: (_, __) {
-        return Stack(
-          children: List.generate(15, (index) {
-            final size = random.nextDouble() * 12 + 6;
-            final dx = random.nextDouble() * MediaQuery.of(context).size.width;
-            final dy = random.nextDouble() * MediaQuery.of(context).size.height;
-
-            return Positioned(
-              left: dx,
-              top: dy - (_controller.value * 80),
-              child: Container(
-                width: size,
-                height: size,
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.25),
-                  shape: BoxShape.circle,
-                ),
-              ),
-            );
-          }),
-        );
-      },
-    );
-  }
-}

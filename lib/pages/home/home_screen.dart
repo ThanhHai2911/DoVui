@@ -1,5 +1,6 @@
 import 'package:dovui/data/audio/audio_manager.dart';
 import 'package:dovui/pages/ads/ads_service.dart';
+import 'package:dovui/pages/home/widgets/animated_section.dart';
 import 'package:dovui/resources/color_manager.dart';
 import 'package:dovui/pages/home/bloc/home_bloc.dart';
 import 'package:dovui/pages/home/bloc/home_event.dart';
@@ -127,7 +128,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                 const SizedBox(height: 20),
                                 const HomeHeader(),
                                 const SizedBox(height: 25),
-                                _AnimatedSection(
+                                AnimatedSection(
                                   delay: 0,
                                   child: StreakCard(
                                     days: state.days,
@@ -136,12 +137,12 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                   ),
                                 ),
                                 const SizedBox(height: 30),
-                                const _AnimatedSection(
+                                const AnimatedSection(
                                   delay: 120,
                                   child: QuizOfWeek(),
                                 ),
                                 const SizedBox(height: 30),
-                                const _AnimatedSection(
+                                const AnimatedSection(
                                   delay: 240,
                                   child: CategoriesSection(),
                                 ),
@@ -182,7 +183,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                 //     ),
                                 //   ],
                                 // ),
-                                //RepaintBoundary(child: NativeAdWidget()),
+                                // RepaintBoundary(child: NativeAdWidget()),
                               ],
                             ),
                           ),
@@ -209,59 +210,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         shape: BoxShape.circle,
         color: color.withOpacity(opacity),
       ),
-    );
-  }
-}
-
-// ── Animated section ─────────────────────────────────────
-class _AnimatedSection extends StatefulWidget {
-  final Widget child;
-  final int delay;
-
-  const _AnimatedSection({required this.child, required this.delay});
-
-  @override
-  State<_AnimatedSection> createState() => _AnimatedSectionState();
-}
-
-class _AnimatedSectionState extends State<_AnimatedSection>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _ctrl;
-  late Animation<double> _fade;
-  late Animation<Offset> _slide;
-
-  @override
-  void initState() {
-    super.initState();
-    _ctrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 500),
-    );
-    _fade = Tween<double>(
-      begin: 0,
-      end: 1,
-    ).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOut));
-    _slide = Tween<Offset>(
-      begin: const Offset(0, 0.08),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOutCubic));
-
-    Future.delayed(Duration(milliseconds: widget.delay), () {
-      if (mounted) _ctrl.forward();
-    });
-  }
-
-  @override
-  void dispose() {
-    _ctrl.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return FadeTransition(
-      opacity: _fade,
-      child: SlideTransition(position: _slide, child: widget.child),
     );
   }
 }

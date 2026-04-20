@@ -1,6 +1,9 @@
 import 'package:dovui/data/audio/audio_manager.dart';
 import 'package:dovui/pages/ads/ads_service.dart';
 import 'package:dovui/pages/home/widgets/game_dialog.dart';
+import 'package:dovui/pages/leaderboard/widgets/animated_podium.dart';
+import 'package:dovui/pages/leaderboard/widgets/animated_tile.dart';
+import 'package:dovui/pages/leaderboard/widgets/podium_column.dart';
 import 'package:dovui/pages/room/bloc/room_bloc.dart';
 import 'package:dovui/pages/room/bloc/room_event.dart';
 import 'package:dovui/pages/room/create_room_screen.dart';
@@ -220,21 +223,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
                                         ),
                                       ),
                                       onPressed:
-                                          () => Navigator.push(
-                                            context,
-                                            MaterialPageRoute(
-                                              builder:
-                                                  (_) => BlocProvider(
-                                                    create:
-                                                        (_) =>
-                                                            RoomBloc()..add(
-                                                              LoadCategories(),
-                                                            ),
-                                                    child:
-                                                        const CreateRoomScreen(),
-                                                  ),
-                                            ),
-                                          ),
+                                          () => _onTapScore(context),
                                     ),
                                   ],
                                 ),
@@ -256,9 +245,9 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
                                           Expanded(
                                             child:
                                                 users.length > 1
-                                                    ? _AnimatedPodium(
+                                                    ? AnimatedPodium(
                                                       delay: 200,
-                                                      child: _PodiumColumn(
+                                                      child: PodiumColumn(
                                                         card: TopUserCard(
                                                           key: ValueKey(
                                                             users[1].id,
@@ -282,9 +271,9 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
 
                                           /// #1
                                           Expanded(
-                                            child: _AnimatedPodium(
+                                            child: AnimatedPodium(
                                               delay: 0,
-                                              child: _PodiumColumn(
+                                              child: PodiumColumn(
                                                 card: TopUserCard(
                                                   key: ValueKey(users[0].id),
                                                   rank: "#1",
@@ -306,9 +295,9 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
                                           Expanded(
                                             child:
                                                 users.length > 2
-                                                    ? _AnimatedPodium(
+                                                    ? AnimatedPodium(
                                                       delay: 400,
-                                                      child: _PodiumColumn(
+                                                      child: PodiumColumn(
                                                         card: TopUserCard(
                                                           key: ValueKey(
                                                             users[2].id,
@@ -353,7 +342,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
                                     itemBuilder: (context, index) {
                                       final user = users[index + 3];
 
-                                      return _AnimatedTile(
+                                      return AnimatedTile(
                                         index: index,
                                         child: LeaderboardTile(
                                           key: ValueKey(user.id),
@@ -395,141 +384,3 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
   }
 }
 
-/// PODIUM ANIMATION
-class _AnimatedPodium extends StatefulWidget {
-  final Widget child;
-  final int delay;
-
-  const _AnimatedPodium({required this.child, required this.delay});
-
-  @override
-  State<_AnimatedPodium> createState() => _AnimatedPodiumState();
-}
-
-class _AnimatedPodiumState extends State<_AnimatedPodium>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _ctrl;
-  late Animation<double> _scale;
-
-  @override
-  void initState() {
-    super.initState();
-
-    _ctrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 600),
-    );
-
-    _scale = Tween<double>(
-      begin: 0.7,
-      end: 1,
-    ).animate(CurvedAnimation(parent: _ctrl, curve: Curves.elasticOut));
-
-    Future.delayed(Duration(milliseconds: widget.delay), () {
-      if (mounted) _ctrl.forward();
-    });
-  }
-
-  @override
-  void dispose() {
-    _ctrl.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return ScaleTransition(scale: _scale, child: widget.child);
-  }
-}
-
-/// LIST ANIMATION
-class _AnimatedTile extends StatefulWidget {
-  final Widget child;
-  final int index;
-
-  const _AnimatedTile({required this.child, required this.index, Key? key})
-    : super(key: key);
-
-  @override
-  State<_AnimatedTile> createState() => _AnimatedTileState();
-}
-
-class _AnimatedTileState extends State<_AnimatedTile>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _ctrl;
-  late Animation<double> _fade;
-  late Animation<Offset> _slide;
-
-  @override
-  void initState() {
-    super.initState();
-
-    _ctrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 400),
-    );
-
-    _fade = Tween<double>(begin: 0, end: 1).animate(_ctrl);
-
-    _slide = Tween<Offset>(
-      begin: const Offset(0, 0.1),
-      end: Offset.zero,
-    ).animate(_ctrl);
-
-    Future.delayed(Duration(milliseconds: 80 * widget.index), () {
-      if (mounted) _ctrl.forward();
-    });
-  }
-
-  @override
-  void dispose() {
-    _ctrl.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return FadeTransition(
-      opacity: _fade,
-      child: SlideTransition(position: _slide, child: widget.child),
-    );
-  }
-}
-
-class _PodiumColumn extends StatelessWidget {
-  final Widget card;
-  final double podiumHeight;
-  final Color podiumColor;
-  final String emoji;
-
-  const _PodiumColumn({
-    required this.card,
-    required this.podiumHeight,
-    required this.podiumColor,
-    required this.emoji,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.end,
-      children: [
-        card,
-        const SizedBox(height: 6),
-        Container(
-          width: double.infinity,
-          height: podiumHeight,
-          decoration: BoxDecoration(
-            color: podiumColor,
-            borderRadius: const BorderRadius.only(
-              topLeft: Radius.circular(12),
-              topRight: Radius.circular(12),
-            ),
-          ),
-          alignment: Alignment.center,
-          child: Text(emoji, style: const TextStyle(fontSize: 24)),
-        ),
-      ],
-    );
-  }
-}

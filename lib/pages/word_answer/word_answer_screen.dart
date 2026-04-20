@@ -1,7 +1,3 @@
-import 'package:dovui/pages/ads/ads_service.dart';
-import 'package:dovui/pages/home/widgets/check_score.dart';
-import 'package:dovui/pages/home/widgets/game_dialog.dart';
-import 'package:dovui/pages/word_answer/widgets/hint_bar.dart';
 import 'package:dovui/data/repositories/user_level_repository.dart';
 import 'package:dovui/pages/gamecomplete/game_complete_screen.dart';
 import 'package:dovui/pages/word_answer/bloc/word_answer_bloc.dart';
@@ -10,6 +6,9 @@ import 'package:dovui/pages/word_answer/bloc/word_answer_state.dart';
 import 'package:dovui/pages/word_answer/widgets/%20word_answer_header.dart';
 import 'package:dovui/pages/word_answer/widgets/%20word_answer_input.dart';
 import 'package:dovui/pages/word_answer/widgets/letter_pool_widget.dart';
+import 'package:dovui/pages/word_answer/widgets/word_answer_background.dart';
+import 'package:dovui/pages/word_answer/widgets/word_answer_hint_bar_handler.dart';
+import 'package:dovui/pages/word_answer/widgets/word_answer_question_card.dart';
 import 'package:dovui/pages/word_answer/widgets/word_answer_shimmer.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -19,7 +18,6 @@ class WordAnswerScreen extends StatefulWidget {
   final String categoryId;
   final String? levelId;
   final String type;
-
 
   const WordAnswerScreen({
     super.key,
@@ -36,7 +34,6 @@ class _WordAnswerScreenState extends State<WordAnswerScreen>
     with TickerProviderStateMixin, WidgetsBindingObserver {
   final _userLevelRepo = UserLevelRepository();
 
-  // Animation controllers
   late AnimationController _entryController;
   late AnimationController _questionController;
   late AnimationController _pulseController;
@@ -55,24 +52,19 @@ class _WordAnswerScreenState extends State<WordAnswerScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _initAnimations();
+    _entryController.forward();
+  }
 
-    // Entry animation (toàn màn hình fade + slide lên)
+  void _initAnimations() {
     _entryController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 600),
     );
-    _fadeAnim = CurvedAnimation(
-      parent: _entryController,
-      curve: Curves.easeOut,
-    );
-    _slideAnim = Tween<Offset>(
-      begin: const Offset(0, 0.08),
-      end: Offset.zero,
-    ).animate(
-      CurvedAnimation(parent: _entryController, curve: Curves.easeOutCubic),
-    );
+    _fadeAnim = CurvedAnimation(parent: _entryController, curve: Curves.easeOut);
+    _slideAnim = Tween<Offset>(begin: const Offset(0, 0.08), end: Offset.zero)
+        .animate(CurvedAnimation(parent: _entryController, curve: Curves.easeOutCubic));
 
-    // Question card flip/scale khi đổi câu
     _questionController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 450),
@@ -87,7 +79,6 @@ class _WordAnswerScreenState extends State<WordAnswerScreen>
       ),
     );
 
-    // Pulse animation cho badge tiêu đề
     _pulseController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1200),
@@ -96,7 +87,6 @@ class _WordAnswerScreenState extends State<WordAnswerScreen>
       CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
     );
 
-    // Float animation cho emoji trang trí
     _floatController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 2000),
@@ -104,8 +94,6 @@ class _WordAnswerScreenState extends State<WordAnswerScreen>
     _floatAnim = Tween<double>(begin: -6.0, end: 6.0).animate(
       CurvedAnimation(parent: _floatController, curve: Curves.easeInOut),
     );
-
-    _entryController.forward();
   }
 
   @override
@@ -120,20 +108,12 @@ class _WordAnswerScreenState extends State<WordAnswerScreen>
 
   Future<void> _saveResult({required int score, required int total}) async {
     if (widget.levelId == null) return;
-
     final prefs = await SharedPreferences.getInstance();
     final userId = prefs.getString("userId");
-
     if (userId == null) return;
-
     final maxScore = total * 10;
     final percent = maxScore > 0 ? ((score / maxScore) * 10).round() : 0;
-
-    _userLevelRepo.saveLevel(
-      userId: userId,
-      levelId: widget.levelId!,
-      score: percent,
-    );
+    _userLevelRepo.saveLevel(userId: userId, levelId: widget.levelId!, score: percent);
   }
 
   void _triggerQuestionAnim(String questionId) {
@@ -147,12 +127,22 @@ class _WordAnswerScreenState extends State<WordAnswerScreen>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (!mounted) return;
     final bloc = context.read<WordAnswerBloc>();
-    if (state == AppLifecycleState.paused ||
-        state == AppLifecycleState.inactive) {
+    if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
       bloc.add(PauseTimer());
     } else if (state == AppLifecycleState.resumed) {
       bloc.add(ResumeTimer());
     }
+  }
+
+  GameCompleteScreen _buildGameComplete({required int score, required int total}) {
+    return GameCompleteScreen(
+      score: score,
+      totalQuestions: total,
+      isWin: total > 0 && (score / (total * 10)) >= 0.6,
+      categoryId: widget.categoryId,
+      levelId: widget.levelId,
+      type: widget.type,
+    );
   }
 
   @override
@@ -161,52 +151,25 @@ class _WordAnswerScreenState extends State<WordAnswerScreen>
       canPop: false,
       onPopInvokedWithResult: (didPop, result) {},
       child: BlocProvider(
-        create:
-            (_) => WordAnswerBloc(
-              categoryId: widget.categoryId,
-              levelId: widget.levelId,
-              type: widget.type,
-            )..add(LoadQuestions()),
+        create: (_) => WordAnswerBloc(
+          categoryId: widget.categoryId,
+          levelId: widget.levelId,
+          type: widget.type,
+        )..add(LoadQuestions()),
         child: BlocConsumer<WordAnswerBloc, WordAnswerState>(
           listener: (context, state) async {
             if (state is WordAnswerCompleted) {
               _saveResult(score: state.score, total: state.total);
-              // NativeAdManager().preloadPool();
               Navigator.pushReplacement(
                 context,
-                MaterialPageRoute(
-                  builder:
-                      (_) => GameCompleteScreen(
-                        score: state.score,
-                        totalQuestions: state.total,
-                        isWin:
-                            state.total > 0 &&
-                            (state.score / (state.total * 10)) >= 0.6,
-                        categoryId: widget.categoryId,
-                        levelId: widget.levelId,
-                        type: widget.type,
-                      ),
-                ),
+                MaterialPageRoute(builder: (_) => _buildGameComplete(score: state.score, total: state.total)),
               );
             }
             if (state is WordAnswerTimeUp) {
               _saveResult(score: state.score, total: state.total);
-              // RepaintBoundary(child: NativeAdWidget());
               Navigator.pushReplacement(
                 context,
-                MaterialPageRoute(
-                  builder:
-                      (_) => GameCompleteScreen(
-                        score: state.score,
-                        totalQuestions: state.total,
-                        isWin:
-                            state.total > 0 &&
-                            (state.score / (state.total * 10)) >= 0.6,
-                        categoryId: widget.categoryId,
-                        levelId: widget.levelId,
-                        type: widget.type,
-                      ),
-                ),
+                MaterialPageRoute(builder: (_) => _buildGameComplete(score: state.score, total: state.total)),
               );
             }
           },
@@ -216,15 +179,13 @@ class _WordAnswerScreenState extends State<WordAnswerScreen>
             if (state is WordAnswerLoaded) {
               final controller = state.controller;
               final question = state.question;
-
-              // Trigger animation mỗi khi câu hỏi đổi
               _triggerQuestionAnim(question.question);
 
               return Scaffold(
                 backgroundColor: const Color(0xFFF4F6FF),
                 body: Stack(
                   children: [
-                    _buildBackground(),
+                    WordAnswerBackground(floatController: _floatController, floatAnim: _floatAnim),
                     FadeTransition(
                       opacity: _fadeAnim,
                       child: SlideTransition(
@@ -233,11 +194,8 @@ class _WordAnswerScreenState extends State<WordAnswerScreen>
                           child: Column(
                             children: [
                               const SizedBox(height: 12),
-
                               Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                ),
+                                padding: const EdgeInsets.symmetric(horizontal: 16),
                                 child: WordAnswerHeader(
                                   lives: controller.lives,
                                   timeLeft: controller.timeLeft,
@@ -245,44 +203,36 @@ class _WordAnswerScreenState extends State<WordAnswerScreen>
                                   totalQuestions: state.questions.length,
                                 ),
                               ),
-
                               const SizedBox(height: 20),
-
                               Expanded(
                                 child: Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 16,
-                                  ),
+                                  padding: const EdgeInsets.symmetric(horizontal: 16),
                                   child: Column(
                                     children: [
-                                      /// Card câu hỏi — scale + fade khi đổi
                                       FadeTransition(
                                         opacity: _questionFadeAnim,
                                         child: ScaleTransition(
                                           scale: _questionScaleAnim,
-                                          child: _buildQuestionCard(question),
+                                          child: WordAnswerQuestionCard(
+                                            question: question,
+                                            pulseAnim: _pulseAnim,
+                                            floatAnim: _floatAnim,
+                                          ),
                                         ),
                                       ),
-
                                       const Spacer(),
-
                                       WordAnswerInput(
                                         userInput: controller.userInput,
                                         onRemove: controller.removeLetter,
                                         controller: controller,
                                       ),
-
                                       const Spacer(),
-
                                       LetterPoolWidget(
                                         letters: controller.letterPool,
                                         onSelect: controller.selectLetter,
                                       ),
-
                                       const SizedBox(height: 20),
-
-                                      _buildHintBar(context),
-
+                                      WordAnswerHintBarHandler(),
                                       const SizedBox(height: 16),
                                     ],
                                   ),
@@ -302,270 +252,6 @@ class _WordAnswerScreenState extends State<WordAnswerScreen>
           },
         ),
       ),
-    );
-  }
-
-  Widget _buildBackground() {
-    return AnimatedBuilder(
-      animation: _floatController,
-      builder: (context, child) {
-        return Stack(
-          children: [
-            Positioned(
-              top: -50 + _floatAnim.value,
-              left: -50,
-              child: Container(
-                width: 180,
-                height: 180,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: const Color(0xFF6C63FF).withOpacity(0.08),
-                ),
-              ),
-            ),
-            Positioned(
-              top: 150 - _floatAnim.value,
-              right: -40,
-              child: Container(
-                width: 140,
-                height: 140,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: const Color(0xFFFF6584).withOpacity(0.07),
-                ),
-              ),
-            ),
-            Positioned(
-              bottom: 200 + _floatAnim.value * 0.5,
-              left: -30,
-              child: Container(
-                width: 120,
-                height: 120,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: const Color(0xFF43C6AC).withOpacity(0.07),
-                ),
-              ),
-            ),
-            Positioned(
-              bottom: 60 - _floatAnim.value * 0.5,
-              right: -40,
-              child: Container(
-                width: 160,
-                height: 160,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: const Color(0xFFFFB347).withOpacity(0.07),
-                ),
-              ),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  Widget _buildQuestionCard(question) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        double screenWidth = constraints.maxWidth;
-        double titleFont = (screenWidth * 0.040).clamp(13.0, 18.0);
-        double questionFont = (screenWidth * 0.065).clamp(17.0, 26.0);
-
-        return Container(
-          width: double.infinity,
-          padding: EdgeInsets.symmetric(
-            horizontal: screenWidth * 0.07,
-            vertical: screenWidth * 0.09,
-          ),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(28),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFF6C63FF).withOpacity(0.12),
-                blurRadius: 24,
-                offset: const Offset(0, 10),
-              ),
-            ],
-            border: Border.all(
-              color: const Color(0xFF6C63FF).withOpacity(0.1),
-              width: 1.5,
-            ),
-          ),
-          child: Stack(
-            clipBehavior: Clip.none,
-            children: [
-              // Emoji nổi góc phải — float animation
-              Positioned(
-                top: -20,
-                right: -10,
-                child: AnimatedBuilder(
-                  animation: _floatAnim,
-                  builder:
-                      (_, __) => Transform.translate(
-                        offset: Offset(0, _floatAnim.value * 0.4),
-                        child: const Text("🎵", style: TextStyle(fontSize: 32)),
-                      ),
-                ),
-              ),
-              // Emoji nổi góc trái
-              Positioned(
-                bottom: -16,
-                left: -8,
-                child: AnimatedBuilder(
-                  animation: _floatAnim,
-                  builder:
-                      (_, __) => Transform.translate(
-                        offset: Offset(0, -_floatAnim.value * 0.4),
-                        child: const Text("🎶", style: TextStyle(fontSize: 22)),
-                      ),
-                ),
-              ),
-
-              Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Badge pulse
-                  ScaleTransition(
-                    scale: _pulseAnim,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 7,
-                      ),
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFF6C63FF), Color(0xFF9B8FFF)],
-                        ),
-                        borderRadius: BorderRadius.circular(20),
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(0xFF6C63FF).withOpacity(0.3),
-                            blurRadius: 8,
-                            offset: const Offset(0, 3),
-                          ),
-                        ],
-                      ),
-                      child: Text(
-                        "🎵 Ghép tên bài hát",
-                        style: TextStyle(
-                          fontSize: titleFont,
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-
-                  SizedBox(height: screenWidth * 0.06),
-
-                  // Câu hỏi
-                  Text(
-                    question.question,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: questionFont,
-                      fontWeight: FontWeight.bold,
-                      color: const Color(0xFF1E1B4B),
-                      letterSpacing: 1.2,
-                      height: 1.4,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildHintBar(BuildContext context) {
-    return HintBar(
-      onMagnifier: () {
-        final score = context.read<WordAnswerBloc>().currentScore;
-        checkScoreAndShowHint(
-          context: context,
-          currentScore: score,
-          cost: 50,
-          hintIcon: "🔍",
-          hintTitle: "Gợi ý chữ cái",
-          hintDescription: "Hé lộ 1 phần đáp án\ncho câu trả lời hiện tại",
-          hintColor: Colors.amber,
-          confirmText: "Dùng ngay!",
-          onConfirm: () => context.read<WordAnswerBloc>().add(UseHintLetter()),
-        );
-      },
-      onKey: () {
-        final score = context.read<WordAnswerBloc>().currentScore;
-        checkScoreAndShowHint(
-          context: context,
-          currentScore: score,
-          cost: 100,
-          hintIcon: "🗝️",
-          hintTitle: "Mở đáp án",
-          hintDescription: "Hiện toàn bộ đáp án\ncâu hỏi hiện tại",
-          hintColor: Colors.deepPurple,
-          confirmText: "Mở thôi!",
-          onConfirm: () => context.read<WordAnswerBloc>().add(UseSkip()),
-        );
-      },
-      onVideo: () {
-        if (!RewardedAdManager().isAdLoaded) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('⏳ Quảng cáo chưa sẵn sàng, thử lại sau!'),
-              backgroundColor: Colors.orange,
-            ),
-          );
-          return;
-        }
-
-        showGameDialog(
-          context: context,
-          icon: "🎬",
-          iconColor: Colors.purple,
-          title: "Xem video nhận gợi ý?",
-          description: "Xem 1 video ngắn để\nhé lộ toàn bộ đáp án miễn phí!",
-          costIcon: "🎬",
-          costText: "Xem video",
-          confirmText: "Xem ngay!",
-          confirmColor: Colors.purple,
-          showCancel: true,
-          onConfirm: () {
-            context.read<WordAnswerBloc>().add(PauseTimer()); // ⏸ dừng timer
-
-            RewardedAdManager().showAd(
-              onRewarded: () {
-                context.read<WordAnswerBloc>().add(UseSkipFree());
-                context.read<WordAnswerBloc>().add(ResumeTimer()); // ▶ chạy lại
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('🎉 Đáp án đã được mở!'),
-                      backgroundColor: Color(0xFF43C6AC),
-                    ),
-                  );
-                }
-              },
-              onFailed: () {
-                context.read<WordAnswerBloc>().add(
-                  ResumeTimer(),
-                ); // ▶ chạy lại dù thất bại
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('❌ Không tải được quảng cáo, thử lại sau!'),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
-                }
-              },
-            );
-          },
-        );
-      },
     );
   }
 }

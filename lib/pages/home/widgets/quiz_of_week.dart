@@ -1,3 +1,4 @@
+import 'package:dovui/pages/home/widgets/home_bottom_nav.dart';
 import 'package:dovui/resources/color_manager.dart';
 import 'package:dovui/data/repositories/user_repository.dart';
 import 'package:dovui/pages/category/categories_screen.dart';
@@ -151,7 +152,7 @@ class _QuizOfWeekState extends State<QuizOfWeek>
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (_) => const Categoriesscreen(),
+                                  builder: (_) => const HomeBottomNav(initialIndex: 1),
                                 ),
                               );
                             },

@@ -40,21 +40,21 @@ class CategoriesItem extends StatelessWidget {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (_) => Levelscreen(categoryId: categoryId, type: type),
+              builder: (_) => LevelScreen(categoryId: categoryId, type: type),
             ),
           );
         } else if (type == "level") {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (_) => Levelscreen(categoryId: categoryId, type: type),
+              builder: (_) => LevelScreen(categoryId: categoryId, type: type),
             ),
           );
         }else if (type == "man") {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (_) => Levelscreen(categoryId: categoryId, type: type),
+              builder: (_) => LevelScreen(categoryId: categoryId, type: type),
             ),
           );
         }
@@ -62,7 +62,7 @@ class CategoriesItem extends StatelessWidget {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (_) => Levelscreen(categoryId: categoryId, type: type),
+              builder: (_) => LevelScreen(categoryId: categoryId, type: type),
             ),
           );
         }
