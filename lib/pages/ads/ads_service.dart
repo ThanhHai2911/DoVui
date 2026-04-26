@@ -76,8 +76,8 @@ class BannerAdManager {
 
   static const String _adUnitId =
       kDebugMode
-          ? 'ca-app-pub-3766615924961894/2558866294' // Test ID
-          : 'ca-app-pub-3766615924961894/2558866294';
+          ? 'ca-app-pub-3766615924961894/6826489768' // Test ID
+          : 'ca-app-pub-3766615924961894/6826489768';
 
   bool get isLoaded => _isLoaded;
   BannerAd? get bannerAd => _bannerAd;
@@ -258,7 +258,7 @@ class NativeAdManager {
   final List<VoidCallback> _listeners = [];
 
   static const String _adUnitId = kDebugMode
-        ? 'ca-app-pub-3940256099942544/2247696110'
+        ? 'ca-app-pub-3766615924961894/8788265127'
         : 'ca-app-pub-3766615924961894/8788265127';
 
   bool get isReady => _adPool.isNotEmpty;
@@ -383,7 +383,7 @@ class _NativeAdWidgetState extends State<NativeAdWidget> {
   @override
   Widget build(BuildContext context) {
     if (_nativeAd == null) {
-      return const SizedBox(height: 160);
+      return const SizedBox.shrink();
     }
 
     return RepaintBoundary( // ✅ isolate render layer, giảm repaint trên Samsung
@@ -392,7 +392,6 @@ class _NativeAdWidgetState extends State<NativeAdWidget> {
         decoration: BoxDecoration(
           color: widget.backgroundColor,
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: const Color(0xFFEEEEEE)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,

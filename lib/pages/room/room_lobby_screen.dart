@@ -398,7 +398,7 @@ class _RoomLobbyScreenState extends State<RoomLobbyScreen>
           _myFinishedShowing = false;
           Navigator.pushAndRemoveUntil(
             context,
-            MaterialPageRoute(builder: (_) => const HomeBottomNav(initialIndex: 2)),
+            MaterialPageRoute(builder: (_) => const HomeBottomNav(initialIndex: 0)),
             (route) => false,
           );
         },

@@ -1,8 +1,12 @@
 import 'package:dovui/data/audio/audio_manager.dart';
 import 'package:dovui/pages/ads/ads_service.dart';
+import 'package:dovui/pages/home/widgets/game_dialog.dart';
 import 'package:dovui/pages/profile/widgets/mission_dialog.dart';
 import 'package:dovui/pages/profile/widgets/profile_avatar_header.dart';
 import 'package:dovui/pages/profile/widgets/profile_stat_card.dart';
+import 'package:dovui/pages/room/bloc/room_bloc.dart';
+import 'package:dovui/pages/room/bloc/room_event.dart';
+import 'package:dovui/pages/room/create_room_screen.dart';
 import 'package:dovui/pages/settings/settings_screen.dart';
 import 'package:dovui/resources/color_manager.dart';
 import 'package:dovui/pages/profile/widgets/profile_shimmer.dart';
@@ -50,7 +54,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _isAdmin = prefs.getBool("isAdmin") ?? false;
 
     final lastCheckIn = prefs.getString('last_check_in');
-    _canCheckIn = lastCheckIn == null || !_isSameDay(DateTime.parse(lastCheckIn));
+    _canCheckIn =
+        lastCheckIn == null || !_isSameDay(DateTime.parse(lastCheckIn));
 
     final lastVideo = prefs.getString('last_video_watch');
     _videoWatched = lastVideo != null && _isSameDay(DateTime.parse(lastVideo));
@@ -71,8 +76,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Color _avatarColorFromName(String name) {
     if (name.isEmpty) return Colors.grey;
     const colors = [
-      Color(0xFF6C63FF), Color(0xFFFF6584), Color(0xFF43C6AC),
-      Color(0xFFFF9A3C), Color(0xFF4FACFE), Color(0xFFA18CD1), Color(0xFFFDA085),
+      Color(0xFF6C63FF),
+      Color(0xFFFF6584),
+      Color(0xFF43C6AC),
+      Color(0xFFFF9A3C),
+      Color(0xFF4FACFE),
+      Color(0xFFA18CD1),
+      Color(0xFFFDA085),
     ];
     return colors[name.codeUnitAt(0) % colors.length];
   }
@@ -91,65 +101,164 @@ class _ProfileScreenState extends State<ProfileScreen> {
     StateSetter setStateDialog,
   ) async {
     if (!RewardedAdManager().isAdLoaded) {
-      _showSnackBar(context, '⏳ Quảng cáo chưa sẵn sàng, thử lại sau!', Colors.orange);
+      _showSnackBar(
+        context,
+        '⏳ Quảng cáo chưa sẵn sàng, thử lại sau!',
+        Colors.orange,
+      );
       return;
     }
 
     RewardedAdManager().showAd(
       onRewarded: () async {
         final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('last_video_watch', DateTime.now().toIso8601String());
+        await prefs.setString(
+          'last_video_watch',
+          DateTime.now().toIso8601String(),
+        );
         await UserRepository().updateScore(userId, score + 10);
         if (mounted) setState(() => _videoWatched = true);
         setStateDialog(() {});
         if (context.mounted) {
-          _showSnackBar(context, '🎉 Cảm ơn bạn! +10 ⭐', const Color(0xFF6C63FF));
+          _showSnackBar(
+            context,
+            '🎉 Cảm ơn bạn! +10 ⭐',
+            const Color(0xFF6C63FF),
+          );
         }
       },
       onFailed: () {
         if (context.mounted) {
-          _showSnackBar(context, '❌ Không tải được quảng cáo, thử lại sau!', Colors.red);
+          _showSnackBar(
+            context,
+            '❌ Không tải được quảng cáo, thử lại sau!',
+            Colors.red,
+          );
         }
       },
     );
   }
 
   void _showSnackBar(BuildContext context, String message, Color color) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: color),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message), backgroundColor: color));
   }
 
   void _showMissionDialog(BuildContext context, String userId, int score) {
     showDialog(
       context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setStateDialog) {
-          AudioManager().playClick();
-          return MissionDialog(
-            canCheckIn: _canCheckIn,
-            videoWatched: _videoWatched,
-            onCheckIn: () async {
-              await _doCheckIn(userId, score);
-              setStateDialog(() {});
-              if (context.mounted) {
-                _showSnackBar(context, '✅ Điểm danh thành công! +10 ⭐', const Color(0xFF43C6AC));
-              }
+      builder:
+          (ctx) => StatefulBuilder(
+            builder: (ctx, setStateDialog) {
+              AudioManager().playClick();
+              return MissionDialog(
+                canCheckIn: _canCheckIn,
+                videoWatched: _videoWatched,
+                onCheckIn: () async {
+                  await _doCheckIn(userId, score);
+                  setStateDialog(() {});
+                  if (context.mounted) {
+                    _showSnackBar(
+                      context,
+                      '✅ Điểm danh thành công! +10 ⭐',
+                      const Color(0xFF43C6AC),
+                    );
+                  }
+                },
+                onWatchVideo:
+                    () => _doWatchVideo(context, userId, score, setStateDialog),
+                onClose: () {
+                  AudioManager().playBackgroundMusic();
+                  Navigator.pop(ctx);
+                },
+              );
             },
-            onWatchVideo: () => _doWatchVideo(context, userId, score, setStateDialog),
-            onClose: () {
-              AudioManager().playBackgroundMusic();
-              Navigator.pop(ctx);
-            },
-          );
-        },
-      ),
+          ),
+    );
+  }
+
+  void _onTapCreateRoom(BuildContext context, String userId, int score) {
+    AudioManager().playClick();
+    showGameDialog(
+      context: context,
+      icon: '🎮',
+      iconColor: Colors.amber,
+      title: 'Tạo phòng chơi',
+      description: 'Xem 1 quảng cáo ngắn để tạo phòng \n chơi cùng bạn bè!',
+      costIcon: '🕹️',
+      costText: 'Hãy tạo phòng ngay!',
+      confirmText: 'Xem ngay',
+      confirmColor: Colors.amber.shade600,
+      showCancel: true,
+      onConfirm: () {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _showRewardedAdForRoom(context);
+        });
+      },
+    );
+  }
+
+  void _showRewardedAdForRoom(BuildContext context) {
+    if (!RewardedAdManager().isAdLoaded) {
+      _showSnackBar(
+        context,
+        '⏳ Quảng cáo chưa sẵn sàng, thử lại sau!',
+        Colors.orange,
+      );
+      return;
+    }
+
+    RewardedAdManager().showAd(
+      onRewarded: () {
+        if (!mounted) return;
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder:
+                (_) => BlocProvider(
+                  create: (_) => RoomBloc()..add(LoadCategories()),
+                  child: const CreateRoomScreen(),
+                ),
+          ),
+        );
+      },
+      onFailed: () {
+        if (!mounted) return;
+        _showSnackBar(
+          context,
+          '❌ Không tải được quảng cáo, thử lại sau!',
+          Colors.red,
+        );
+      },
+    );
+  }
+
+  void _onTapBuyVip(BuildContext context) {
+    AudioManager().playClick();
+    showGameDialog(
+      context: context,
+      icon: '👑',
+      iconColor: const Color(0xFFFFB347),
+      title: 'Gói VIP',
+      description: 'Chơi không giới hạn\nKhông quảng cáo!',
+      costIcon: '💎',
+      costText: 'Mua 1 lần, dùng mãi mãi!',
+      confirmText: 'Mua ngay',
+      confirmColor: const Color(0xFFFFB347),
+      showCancel: true,
+      onConfirm: () {
+        // TODO: xử lý mua VIP (in-app purchase)
+      },
     );
   }
 
   void _openSettings() {
     AudioManager().playClick();
-    Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsScreen()));
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const SettingsScreen()),
+    );
   }
 
   @override
@@ -191,13 +300,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   const SizedBox(height: 30),
                   _buildStatsRow(context, userId, score, rank),
                   const SizedBox(height: 28),
-                  _buildAchievementBanner(),
+                  _buildAchievementBanner(context, userId, score),
                   const SizedBox(height: 28),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    child: RepaintBoundary(child: NativeAdWidget()),
-                  ),
-                  const SizedBox(height: 20),
+                  _buildVipBanner(context),
+                  const SizedBox(height: 28),
                 ],
               ),
             );
@@ -238,7 +344,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildStatsRow(BuildContext context, String userId, int score, int rank) {
+  Widget _buildStatsRow(
+    BuildContext context,
+    String userId,
+    int score,
+    int rank,
+  ) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Row(
@@ -269,46 +380,178 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildAchievementBanner() {
+  Widget _buildVipBanner(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Container(
-        padding: const EdgeInsets.all(18),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              const Color(0xFF6C63FF).withOpacity(0.15),
-              const Color(0xFF43C6AC).withOpacity(0.15),
+      child: GestureDetector(
+        onTap: () => _onTapBuyVip(context),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFFFFB347), Color(0xFFFF6584)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFFFFB347).withOpacity(0.4),
+                blurRadius: 12,
+                offset: const Offset(0, 6),
+              ),
             ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
           ),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: const Color(0xFF6C63FF).withOpacity(0.2)),
-        ),
-        child: Row(
-          children: [
-            const Text("🎮", style: TextStyle(fontSize: 32)),
-            const SizedBox(width: 14),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  "Người chơi tích cực",
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 15,
-                    color: Color(0xFF1E1B4B),
+          child: Row(
+            children: [
+              // Crown icon với shimmer effect
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: Image.asset(
+                    'assets/images/vip.gif',
+                    fit: BoxFit.cover,
                   ),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  "Tiếp tục chinh phục các thử thách!",
-                  style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+              ),
+              const SizedBox(width: 14),
+
+              // Text
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Text(
+                          "Gói VIP",
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                            color: Colors.white,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.3),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: const Text(
+                            "19.999đ",
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    const Text(
+                      "Không quảng cáo • Chơi không giới hạn",
+                      style: TextStyle(fontSize: 12, color: Colors.white70),
+                    ),
+                  ],
                 ),
+              ),
+
+              // Arrow
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.25),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(
+                  Icons.arrow_forward_ios,
+                  size: 14,
+                  color: Colors.white,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAchievementBanner(
+    BuildContext context,
+    String userId,
+    int score,
+  ) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: GestureDetector(
+        onTap: () => _onTapCreateRoom(context, userId, score),
+        child: Container(
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                const Color(0xFF6C63FF).withOpacity(0.15),
+                const Color(0xFF43C6AC).withOpacity(0.15),
               ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
             ),
-          ],
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: const Color(0xFF6C63FF).withOpacity(0.2)),
+          ),
+          child: Row(
+            children: [
+              const Text("🎮", style: TextStyle(fontSize: 32)),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      "Tạo phòng chơi",
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                        color: Color(0xFF1E1B4B),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      "Xem quảng cáo để tạo phòng cùng bạn bè!",
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey.shade600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: Image.asset(
+                    'assets/images/join.gif',
+                    fit: BoxFit.cover,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

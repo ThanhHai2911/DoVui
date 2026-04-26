@@ -1211,6 +1211,8 @@ PODS:
     - Firebase/Firestore (= 12.9.0)
     - firebase_core
     - Flutter
+  - device_info_plus (0.0.1):
+    - Flutter
   - FBAEMKit (18.0.2):
     - FBSDKCoreKit_Basics (= 18.0.2)
   - FBSDKCoreKit (18.0.2):
@@ -1504,6 +1506,7 @@ PODS:
 DEPENDENCIES:
   - audioplayers_darwin (from `.symlinks/plugins/audioplayers_darwin/darwin`)
   - cloud_firestore (from `.symlinks/plugins/cloud_firestore/ios`)
+  - device_info_plus (from `.symlinks/plugins/device_info_plus/ios`)
   - firebase_analytics (from `.symlinks/plugins/firebase_analytics/ios`)
   - firebase_auth (from `.symlinks/plugins/firebase_auth/ios`)
   - firebase_core (from `.symlinks/plugins/firebase_core/ios`)
@@ -1560,6 +1563,8 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/audioplayers_darwin/darwin"
   cloud_firestore:
     :path: ".symlinks/plugins/cloud_firestore/ios"
+  device_info_plus:
+    :path: ".symlinks/plugins/device_info_plus/ios"
   firebase_analytics:
     :path: ".symlinks/plugins/firebase_analytics/ios"
   firebase_auth:
@@ -1594,6 +1599,7 @@ SPEC CHECKSUMS:
   audioplayers_darwin: f15e209a3e856d1a7edcf98dc029f484fead2242
   BoringSSL-GRPC: dded2a44897e45f28f08ae87a55ee4bcd19bc508
   cloud_firestore: 565f7b324f6c98153b723191a4dc4f166a3c8019
+  device_info_plus: bf2e3232933866d73fe290f2942f2156cdd10342
   FBAEMKit: 56a4f5a9607957b547b6458b17a98c5bb2736367
   FBSDKCoreKit: 54f1240567e16862ab71c53c33dc347db5c524c5
   FBSDKCoreKit_Basics: eb530cd6a79030dbb11df460aafb2767bcad9028

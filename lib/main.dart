@@ -8,6 +8,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
+import 'package:upgrader/upgrader.dart';
 import 'firebase_options.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
@@ -24,9 +25,9 @@ void main() async {
   // Load ads sau khi init xong
   RewardedAdManager().loadAd();
   InterstitialAdManager().loadAd();
-  // await MobileAds.instance.initialize().then((_) {
-  //   NativeAdManager().preloadPool();
-  // });
+  await MobileAds.instance.initialize().then((_) {
+    NativeAdManager().preloadPool();
+  });
 
   runApp(const MyApp());
 }
@@ -42,12 +43,10 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
-
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-
   }
 
   @override
@@ -62,10 +61,40 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       providers: [
         BlocProvider<UserBloc>(create: (_) => UserBloc(UserRepository())),
       ],
-      child: const MaterialApp(
+      child: MaterialApp(
         debugShowCheckedModeBanner: false,
-        home: SplashScreen(),
+        home: UpgradeAlert(
+          upgrader: Upgrader(
+            // debugDisplayAlways: true, // chỉ bật khi test
+            durationUntilAlertAgain: const Duration(days: 1),
+            messages: VietnameseMessages(), // ← dùng class vừa tạo
+          ),
+          child: const SplashScreen(),
+        ),
       ),
     );
   }
+}
+
+class VietnameseMessages extends UpgraderMessages {
+  @override
+  String get title => '🎉 Có phiên bản mới!';
+
+  @override
+  String get body =>
+      'Phiên bản {{currentInstalledVersion}} đang được sử dụng. '
+      'Phiên bản {{currentAppStoreVersion}} đã có trên cửa hàng. '
+      'Hãy cập nhật để trải nghiệm tốt hơn!';
+
+  @override
+  String get prompt => 'Bạn có muốn cập nhật không?';
+
+  @override
+  String get buttonTitleIgnore => 'Bỏ qua';
+
+  @override
+  String get buttonTitleLater => 'Để sau';
+
+  @override
+  String get buttonTitleUpdate => 'Cập nhật ngay ↗';
 }

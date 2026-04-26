@@ -3,7 +3,7 @@ import 'package:dovui/pages/home/widgets/game_dialog.dart';
 import 'package:dovui/pages/level/bloc/level_bloc.dart';
 import 'package:dovui/pages/level/bloc/level_event.dart';
 import 'package:dovui/pages/level/bloc/level_state.dart';
-import 'package:dovui/pages/level/widgets/level_card.dart';
+import 'package:dovui/pages/level/widgets/level_grid.dart'; // ← import mới
 import 'package:dovui/pages/level/widgets/level_header.dart';
 import 'package:dovui/pages/level/widgets/level_legend.dart';
 import 'package:dovui/pages/quiz/quiz_screen.dart';
@@ -28,12 +28,12 @@ class _LevelScreenState extends State<LevelScreen> {
   final ScrollController _scrollController = ScrollController();
   bool _hasScrolled = false;
 
-  static const int _adEvery = 10;
+  static const int _adEvery = 6;
   static const int _crossAxisCount = 2;
   static const double _spacing = 16.0;
   static const double _topPadding = 8.0;
   static const double _aspectRatio = 0.88;
-  static const double _adHeight = 180.0;
+  static const double _adHeight = 60.0;
 
   @override
   void dispose() {
@@ -52,7 +52,8 @@ class _LevelScreenState extends State<LevelScreen> {
       if (!_scrollController.position.hasContentDimensions) return;
 
       final double gridWidth = MediaQuery.of(context).size.width - 32;
-      final double itemHeight = (gridWidth - _spacing) / _crossAxisCount / _aspectRatio;
+      final double itemHeight =
+          (gridWidth - _spacing) / _crossAxisCount / _aspectRatio;
       final int adsBeforeNext = nextIndex ~/ _adEvery;
       final int row = nextIndex ~/ _crossAxisCount;
       final double targetOffset =
@@ -184,7 +185,8 @@ class _LevelScreenState extends State<LevelScreen> {
                               final statuses = state.levelStatuses;
                               int nextIndex = levels.length - 1;
                               for (int i = 0; i < levels.length; i++) {
-                                if (statuses[levels[i].id]?.status != 'completed') {
+                                if (statuses[levels[i].id]?.status !=
+                                    'completed') {
                                   nextIndex = i;
                                   break;
                                 }
@@ -197,7 +199,7 @@ class _LevelScreenState extends State<LevelScreen> {
                               return const CategoryShimmer();
                             }
                             if (state is LevelLoaded) {
-                              return _LevelGrid(
+                              return LevelGrid( // ← dùng widget mới
                                 levels: state.levels,
                                 statuses: state.levelStatuses,
                                 scrollController: _scrollController,
@@ -223,64 +225,6 @@ class _LevelScreenState extends State<LevelScreen> {
           ),
         ),
       ),
-    );
-  }
-}
-
-// ── Private grid widget ───────────────────────────────────────────────────────
-
-class _LevelGrid extends StatelessWidget {
-  final List levels;
-  final Map statuses;
-  final ScrollController scrollController;
-  final List<List<int>> chunks;
-  final bool Function(int, List, Map) isUnlocked;
-  final void Function(int) onLevelTap;
-
-  const _LevelGrid({
-    required this.levels,
-    required this.statuses,
-    required this.scrollController,
-    required this.chunks,
-    required this.isUnlocked,
-    required this.onLevelTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return CustomScrollView(
-      controller: scrollController,
-      slivers: [
-        const SliverPadding(padding: EdgeInsets.only(top: 8)),
-        for (final chunk in chunks) ...[
-          SliverGrid(
-            delegate: SliverChildBuilderDelegate(
-              (context, i) {
-                final levelIndex = chunk[i];
-                final level = levels[levelIndex];
-                final String status = statuses[level.id]?.status ?? 'default';
-                final unlocked = isUnlocked(levelIndex, levels, statuses);
-
-                return LevelCard(
-                  index: levelIndex,
-                  status: status,
-                  isUnlocked: unlocked,
-                  onTap: unlocked ? () => onLevelTap(levelIndex) : null,
-                );
-              },
-              childCount: chunk.length,
-            ),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              mainAxisSpacing: 16,
-              crossAxisSpacing: 16,
-              childAspectRatio: 0.88,
-            ),
-          ),
-          const SliverPadding(padding: EdgeInsets.only(bottom: 16)),
-        ],
-        const SliverPadding(padding: EdgeInsets.only(bottom: 20)),
-      ],
     );
   }
 }

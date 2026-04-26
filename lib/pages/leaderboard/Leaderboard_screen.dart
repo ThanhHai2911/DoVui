@@ -1,13 +1,7 @@
 import 'package:dovui/data/audio/audio_manager.dart';
-import 'package:dovui/pages/ads/ads_service.dart';
-import 'package:dovui/pages/home/widgets/game_dialog.dart';
 import 'package:dovui/pages/leaderboard/widgets/animated_podium.dart';
 import 'package:dovui/pages/leaderboard/widgets/animated_tile.dart';
 import 'package:dovui/pages/leaderboard/widgets/podium_column.dart';
-import 'package:dovui/pages/room/bloc/room_bloc.dart';
-import 'package:dovui/pages/room/bloc/room_event.dart';
-import 'package:dovui/pages/room/create_room_screen.dart';
-import 'package:dovui/pages/user/bloc/user_bloc.dart' hide LeaderboardLoaded;
 import 'package:dovui/resources/color_manager.dart';
 import 'package:dovui/data/repositories/leaderboard_repository.dart';
 import 'package:dovui/pages/leaderboard/bloc/leaderboard_bloc.dart';
@@ -69,64 +63,6 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
         AudioManager().playBackgroundMusic();
       }
     });
-  }
-
-  void _onTapScore(BuildContext context) {
-    showGameDialog(
-      context: context,
-      icon: '🎮',
-      iconColor: Colors.amber,
-      title: 'Tạo phòng chơi',
-      description: 'Xem 1 quảng cáo ngắn để tạo phòng \n chơi cùng bạn bè!',
-      costIcon: '🕹️',
-      costText: 'Hãy tạo phòng ngay!',
-      confirmText: 'Xem ngay',
-      confirmColor: Colors.amber.shade600,
-      showCancel: true,
-      onConfirm: () {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) _showRewardedAd(context);
-        });
-      },
-    );
-  }
-
-  void _showRewardedAd(BuildContext context) {
-    if (!RewardedAdManager().isAdLoaded) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('⏳ Quảng cáo chưa sẵn sàng, thử lại sau!'),
-          backgroundColor: Colors.orange,
-        ),
-      );
-      return;
-    }
-
-    RewardedAdManager().showAd(
-      onRewarded: () {
-        if (!mounted) return;
-        context.read<UserBloc>().add(AddScoreEvent(10));
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder:
-                (_) => BlocProvider(
-                  create: (_) => RoomBloc()..add(LoadCategories()),
-                  child: const CreateRoomScreen(),
-                ),
-          ),
-        );
-      },
-      onFailed: () {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('❌ Không tải được quảng cáo, thử lại sau!'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      },
-    );
   }
 
   @override
@@ -214,16 +150,6 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
                                           ),
                                         ),
                                       ),
-                                    ),
-                                    IconButton(
-                                      icon: Center(
-                                        child: Text(
-                                          "🏠🎮",
-                                          style: TextStyle(fontSize: 26),
-                                        ),
-                                      ),
-                                      onPressed:
-                                          () => _onTapScore(context),
                                     ),
                                   ],
                                 ),
@@ -383,4 +309,3 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
     );
   }
 }
-

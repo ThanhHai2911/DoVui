@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:dovui/data/audio/audio_manager.dart';
+import 'package:dovui/pages/ads/ads_service.dart';
 import 'package:dovui/pages/user/login_screen.dart';
 import 'package:dovui/pages/user/bloc/user_bloc.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -220,11 +221,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     onTap: _confirmDeleteAccount,
                   ),
                 ]),
-                const SizedBox(height: 30),
-                const SizedBox(height: 20),
+                const SizedBox(height: 50),
                 Center(
                   child: Text(
-                    'Đố Vui - Quiz App · Phiên bản 1.0.3',
+                    'Đố Vui - Quiz App · Phiên bản 1.0.4',
                     style: TextStyle(fontSize: 12, color: Colors.grey.shade400),
                   ),
                 ),
