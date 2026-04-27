@@ -140,6 +140,7 @@ class _LevelScreenState extends State<LevelScreen> {
           categoryId: widget.categoryId,
           levelId: level.id,
           type: widget.type,
+          isVip: false,
         );
       case "man":
         return MillionaireScreen(

@@ -17,7 +17,7 @@ class GameCompleteLoaded extends GameCompleteState {
   const GameCompleteLoaded({
     required this.score,
     required this.totalQuestions,
-    required this.isWin,
+    required this.isWin, 
   });
 
   @override

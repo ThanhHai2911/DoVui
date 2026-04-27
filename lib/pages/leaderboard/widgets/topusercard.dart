@@ -6,6 +6,7 @@ class TopUserCard extends StatelessWidget {
   final String points;
   final double size;
   final bool isFirst;
+  final bool isVip;
 
   const TopUserCard({
     super.key,
@@ -14,14 +15,20 @@ class TopUserCard extends StatelessWidget {
     required this.points,
     required this.size,
     this.isFirst = false,
+    required this.isVip,
   });
 
   Color _getColorByName(String name) {
     if (name.isEmpty) return Colors.grey;
     final code = name.codeUnitAt(0);
     final colors = [
-      Colors.blue, Colors.red, Colors.green,
-      Colors.orange, Colors.purple, Colors.teal, Colors.indigo,
+      Colors.blue,
+      Colors.red,
+      Colors.green,
+      Colors.orange,
+      Colors.purple,
+      Colors.teal,
+      Colors.indigo,
     ];
     return colors[code % colors.length];
   }
@@ -49,17 +56,39 @@ class TopUserCard extends StatelessWidget {
         const SizedBox(height: 4),
 
         // Avatar — to hơn với #1
-        CircleAvatar(
-          radius: avatarRadius,
-          backgroundColor: _getColorByName(name),
-          child: Text(
-            name.isNotEmpty ? name[0].toUpperCase() : "?",
-            style: TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-              fontSize: avatarRadius * 0.9,
+        Stack(
+          clipBehavior: Clip.none,
+          children: [
+            CircleAvatar(
+              radius: avatarRadius,
+              backgroundColor: _getColorByName(name),
+              child: Text(
+                name.isNotEmpty ? name[0].toUpperCase() : "?",
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: avatarRadius * 0.9,
+                ),
+              ),
             ),
-          ),
+
+            /// 👇 CHỈ HIỆN KHI VIP
+            if (isVip == true)
+              Positioned(
+                top: -2,
+                right: -2,
+                child: Container(
+                  padding: const EdgeInsets.all(3),
+                  decoration: const BoxDecoration(shape: BoxShape.circle),
+                  child: Image.asset(
+                    "assets/images/vip.png",
+                    width: 18,
+                    height: 18,
+                    fit: BoxFit.cover,
+                  ),
+                ),
+              ),
+          ],
         ),
         const SizedBox(height: 6),
 

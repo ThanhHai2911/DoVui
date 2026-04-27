@@ -4,12 +4,14 @@ class ProfileAvatarHeader extends StatelessWidget {
   final String name;
   final Color avatarColor;
   final VoidCallback onSettingsTap;
+  final bool isVip;
 
   const ProfileAvatarHeader({
     super.key,
     required this.name,
     required this.avatarColor,
     required this.onSettingsTap,
+    this.isVip = false,
   });
 
   @override
@@ -62,7 +64,11 @@ class ProfileAvatarHeader extends StatelessWidget {
                         color: Colors.white.withOpacity(0.15),
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(Icons.settings, color: Colors.white, size: 22),
+                      child: const Icon(
+                        Icons.settings,
+                        color: Colors.white,
+                        size: 22,
+                      ),
                     ),
                   ),
                 ),
@@ -86,20 +92,44 @@ class ProfileAvatarHeader extends StatelessWidget {
                     color: avatarColor.withOpacity(0.4),
                     blurRadius: 20,
                     spreadRadius: 2,
-                  )
+                  ),
                 ],
               ),
-              child: CircleAvatar(
-                radius: 55,
-                backgroundColor: avatarColor,
-                child: Text(
-                  name.isNotEmpty ? name[0].toUpperCase() : "A",
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 42,
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  CircleAvatar(
+                    radius: 55,
+                    backgroundColor: avatarColor,
+                    child: Text(
+                      name.isNotEmpty ? name[0].toUpperCase() : "A",
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 42,
+                      ),
+                    ),
                   ),
-                ),
+
+                  /// 👇 VIP BADGE
+                  if (isVip)
+                    Positioned(
+                      top: -2,
+                      right: -2,
+                      child: Container(
+                        padding: const EdgeInsets.all(3),
+                        decoration: const BoxDecoration(
+                          shape: BoxShape.circle,
+                        ),
+                        child: Image.asset(
+                          "assets/images/vip.png",
+                          width: 30,
+                          height: 30,
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                    ),
+                ],
               ),
             ),
           ),

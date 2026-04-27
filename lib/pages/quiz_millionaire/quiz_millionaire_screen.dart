@@ -1,5 +1,6 @@
 import 'package:dovui/data/audio/audio_manager.dart';
 import 'package:dovui/data/repositories/user_level_repository.dart';
+import 'package:dovui/pages/ads/widgets/adsService.dart';
 import 'package:dovui/pages/quiz_millionaire/widgets/askcontinue_dialog.dart';
 import 'package:dovui/pages/quiz_millionaire/widgets/prizeladderoverlay.dart';
 import 'package:flutter/material.dart';
@@ -50,7 +51,8 @@ class _MillionaireScreenState extends State<MillionaireScreen> {
         categoryId: widget.categoryId,
         levelId: widget.levelId,
         type: widget.type,
-        onSaveResult: _saveResult,
+        onSaveResult: _saveResult, 
+        isVip: AdsService().isVip,
       ),
     );
   }
@@ -71,12 +73,13 @@ class _MillionaireView extends StatefulWidget {
   final String? levelId;
   final String type;
   final Future<void> Function({required int score, required int total}) onSaveResult;
+  final bool isVip;
 
   const _MillionaireView({
     required this.categoryId,
     required this.levelId,
     required this.type,
-    required this.onSaveResult,
+    required this.onSaveResult, required this.isVip,
   });
 
   @override
@@ -175,6 +178,7 @@ class _MillionaireViewState extends State<_MillionaireView> {
           categoryId: widget.categoryId,
           levelId: widget.levelId,
           type: widget.type,
+          isVip: AdsService().isVip,
         ),
       ),
     );

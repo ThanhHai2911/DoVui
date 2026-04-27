@@ -70,7 +70,7 @@ class CategoriesItem extends StatelessWidget {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (_) => QuizScreen(categoryId: categoryId, type: type),
+              builder: (_) => QuizScreen(categoryId: categoryId, type: type,),
             ),
           );
         }

@@ -1,5 +1,6 @@
 import 'package:dovui/data/audio/audio_manager.dart';
 import 'package:dovui/pages/ads/ads_service.dart';
+import 'package:dovui/pages/ads/widgets/adsService.dart';
 import 'package:dovui/pages/home/widgets/game_dialog.dart';
 import 'package:dovui/pages/profile/widgets/mission_dialog.dart';
 import 'package:dovui/pages/profile/widgets/profile_avatar_header.dart';
@@ -101,85 +102,84 @@ class _ProfileScreenState extends State<ProfileScreen> {
     StateSetter setStateDialog,
   ) async {
     if (!RewardedAdManager().isAdLoaded) {
-      _showSnackBar(
-        context,
-        '⏳ Quảng cáo chưa sẵn sàng, thử lại sau!',
-        Colors.orange,
-      );
+      _showSnackBar(context, '⏳ Quảng cáo chưa sẵn sàng, thử lại sau!', Colors.orange);
       return;
     }
 
     RewardedAdManager().showAd(
       onRewarded: () async {
         final prefs = await SharedPreferences.getInstance();
-        await prefs.setString(
-          'last_video_watch',
-          DateTime.now().toIso8601String(),
-        );
+        await prefs.setString('last_video_watch', DateTime.now().toIso8601String());
         await UserRepository().updateScore(userId, score + 10);
         if (mounted) setState(() => _videoWatched = true);
         setStateDialog(() {});
         if (context.mounted) {
-          _showSnackBar(
-            context,
-            '🎉 Cảm ơn bạn! +10 ⭐',
-            const Color(0xFF6C63FF),
-          );
+          _showSnackBar(context, '🎉 Cảm ơn bạn! +10 ⭐', const Color(0xFF6C63FF));
         }
       },
       onFailed: () {
         if (context.mounted) {
-          _showSnackBar(
-            context,
-            '❌ Không tải được quảng cáo, thử lại sau!',
-            Colors.red,
-          );
+          _showSnackBar(context, '❌ Không tải được quảng cáo, thử lại sau!', Colors.red);
         }
       },
     );
   }
 
   void _showSnackBar(BuildContext context, String message, Color color) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message), backgroundColor: color));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: color),
+    );
   }
 
   void _showMissionDialog(BuildContext context, String userId, int score) {
     showDialog(
       context: context,
-      builder:
-          (ctx) => StatefulBuilder(
-            builder: (ctx, setStateDialog) {
-              AudioManager().playClick();
-              return MissionDialog(
-                canCheckIn: _canCheckIn,
-                videoWatched: _videoWatched,
-                onCheckIn: () async {
-                  await _doCheckIn(userId, score);
-                  setStateDialog(() {});
-                  if (context.mounted) {
-                    _showSnackBar(
-                      context,
-                      '✅ Điểm danh thành công! +10 ⭐',
-                      const Color(0xFF43C6AC),
-                    );
-                  }
-                },
-                onWatchVideo:
-                    () => _doWatchVideo(context, userId, score, setStateDialog),
-                onClose: () {
-                  AudioManager().playBackgroundMusic();
-                  Navigator.pop(ctx);
-                },
-              );
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setStateDialog) {
+          AudioManager().playClick();
+          return MissionDialog(
+            canCheckIn: _canCheckIn,
+            videoWatched: _videoWatched,
+            onCheckIn: () async {
+              await _doCheckIn(userId, score);
+              setStateDialog(() {});
+              if (context.mounted) {
+                _showSnackBar(context, '✅ Điểm danh thành công! +10 ⭐', const Color(0xFF43C6AC));
+              }
             },
-          ),
+            onWatchVideo: () => _doWatchVideo(context, userId, score, setStateDialog),
+            onClose: () {
+              AudioManager().playBackgroundMusic();
+              Navigator.pop(ctx);
+            },
+          );
+        },
+      ),
+    );
+  }
+
+  void _navigateToCreateRoom(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => BlocProvider(
+          create: (_) => RoomBloc()..add(LoadCategories()),
+          child: const CreateRoomScreen(),
+        ),
+      ),
     );
   }
 
   void _onTapCreateRoom(BuildContext context, String userId, int score) {
     AudioManager().playClick();
+
+    // ✅ VIP → vào tạo phòng luôn, không cần xem ads
+    if (AdsService().isVip) {
+      _navigateToCreateRoom(context);
+      return;
+    }
+
+    // User thường → phải xem video mới được tạo phòng
     showGameDialog(
       context: context,
       icon: '🎮',
@@ -201,35 +201,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   void _showRewardedAdForRoom(BuildContext context) {
     if (!RewardedAdManager().isAdLoaded) {
-      _showSnackBar(
-        context,
-        '⏳ Quảng cáo chưa sẵn sàng, thử lại sau!',
-        Colors.orange,
-      );
+      _showSnackBar(context, '⏳ Quảng cáo chưa sẵn sàng, thử lại sau!', Colors.orange);
       return;
     }
 
     RewardedAdManager().showAd(
       onRewarded: () {
         if (!mounted) return;
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder:
-                (_) => BlocProvider(
-                  create: (_) => RoomBloc()..add(LoadCategories()),
-                  child: const CreateRoomScreen(),
-                ),
-          ),
-        );
+        _navigateToCreateRoom(context);
       },
       onFailed: () {
         if (!mounted) return;
-        _showSnackBar(
-          context,
-          '❌ Không tải được quảng cáo, thử lại sau!',
-          Colors.red,
-        );
+        _showSnackBar(context, '❌ Không tải được quảng cáo, thử lại sau!', Colors.red);
       },
     );
   }
@@ -276,12 +259,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
             int score = 0;
             int rank = 0;
             String userId = '';
+            bool isVip = false;
 
             if (state is UserRegistered) {
               name = state.user.name;
               score = state.user.score;
               rank = state.user.rank;
               userId = state.user.id;
+              isVip = state.user.isVip;
+
+              AdsService().setVip(isVip);
             }
 
             final avatarColor = _avatarColorFromName(name);
@@ -294,6 +281,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     name: name,
                     avatarColor: avatarColor,
                     onSettingsTap: _openSettings,
+                    isVip: state is UserRegistered ? state.user.isVip : false,
                   ),
                   const SizedBox(height: 70),
                   _buildNameSection(name, avatarColor),
@@ -302,7 +290,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   const SizedBox(height: 28),
                   _buildAchievementBanner(context, userId, score),
                   const SizedBox(height: 28),
-                  _buildVipBanner(context),
+                  _buildVipBanner(context, isVip: isVip),
                   const SizedBox(height: 28),
                 ],
               ),
@@ -344,12 +332,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildStatsRow(
-    BuildContext context,
-    String userId,
-    int score,
-    int rank,
-  ) {
+  Widget _buildStatsRow(BuildContext context, String userId, int score, int rank) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Row(
@@ -380,23 +363,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildVipBanner(BuildContext context) {
+  Widget _buildVipBanner(BuildContext context, {required bool isVip}) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: GestureDetector(
-        onTap: () => _onTapBuyVip(context),
+        onTap: isVip ? null : () => _onTapBuyVip(context),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
           decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [Color(0xFFFFB347), Color(0xFFFF6584)],
+            gradient: LinearGradient(
+              colors: isVip
+                  ? [const Color(0xFF43C6AC), const Color(0xFF6C63FF)]
+                  : [const Color(0xFFFFB347), const Color(0xFFFF6584)],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFFFFB347).withOpacity(0.4),
+                color: (isVip ? const Color(0xFF43C6AC) : const Color(0xFFFFB347))
+                    .withOpacity(0.4),
                 blurRadius: 12,
                 offset: const Offset(0, 6),
               ),
@@ -404,81 +390,49 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
           child: Row(
             children: [
-              // Crown icon với shimmer effect
               Container(
                 width: 48,
                 height: 48,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(12),
-                ),
+                decoration: BoxDecoration(borderRadius: BorderRadius.circular(12)),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(10),
-                  child: Image.asset(
-                    'assets/images/vip.gif',
-                    fit: BoxFit.cover,
-                  ),
+                  child: Image.asset('assets/images/vip.gif', fit: BoxFit.cover),
                 ),
               ),
               const SizedBox(width: 14),
-
-              // Text
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      children: [
-                        const Text(
-                          "Gói VIP",
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                            color: Colors.white,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.3),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: const Text(
-                            "19.999đ",
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                      ],
+                    Text(
+                      isVip ? "Bạn là VIP 👑" : "Gói VIP",
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        color: Colors.white,
+                      ),
                     ),
                     const SizedBox(height: 4),
-                    const Text(
-                      "Không quảng cáo • Chơi không giới hạn",
-                      style: TextStyle(fontSize: 12, color: Colors.white70),
+                    Text(
+                      isVip
+                          ? "Tận hưởng toàn bộ đặc quyền VIP ✨"
+                          : "Không quảng cáo • Chơi không giới hạn",
+                      style: const TextStyle(fontSize: 12, color: Colors.white70),
                     ),
                   ],
                 ),
               ),
-
-              // Arrow
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.25),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(
-                  Icons.arrow_forward_ios,
-                  size: 14,
-                  color: Colors.white,
-                ),
-              ),
+              if (!isVip)
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.25),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.white),
+                )
+              else
+                const Icon(Icons.verified, color: Colors.white),
             ],
           ),
         ),
@@ -486,11 +440,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildAchievementBanner(
-    BuildContext context,
-    String userId,
-    int score,
-  ) {
+  Widget _buildAchievementBanner(BuildContext context, String userId, int score) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: GestureDetector(
@@ -517,9 +467,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      "Tạo phòng chơi",
-                      style: TextStyle(
+                    // ✅ Label thay đổi theo VIP
+                    Text(
+                      AdsService().isVip ? "Tạo phòng chơi" : "Tạo phòng chơi",
+                      style: const TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 15,
                         color: Color(0xFF1E1B4B),
@@ -527,11 +478,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      "Xem quảng cáo để tạo phòng cùng bạn bè!",
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey.shade600,
-                      ),
+                      AdsService().isVip
+                          ? "Tạo phòng ngay, không cần xem quảng cáo!"
+                          : "Xem quảng cáo để tạo phòng cùng bạn bè!",
+                      style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
                     ),
                   ],
                 ),
@@ -539,15 +489,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
               Container(
                 width: 48,
                 height: 48,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(12),
-                ),
+                decoration: BoxDecoration(borderRadius: BorderRadius.circular(12)),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(10),
-                  child: Image.asset(
-                    'assets/images/join.gif',
-                    fit: BoxFit.cover,
-                  ),
+                  child: Image.asset('assets/images/join.gif', fit: BoxFit.cover),
                 ),
               ),
             ],

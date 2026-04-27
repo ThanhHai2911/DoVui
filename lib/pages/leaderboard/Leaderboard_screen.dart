@@ -167,7 +167,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
                                         crossAxisAlignment:
                                             CrossAxisAlignment.end,
                                         children: [
-                                          /// #2
+                                          /// 🥈 #2
                                           Expanded(
                                             child:
                                                 users.length > 1
@@ -183,6 +183,9 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
                                                           points:
                                                               "${users[1].score} ⭐",
                                                           size: w * 0.22,
+                                                          isVip:
+                                                              users[1]
+                                                                  .isVip, // ⭐ FIX HERE
                                                         ),
                                                         podiumHeight: w * 0.18,
                                                         podiumColor:
@@ -195,7 +198,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
                                                     : const SizedBox(),
                                           ),
 
-                                          /// #1
+                                          /// 🥇 #1
                                           Expanded(
                                             child: AnimatedPodium(
                                               delay: 0,
@@ -207,6 +210,9 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
                                                   points: "${users[0].score} ⭐",
                                                   size: w * 0.30,
                                                   isFirst: true,
+                                                  isVip:
+                                                      users[0]
+                                                          .isVip, // ⭐ FIX HERE
                                                 ),
                                                 podiumHeight: w * 0.26,
                                                 podiumColor: const Color(
@@ -217,7 +223,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
                                             ),
                                           ),
 
-                                          /// #3
+                                          /// 🥉 #3
                                           Expanded(
                                             child:
                                                 users.length > 2
@@ -233,6 +239,9 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
                                                           points:
                                                               "${users[2].score} ⭐",
                                                           size: w * 0.18,
+                                                          isVip:
+                                                              users[2]
+                                                                  .isVip, // ⭐ FIX HERE
                                                         ),
                                                         podiumHeight: w * 0.12,
                                                         podiumColor:
@@ -275,6 +284,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
                                           rank: "#${index + 4}",
                                           name: user.name,
                                           points: "${user.score} ⭐",
+                                          isVip: user.isVip,
                                         ),
                                       );
                                     },

@@ -1,6 +1,7 @@
 import 'package:dovui/data/audio/audio_manager.dart';
 import 'package:dovui/data/repositories/user_level_repository.dart';
 import 'package:dovui/pages/ads/ads_service.dart';
+import 'package:dovui/pages/ads/widgets/adsService.dart';
 import 'package:dovui/pages/gamecomplete/game_complete_screen.dart';
 import 'package:dovui/pages/home/widgets/game_dialog.dart';
 import 'package:dovui/pages/quiz/bloc/quiz_event.dart';
@@ -55,6 +56,7 @@ class _QuizScreenState extends State<QuizScreen> with TickerProviderStateMixin {
   late final Animation<double> _pulseAnim;
   late final Animation<double> _floatAnim;
   late final Animation<double> _shakeAnim;
+  
 
   final _userLevelRepo = UserLevelRepository();
   String _lastQuestion = '';
@@ -146,6 +148,7 @@ class _QuizScreenState extends State<QuizScreen> with TickerProviderStateMixin {
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
+      final isVip = AdsService().isVip;
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
@@ -156,6 +159,7 @@ class _QuizScreenState extends State<QuizScreen> with TickerProviderStateMixin {
             categoryId: widget.categoryId,
             levelId: widget.levelId,
             type: widget.type,
+            isVip: AdsService().isVip,
           ),
         ),
       );

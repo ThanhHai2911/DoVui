@@ -1,5 +1,6 @@
 import 'package:dovui/data/repositories/user_repository.dart';
 import 'package:dovui/pages/ads/ads_service.dart';
+import 'package:dovui/pages/ads/widgets/adsService.dart';
 import 'package:dovui/pages/splash/splash_screen.dart';
 import 'package:dovui/pages/user/bloc/user_bloc.dart';
 import 'package:firebase_analytics/firebase_analytics.dart';
@@ -28,6 +29,7 @@ void main() async {
   await MobileAds.instance.initialize().then((_) {
     NativeAdManager().preloadPool();
   });
+  await AdsService().init();
 
   runApp(const MyApp());
 }

@@ -44,11 +44,11 @@ class UserRepository {
       score: 300,
       createdAt: DateTime.now(),
     );
-
-    // 🔥 Firestore (KHÔNG lưu password)
     await _firestore.collection("users").doc(uid).set({
       ...user.toJson(),
       "email": trimmedEmail,
+      "isAdmin": false,
+      "isVip": false,
     });
 
     final prefs = await SharedPreferences.getInstance();

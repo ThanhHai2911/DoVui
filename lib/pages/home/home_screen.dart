@@ -1,5 +1,6 @@
 import 'package:dovui/data/audio/audio_manager.dart';
 import 'package:dovui/pages/ads/ads_service.dart';
+import 'package:dovui/pages/ads/widgets/adsService.dart';
 import 'package:dovui/pages/home/widgets/animated_section.dart';
 import 'package:dovui/resources/color_manager.dart';
 import 'package:dovui/pages/home/bloc/home_bloc.dart';
@@ -53,11 +54,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
     _entryCtrl.forward();
 
-    // FIX: init đọc setting trước, rồi mới play —
-    // nếu user đã tắt âm thanh thì playBackgroundMusic() sẽ bị skip bên trong
     AudioManager().init().then((_) {
       AudioManager().playBackgroundMusic();
     });
+    if (AdsService().isVip) return;
   }
 
   @override
@@ -78,7 +78,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           backgroundColor: ColorManager.scaffoldBackground,
           body: Stack(
             children: [
-              /// BACKGROUND BLOB
               AnimatedBuilder(
                 animation: _float,
                 builder: (_, __) {
@@ -147,29 +146,36 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                   child: CategoriesSection(),
                                 ),
                                 const SizedBox(height: 30),
-                                Row(
-                                  children: [
-                                    Container(
-                                      width: 4,
-                                      height: 22,
-                                      decoration: BoxDecoration(
-                                        color: const Color(0xFF6C63FF),
-                                        borderRadius: BorderRadius.circular(4),
+
+                                // Native Ad — chỉ hiện cho user thường (không phải VIP)
+                                if (!state.isVip) ...[
+                                  Row(
+                                    children: [
+                                      Container(
+                                        width: 4,
+                                        height: 22,
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFF6C63FF),
+                                          borderRadius: BorderRadius.circular(4),
+                                        ),
                                       ),
-                                    ),
-                                    const SizedBox(width: 10),
-                                    const Text(
-                                      "Quảng cáo",
-                                      style: TextStyle(
-                                        fontSize: 20,
-                                        fontWeight: FontWeight.bold,
-                                        color: Color(0xFF1E1B4B),
-                                        letterSpacing: 0.3,
+                                      const SizedBox(width: 10),
+                                      const Text(
+                                        "Quảng cáo",
+                                        style: TextStyle(
+                                          fontSize: 20,
+                                          fontWeight: FontWeight.bold,
+                                          color: Color(0xFF1E1B4B),
+                                          letterSpacing: 0.3,
+                                        ),
                                       ),
-                                    ),
-                                  ],
-                                ),
-                                RepaintBoundary(child: NativeAdWidget()),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 10),
+                                  const RepaintBoundary(
+                                    child: NativeAdWidget(),
+                                  ),
+                                ],
                               ],
                             ),
                           ),

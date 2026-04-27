@@ -47,7 +47,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
   void _emitLoaded(Emitter<HomeState> emit, AppUser user) {
     final days = DateTime.now().difference(user.createdAt).inDays;
 
-    emit(HomeLoaded(days: days, name: user.name, score: user.score));
+    emit(HomeLoaded(days: days, name: user.name, score: user.score,isVip: user.isVip,));
   }
 
   /// Tính thời gian còn lại đến 00:00 ngày hôm sau rồi set timer

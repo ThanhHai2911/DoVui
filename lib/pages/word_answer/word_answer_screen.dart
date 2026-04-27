@@ -1,4 +1,5 @@
 import 'package:dovui/data/repositories/user_level_repository.dart';
+import 'package:dovui/pages/ads/widgets/adsService.dart';
 import 'package:dovui/pages/gamecomplete/game_complete_screen.dart';
 import 'package:dovui/pages/word_answer/bloc/word_answer_bloc.dart';
 import 'package:dovui/pages/word_answer/bloc/word_answer_event.dart';
@@ -142,6 +143,7 @@ class _WordAnswerScreenState extends State<WordAnswerScreen>
       categoryId: widget.categoryId,
       levelId: widget.levelId,
       type: widget.type,
+      isVip: AdsService().isVip,
     );
   }
 

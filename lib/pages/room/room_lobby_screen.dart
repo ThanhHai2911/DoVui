@@ -270,6 +270,7 @@ class _RoomLobbyScreenState extends State<RoomLobbyScreen>
                   final currentRoom = context.read<RoomBloc>().state.room;
                   if (currentRoom != null) _onPlayerFinished(currentRoom);
                 },
+
               ),
             ),
           ],

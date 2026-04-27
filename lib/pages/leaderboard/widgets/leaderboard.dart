@@ -5,6 +5,7 @@ class LeaderboardTile extends StatelessWidget {
   final String name;
   final String points;
   final bool isHighlight;
+  final bool isVip; // ⭐ THÊM VIP
 
   const LeaderboardTile({
     super.key,
@@ -12,7 +13,9 @@ class LeaderboardTile extends StatelessWidget {
     required this.name,
     required this.points,
     this.isHighlight = false,
+    this.isVip = false, // ⭐ default
   });
+
   Color _getColorByName(String name) {
     if (name.isEmpty) return Colors.grey;
 
@@ -50,25 +53,50 @@ class LeaderboardTile extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 20),
-          CircleAvatar(
-            radius: 20,
-            backgroundColor: _getColorByName(name),
-            child: Text(
-              name.isNotEmpty ? name[0].toUpperCase() : "A",
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
+
+          /// ⭐ AVATAR + VIP
+          Stack(
+            clipBehavior: Clip.none,
+            children: [
+              CircleAvatar(
+                radius: 20,
+                backgroundColor: _getColorByName(name),
+                child: Text(
+                  name.isNotEmpty ? name[0].toUpperCase() : "A",
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
-            ),
+
+              /// 👇 VIP ICON
+              if (isVip)
+                Positioned(
+                  top: -4,
+                  right: -4,
+                  child: Image.asset(
+                    "assets/images/vip.png",
+                    width: 16,
+                    height: 16,
+                  ),
+                ),
+            ],
           ),
+
           const SizedBox(width: 20),
+
           Expanded(
             child: Text(
               name,
               style: const TextStyle(fontWeight: FontWeight.w600),
             ),
           ),
-          Text(points, style: const TextStyle(color: Color(0xff2E2B72))),
+
+          Text(
+            points,
+            style: const TextStyle(color: Color(0xff2E2B72)),
+          ),
         ],
       ),
     );

@@ -1,3 +1,4 @@
+import 'package:dovui/pages/ads/widgets/adsService.dart';
 import 'package:dovui/pages/quiz_image/widgets/quiz_image_input.dart';
 import 'package:dovui/pages/word_answer/widgets/%20word_answer_header.dart';
 import 'package:dovui/resources/color_manager.dart';
@@ -18,6 +19,7 @@ class QuizImageScreen extends StatefulWidget {
   final String? levelId;
   final String type;
   final String? roomId;
+  final bool isVip;
 
   const QuizImageScreen({
     super.key,
@@ -25,6 +27,7 @@ class QuizImageScreen extends StatefulWidget {
     required this.type,
     this.levelId,
     this.roomId,
+    required this.isVip,
   });
 
   @override
@@ -75,6 +78,7 @@ class _QuizImageScreenState extends State<QuizImageScreen> with WidgetsBindingOb
       categoryId: widget.categoryId,
       levelId: widget.levelId,
       type: widget.type,
+      isVip: AdsService().isVip,
     );
   }
 

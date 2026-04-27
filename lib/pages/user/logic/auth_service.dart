@@ -129,6 +129,7 @@ class AuthService {
         'rank': 0,
         'createdAt': FieldValue.serverTimestamp(),
         'isAdmin': false,
+        'isVip': false,
         'loginType': 'google',
         'avatar': firebaseUser.photoURL ?? '',
       });
@@ -217,6 +218,7 @@ class AuthService {
         'rank': 0,
         'createdAt': FieldValue.serverTimestamp(),
         'isAdmin': false,
+        'isVip': false,
         'loginType': loginType,
         'avatar': avatar,
       });
