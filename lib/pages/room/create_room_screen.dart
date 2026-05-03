@@ -143,7 +143,7 @@ class _CreateRoomScreenState extends State<CreateRoomScreen>
                 border: Border.all(color: Colors.grey.shade200),
               ),
               child: const Icon(
-                Icons.arrow_back_ios_rounded,
+                Icons.close_rounded,
                 size: 16,
                 color: Color(0xFF1E1B4B),
               ),

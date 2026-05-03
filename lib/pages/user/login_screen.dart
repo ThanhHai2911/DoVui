@@ -5,7 +5,6 @@ import 'package:dovui/pages/user/logic/auth_service.dart';
 import 'package:dovui/pages/user/register_screen.dart';
 import 'package:dovui/pages/user/forgot_password_screen.dart';
 import 'package:dovui/resources/color_manager.dart';
-// Extracted widgets:
 import 'widgets/auth_widgets.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -40,7 +39,8 @@ class _LoginScreenState extends State<LoginScreen>
   @override
   void initState() {
     super.initState();
-    _floatCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 2000))
+    _floatCtrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 2000))
       ..repeat(reverse: true);
     _floatAnim = Tween<double>(begin: -8, end: 8)
         .animate(CurvedAnimation(parent: _floatCtrl, curve: Curves.easeInOut));
@@ -64,13 +64,22 @@ class _LoginScreenState extends State<LoginScreen>
   }
 
   Future<void> _onLogin() async {
-    setState(() { _nameError = null; _passwordError = null; });
+    setState(() {
+      _nameError = null;
+      _passwordError = null;
+    });
 
     final name = _nameController.text.trim();
     final password = _passwordController.text.trim();
 
-    if (name.isEmpty) { setState(() => _nameError = 'Vui lòng nhập tên người dùng'); return; }
-    if (password.isEmpty) { setState(() => _passwordError = 'Vui lòng nhập mật khẩu'); return; }
+    if (name.isEmpty) {
+      setState(() => _nameError = 'Vui lòng nhập tên người dùng');
+      return;
+    }
+    if (password.isEmpty) {
+      setState(() => _passwordError = 'Vui lòng nhập mật khẩu');
+      return;
+    }
 
     setState(() => _isLoading = true);
     try {
@@ -78,9 +87,13 @@ class _LoginScreenState extends State<LoginScreen>
 
       if (result['type'] == 'admin') {
         _authService.loginAdmin(name);
+
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Đăng nhập Admin thành công 👑'), backgroundColor: Colors.blue),
+          const SnackBar(
+            content: Text('Đăng nhập Admin thành công 👑'),
+            backgroundColor: Colors.blue,
+          ),
         );
         context.read<UserBloc>().add(CheckUserEvent());
         return;
@@ -92,15 +105,24 @@ class _LoginScreenState extends State<LoginScreen>
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Đăng nhập thành công 🎉'), backgroundColor: Colors.green, duration: Duration(seconds: 1)),
+        const SnackBar(
+          content: Text('Đăng nhập thành công 🎉'),
+          backgroundColor: Colors.green,
+          duration: Duration(seconds: 1),
+        ),
       );
       _navigateHome();
     } catch (e) {
       final error = e.toString();
-      if (error.contains('USER_NOT_FOUND')) setState(() => _nameError = 'Tên người dùng không tồn tại');
-      else if (error.contains('WRONG_PASSWORD')) setState(() => _passwordError = 'Mật khẩu không đúng');
-      else if (error.contains('NO_EMAIL')) setState(() => _nameError = 'Tài khoản chưa có email');
-      else setState(() => _passwordError = 'Đăng nhập thất bại');
+      if (error.contains('USER_NOT_FOUND')) {
+        setState(() => _nameError = 'Tên người dùng không tồn tại');
+      } else if (error.contains('WRONG_PASSWORD')) {
+        setState(() => _passwordError = 'Mật khẩu không đúng');
+      } else if (error.contains('NO_EMAIL')) {
+        setState(() => _nameError = 'Tài khoản chưa có email');
+      } else {
+        setState(() => _passwordError = 'Đăng nhập thất bại');
+      }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -110,16 +132,24 @@ class _LoginScreenState extends State<LoginScreen>
     setState(() => _isGoogleLoading = true);
     try {
       final result = await _authService.loginWithGoogle();
+
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Chào mừng ${result['name']} 🎉"), backgroundColor: Colors.green, duration: const Duration(seconds: 1)),
+        SnackBar(
+          content: Text("Chào mừng ${result['name']} 🎉"),
+          backgroundColor: Colors.green,
+          duration: const Duration(seconds: 1),
+        ),
       );
       _navigateHome();
     } catch (e) {
       if (!mounted) return;
       if (!e.toString().contains('GOOGLE_CANCELLED')) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Đăng nhập Google thất bại'), backgroundColor: Colors.red),
+          const SnackBar(
+            content: Text('Đăng nhập Google thất bại'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     } finally {
@@ -139,7 +169,8 @@ class _LoginScreenState extends State<LoginScreen>
             if (state is UserRegistered) {
               Navigator.pushReplacement(
                 context,
-                MaterialPageRoute(builder: (_) => const HomeBottomNav(initialIndex: 0)),
+                MaterialPageRoute(
+                    builder: (_) => const HomeBottomNav(initialIndex: 0)),
               );
             }
           },
@@ -149,27 +180,39 @@ class _LoginScreenState extends State<LoginScreen>
                 const AuthBackgroundBlobs(topLeftVariant: true),
                 Center(
                   child: SingleChildScrollView(
-                    padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 28, vertical: 24),
                     child: TweenAnimationBuilder(
                       tween: Tween(begin: 0.95, end: 1.0),
                       duration: const Duration(milliseconds: 400),
                       curve: Curves.easeOutBack,
-                      builder: (_, value, child) => Transform.scale(scale: value, child: child),
+                      builder: (_, value, child) =>
+                          Transform.scale(scale: value, child: child),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           FloatingEmojiIcon(
                             floatAnim: _floatAnim,
                             emoji: '🕹️',
-                            bgColor: const Color(0xFF43C6AC).withOpacity(0.1),
-                            borderColor: const Color(0xFF43C6AC).withOpacity(0.25),
+                            bgColor:
+                                const Color(0xFF43C6AC).withOpacity(0.1),
+                            borderColor:
+                                const Color(0xFF43C6AC).withOpacity(0.25),
                           ),
                           const SizedBox(height: 28),
-                          const Text('Chào mừng trở lại!',
-                              style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Color(0xFF1E1B4B))),
+                          const Text(
+                            'Chào mừng trở lại!',
+                            style: TextStyle(
+                                fontSize: 26,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF1E1B4B)),
+                          ),
                           const SizedBox(height: 6),
-                          Text('Đăng nhập để tiếp tục hành trình',
-                              style: TextStyle(fontSize: 14, color: Colors.grey.shade500)),
+                          Text(
+                            'Đăng nhập để tiếp tục hành trình',
+                            style: TextStyle(
+                                fontSize: 14, color: Colors.grey.shade500),
+                          ),
                           const SizedBox(height: 20),
 
                           const AuthFieldLabel('Tên người dùng'),
@@ -179,8 +222,11 @@ class _LoginScreenState extends State<LoginScreen>
                             hint: 'Nhập tên người dùng',
                             icon: Icons.person_outline_rounded,
                             errorText: _nameError,
-                            iconColor: _nameError != null ? const Color(0xFFFF6584) : const Color(0xFF43C6AC).withOpacity(0.7),
-                            onChanged: (_) => setState(() => _nameError = null),
+                            iconColor: _nameError != null
+                                ? const Color(0xFFFF6584)
+                                : const Color(0xFF43C6AC).withOpacity(0.7),
+                            onChanged: (_) =>
+                                setState(() => _nameError = null),
                           ),
                           const SizedBox(height: 20),
 
@@ -192,11 +238,15 @@ class _LoginScreenState extends State<LoginScreen>
                             icon: Icons.lock_outline_rounded,
                             obscure: !_isPasswordVisible,
                             errorText: _passwordError,
-                            iconColor: _passwordError != null ? const Color(0xFFFF6584) : const Color(0xFF43C6AC).withOpacity(0.7),
-                            onChanged: (_) => setState(() => _passwordError = null),
+                            iconColor: _passwordError != null
+                                ? const Color(0xFFFF6584)
+                                : const Color(0xFF43C6AC).withOpacity(0.7),
+                            onChanged: (_) =>
+                                setState(() => _passwordError = null),
                             suffix: EyeToggleButton(
                               visible: _isPasswordVisible,
-                              onTap: () => setState(() => _isPasswordVisible = !_isPasswordVisible),
+                              onTap: () => setState(() =>
+                                  _isPasswordVisible = !_isPasswordVisible),
                             ),
                           ),
 
@@ -205,10 +255,19 @@ class _LoginScreenState extends State<LoginScreen>
                             child: TextButton(
                               onPressed: () => Navigator.push(
                                 context,
-                                MaterialPageRoute(builder: (_) => const ForgotPasswordScreen()),
+                                MaterialPageRoute(
+                                    builder: (_) =>
+                                        const ForgotPasswordScreen()),
                               ),
-                              style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 6)),
-                              child: Text('Quên mật khẩu?', style: TextStyle(color: Colors.grey.shade400, fontSize: 13)),
+                              style: TextButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(
+                                      vertical: 6)),
+                              child: Text(
+                                'Quên mật khẩu?',
+                                style: TextStyle(
+                                    color: Colors.grey.shade400,
+                                    fontSize: 13),
+                              ),
                             ),
                           ),
 
@@ -223,16 +282,28 @@ class _LoginScreenState extends State<LoginScreen>
                           const SizedBox(height: 20),
 
                           Row(children: [
-                            Expanded(child: Divider(color: Colors.grey.shade200)),
+                            Expanded(
+                                child: Divider(color: Colors.grey.shade200)),
                             Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 12),
-                              child: Text('hoặc', style: TextStyle(fontSize: 13, color: Colors.grey.shade400)),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 12),
+                              child: Text(
+                                'hoặc',
+                                style: TextStyle(
+                                    fontSize: 13,
+                                    color: Colors.grey.shade400),
+                              ),
                             ),
-                            Expanded(child: Divider(color: Colors.grey.shade200)),
+                            Expanded(
+                                child: Divider(color: Colors.grey.shade200)),
                           ]),
                           const SizedBox(height: 20),
 
-                          _GoogleButton(isLoading: _isGoogleLoading, disabled: _anyLoading, onPressed: _onGoogleLogin),
+                          _GoogleButton(
+                            isLoading: _isGoogleLoading,
+                            disabled: _anyLoading,
+                            onPressed: _onGoogleLogin,
+                          ),
                           const SizedBox(height: 20),
 
                           AuthLinkRow(
@@ -240,7 +311,8 @@ class _LoginScreenState extends State<LoginScreen>
                             linkText: 'Tạo tài khoản',
                             onTap: () => Navigator.pushReplacement(
                               context,
-                              MaterialPageRoute(builder: (_) => const RegisterScreen()),
+                              MaterialPageRoute(
+                                  builder: (_) => const RegisterScreen()),
                             ),
                           ),
                         ],
@@ -262,7 +334,10 @@ class _GoogleButton extends StatelessWidget {
   final bool disabled;
   final VoidCallback onPressed;
 
-  const _GoogleButton({required this.isLoading, required this.disabled, required this.onPressed});
+  const _GoogleButton(
+      {required this.isLoading,
+      required this.disabled,
+      required this.onPressed});
 
   @override
   Widget build(BuildContext context) {
@@ -273,23 +348,30 @@ class _GoogleButton extends StatelessWidget {
         onPressed: disabled ? null : onPressed,
         style: OutlinedButton.styleFrom(
           side: BorderSide(color: Colors.grey.shade300, width: 1.5),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16)),
           backgroundColor: Colors.white,
         ),
         child: isLoading
             ? SizedBox(
-                width: 22, height: 22,
-                child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.grey.shade600),
+                width: 22,
+                height: 22,
+                child: CircularProgressIndicator(
+                    strokeWidth: 2.5, color: Colors.grey.shade600),
               )
             : Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   SvgPicture.network(
                     'https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg',
-                    width: 20, height: 20,
+                    width: 20,
+                    height: 20,
                   ),
                   const SizedBox(width: 8),
-                  const Text('Đăng nhập bằng Google', style: TextStyle(fontWeight: FontWeight.w600)),
+                  const Text(
+                    'Đăng nhập bằng Google',
+                    style: TextStyle(fontWeight: FontWeight.w600),
+                  ),
                 ],
               ),
       ),

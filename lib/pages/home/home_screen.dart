@@ -57,6 +57,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     AudioManager().init().then((_) {
       AudioManager().playBackgroundMusic();
     });
+
     if (AdsService().isVip) return;
   }
 
@@ -147,7 +148,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                 ),
                                 const SizedBox(height: 30),
 
-                                // Native Ad — chỉ hiện cho user thường (không phải VIP)
                                 if (!state.isVip) ...[
                                   Row(
                                     children: [
@@ -156,7 +156,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                         height: 22,
                                         decoration: BoxDecoration(
                                           color: const Color(0xFF6C63FF),
-                                          borderRadius: BorderRadius.circular(4),
+                                          borderRadius:
+                                              BorderRadius.circular(4),
                                         ),
                                       ),
                                       const SizedBox(width: 10),

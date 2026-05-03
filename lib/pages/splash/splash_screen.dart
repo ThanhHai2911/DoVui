@@ -4,6 +4,8 @@ import 'package:dovui/pages/user/login_screen.dart';
 import 'package:dovui/resources/color_manager.dart';
 import 'package:dovui/pages/home/widgets/home_bottom_nav.dart';
 import 'package:dovui/pages/user/bloc/user_bloc.dart';
+import 'package:dovui/widgets/update_checker.dart';
+import 'package:dovui/widgets/update_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -29,7 +31,7 @@ class _SplashScreenState extends State<SplashScreen>
   void initState() {
     super.initState();
 
-    /// Logo pop animation
+    /// Logo animation
     _logoController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 900),
@@ -39,10 +41,9 @@ class _SplashScreenState extends State<SplashScreen>
       CurvedAnimation(parent: _logoController, curve: Curves.elasticOut),
     );
 
-    _fadeAnim = Tween<double>(
-      begin: 0,
-      end: 1,
-    ).animate(CurvedAnimation(parent: _logoController, curve: Curves.easeIn));
+    _fadeAnim = Tween<double>(begin: 0, end: 1).animate(
+      CurvedAnimation(parent: _logoController, curve: Curves.easeIn),
+    );
 
     _logoController.forward();
 
@@ -68,12 +69,21 @@ class _SplashScreenState extends State<SplashScreen>
 
     _progressController.forward();
 
-    /// Check user after splash
-    Future.delayed(const Duration(seconds: 2), () {
-      if (mounted) {
-        context.read<UserBloc>().add(CheckUserEvent());
-      }
-    });
+    /// 🚀 INIT APP
+    _initApp();
+  }
+
+  /// ✅ Hàm khởi tạo app (quan trọng)
+  Future<void> _initApp() async {
+    await Future.delayed(const Duration(milliseconds: 800));
+
+    /// 1. Check version (chỉ chạy 1 lần)
+    await UpdateChecker().checkAndShow(context);
+
+    /// 2. Sau đó check user
+    if (mounted) {
+      context.read<UserBloc>().add(CheckUserEvent());
+    }
   }
 
   @override
@@ -92,7 +102,9 @@ class _SplashScreenState extends State<SplashScreen>
           if (state is UserRegistered) {
             Navigator.pushReplacement(
               context,
-              MaterialPageRoute(builder: (_) => const HomeBottomNav(initialIndex: 0)),
+              MaterialPageRoute(
+                builder: (_) => const HomeBottomNav(initialIndex: 0),
+              ),
             );
           }
 
@@ -105,7 +117,7 @@ class _SplashScreenState extends State<SplashScreen>
         },
         child: Stack(
           children: [
-            /// Animated Gradient Background
+            /// Background
             Container(
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
@@ -120,10 +132,10 @@ class _SplashScreenState extends State<SplashScreen>
               ),
             ),
 
-            /// Floating particles
+            /// Particles
             const Particles(),
 
-            /// Main content
+            /// Content
             Center(
               child: FadeTransition(
                 opacity: _fadeAnim,
@@ -132,7 +144,7 @@ class _SplashScreenState extends State<SplashScreen>
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      /// Floating logo
+                      /// Logo float
                       AnimatedBuilder(
                         animation: _floatAnim,
                         builder: (_, child) {
@@ -160,8 +172,6 @@ class _SplashScreenState extends State<SplashScreen>
                               width: 220,
                               height: 220,
                               fit: BoxFit.cover,
-                              cacheHeight: 220,
-                              cacheWidth: 220,
                             ),
                           ),
                         ),
@@ -181,7 +191,7 @@ class _SplashScreenState extends State<SplashScreen>
 
                       const SizedBox(height: 30),
 
-                      /// Animated progress bar
+                      /// Progress bar
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 80),
                         child: AnimatedBuilder(
@@ -203,7 +213,10 @@ class _SplashScreenState extends State<SplashScreen>
 
                       const Text(
                         "Đang tải dữ liệu...",
-                        style: TextStyle(fontSize: 12, color: Colors.black54),
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.black54,
+                        ),
                       ),
                     ],
                   ),
@@ -216,4 +229,3 @@ class _SplashScreenState extends State<SplashScreen>
     );
   }
 }
-

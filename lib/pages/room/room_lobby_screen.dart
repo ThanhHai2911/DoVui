@@ -285,7 +285,7 @@ class _RoomLobbyScreenState extends State<RoomLobbyScreen>
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Color(0xFFF4F6FF),
         boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 8, offset: const Offset(0, 2))],
       ),
       child: Row(
@@ -295,8 +295,15 @@ class _RoomLobbyScreenState extends State<RoomLobbyScreen>
             child: Container(
               width: 40,
               height: 40,
-              decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: Colors.grey.shade200)),
-              child: const Icon(Icons.close_rounded, size: 18, color: Color(0xFF1E1B4B)),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.grey.shade200),
+              ),
+              child: const Icon(
+                Icons.close_rounded,
+                size: 16,
+                color: Color(0xFF1E1B4B),
+              ),
             ),
           ),
           const SizedBox(width: 12),

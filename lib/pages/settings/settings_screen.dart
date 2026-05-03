@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:dovui/data/audio/audio_manager.dart';
 import 'package:dovui/pages/ads/ads_service.dart';
+import 'package:dovui/pages/support_dialog/support_dialog.dart';
 import 'package:dovui/pages/user/login_screen.dart';
 import 'package:dovui/pages/user/bloc/user_bloc.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -143,21 +144,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ),
     );
   }
+  void _openSupportDialog() {
+  showDialog(
+    context: context,
+    builder: (_) => const SupportDialog(),
+  );
+}
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF4F6FF),
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: Color(0xFFF4F6FF),
         elevation: 0,
         scrolledUnderElevation: 0.5,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18, color: Color(0xFF1E1B4B)),
+          icon: const Icon(Icons.close_rounded, size: 18, color: Color(0xFF1E1B4B)),
           onPressed: () => Navigator.pop(context),
         ),
         title: const Text('Cài đặt', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF1E1B4B))),
-        centerTitle: false,
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -198,6 +204,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                 ]),
                 const SizedBox(height: 24),
+                const SectionLabel(label: 'HỖ TRỢ'),
+                const SizedBox(height: 8),
+                SettingsCard(children: [
+                  ChevronRow(
+                    emoji: '📧',
+                    emojiBg: const Color(0xFFDEEBFF),
+                    title: 'Liên hệ hỗ trợ',
+                    subtitle: 'Gửi email cho chúng tôi',
+                    onTap: _openSupportDialog,
+                  ),
+                ]),
+                const SizedBox(height: 24),
                 const SectionLabel(label: 'TÀI KHOẢN'),
                 const SizedBox(height: 8),
                 SettingsCard(children: [
@@ -224,7 +242,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 const SizedBox(height: 50),
                 Center(
                   child: Text(
-                    'Đố Vui - Quiz App · Phiên bản 1.0.4',
+                    'Đố Vui - Quiz App · Phiên bản 1.0.7',
                     style: TextStyle(fontSize: 12, color: Colors.grey.shade400),
                   ),
                 ),

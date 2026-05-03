@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:dovui/data/audio/audio_manager.dart';
 import 'package:dovui/pages/ads/ads_service.dart';
 import 'package:dovui/pages/ads/widgets/adsService.dart';
@@ -5,6 +6,7 @@ import 'package:dovui/pages/home/widgets/game_dialog.dart';
 import 'package:dovui/pages/profile/widgets/mission_dialog.dart';
 import 'package:dovui/pages/profile/widgets/profile_avatar_header.dart';
 import 'package:dovui/pages/profile/widgets/profile_stat_card.dart';
+import 'package:dovui/pages/profile/widgets/vip_dialog.dart';
 import 'package:dovui/pages/room/bloc/room_bloc.dart';
 import 'package:dovui/pages/room/bloc/room_event.dart';
 import 'package:dovui/pages/room/create_room_screen.dart';
@@ -28,6 +30,51 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool _canCheckIn = true;
   bool _videoWatched = false;
   bool _isAdmin = false;
+  static const int _maxRoomsPerPeriod = 3;
+  static const int _periodDays = 7;
+
+Future<int> _getRoomCreationCount(String userId) async {
+  if (userId.isEmpty) return 0;
+
+  final doc = await FirebaseFirestore.instance
+      .collection('users')
+      .doc(userId)
+      .get();
+
+  final raw = List<String>.from(doc.data()?['roomCreationDates'] ?? []);
+  final cutoff = DateTime.now().subtract(const Duration(days: _periodDays));
+
+  final recent = raw
+      .map((s) => DateTime.tryParse(s))
+      .whereType<DateTime>()
+      .where((d) => d.isAfter(cutoff))
+      .toList();
+
+  // Dọn dẹp dữ liệu cũ luôn (write-back)
+  if (recent.length != raw.length) {
+    await FirebaseFirestore.instance
+        .collection('users')
+        .doc(userId)
+        .update({
+      'roomCreationDates': recent.map((d) => d.toIso8601String()).toList(),
+    });
+  }
+
+  return recent.length;
+}
+
+Future<void> _recordRoomCreation(String userId) async {
+  if (userId.isEmpty) return;
+
+  await FirebaseFirestore.instance
+      .collection('users')
+      .doc(userId)
+      .update({
+    'roomCreationDates': FieldValue.arrayUnion([
+      DateTime.now().toIso8601String(),
+    ]),
+  });
+}
 
   @override
   void initState() {
@@ -170,71 +217,87 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  void _onTapCreateRoom(BuildContext context, String userId, int score) {
-    AudioManager().playClick();
+  void _onTapCreateRoom(BuildContext context, String userId, int score) async {
+  AudioManager().playClick();
 
-    // ✅ VIP → vào tạo phòng luôn, không cần xem ads
-    if (AdsService().isVip) {
-      _navigateToCreateRoom(context);
-      return;
-    }
+  if (AdsService().isVip) {
+    _navigateToCreateRoom(context);
+    return;
+  }
 
-    // User thường → phải xem video mới được tạo phòng
+  // ✅ Truyền userId vào
+  final count = await _getRoomCreationCount(userId);
+
+  if (!mounted) return;
+
+  if (count >= _maxRoomsPerPeriod) {
     showGameDialog(
       context: context,
-      icon: '🎮',
-      iconColor: Colors.amber,
-      title: 'Tạo phòng chơi',
-      description: 'Xem 1 quảng cáo ngắn để tạo phòng \n chơi cùng bạn bè!',
-      costIcon: '🕹️',
-      costText: 'Hãy tạo phòng ngay!',
-      confirmText: 'Xem ngay',
+      icon: '🔒',
+      iconColor: Colors.red,
+      title: 'Hết lượt tạo phòng',
+      description:
+          'Bạn đã tạo $_maxRoomsPerPeriod phòng trong $_periodDays ngày qua.\n'
+          'Nâng VIP để tạo phòng không giới hạn!',
+      costIcon: '👑',
+      costText: 'Nâng cấp VIP ngay!',
+      confirmText: 'Mua VIP',
       confirmColor: Colors.amber.shade600,
       showCancel: true,
-      onConfirm: () {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) _showRewardedAdForRoom(context);
-        });
-      },
+      onConfirm: () => _onTapBuyVip(context),
     );
+    return;
   }
 
-  void _showRewardedAdForRoom(BuildContext context) {
-    if (!RewardedAdManager().isAdLoaded) {
-      _showSnackBar(context, '⏳ Quảng cáo chưa sẵn sàng, thử lại sau!', Colors.orange);
-      return;
-    }
+  showGameDialog(
+    context: context,
+    icon: '🎮',
+    iconColor: Colors.amber,
+    title: 'Tạo phòng chơi',
+    description:
+        'Xem 1 quảng cáo ngắn để tạo phòng \n chơi cùng bạn bè!\n'
+        '(${_maxRoomsPerPeriod - count} lượt còn lại trong $_periodDays ngày)',
+    costIcon: '🕹️',
+    costText: 'Hãy tạo phòng ngay!',
+    confirmText: 'Xem ngay',
+    confirmColor: Colors.amber.shade600,
+    showCancel: true,
+    onConfirm: () {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _showRewardedAdForRoom(context, userId); // ✅ truyền userId
+      });
+    },
+  );
+}
 
-    RewardedAdManager().showAd(
-      onRewarded: () {
-        if (!mounted) return;
-        _navigateToCreateRoom(context);
-      },
-      onFailed: () {
-        if (!mounted) return;
-        _showSnackBar(context, '❌ Không tải được quảng cáo, thử lại sau!', Colors.red);
-      },
-    );
+  void _showRewardedAdForRoom(BuildContext context, String userId) {
+  if (!RewardedAdManager().isAdLoaded) {
+    _showSnackBar(context, '⏳ Quảng cáo chưa sẵn sàng, thử lại sau!', Colors.orange);
+    return;
   }
+
+  RewardedAdManager().showAd(
+    onRewarded: () async {
+      await _recordRoomCreation(userId); // ✅ lưu lên Firestore
+      if (!mounted) return;
+      _navigateToCreateRoom(context);
+    },
+    onFailed: () {
+      if (!mounted) return;
+      _showSnackBar(context, '❌ Không tải được quảng cáo, thử lại sau!', Colors.red);
+    },
+  );
+}
 
   void _onTapBuyVip(BuildContext context) {
-    AudioManager().playClick();
-    showGameDialog(
-      context: context,
-      icon: '👑',
-      iconColor: const Color(0xFFFFB347),
-      title: 'Gói VIP',
-      description: 'Chơi không giới hạn\nKhông quảng cáo!',
-      costIcon: '💎',
-      costText: 'Mua 1 lần, dùng mãi mãi!',
-      confirmText: 'Mua ngay',
-      confirmColor: const Color(0xFFFFB347),
-      showCancel: true,
-      onConfirm: () {
-        // TODO: xử lý mua VIP (in-app purchase)
-      },
-    );
-  }
+  AudioManager().playClick();
+  showDialog(
+    context: context,
+    barrierDismissible: true,
+    barrierColor: Colors.black.withOpacity(0.7),
+    builder: (_) => const VipDialog(),
+  );
+}
 
   void _openSettings() {
     AudioManager().playClick();
