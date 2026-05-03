@@ -70,33 +70,30 @@ class _VipDialogState extends State<VipDialog>
   Future<void> _handleBuyVip() async {
     setState(() => _isLoading = true);
 
-    final vipService = VipPurchaseService(); // ✅ dùng 1 instance
-
-    setState(() => _isLoading = true);
+    final vipService = VipPurchaseService(); // ✅ chỉ 1 instance duy nhất
 
     vipService.onPurchaseSuccess = () async {
       if (!mounted) return;
 
       await _saveVipRequestToFirestore();
 
+      if (!mounted) return;
       setState(() => _isLoading = false);
 
-      Navigator.of(
-        context,
-        rootNavigator: true,
-      ).pop(); // ✅ chắc chắn đóng dialog
+      // Đóng tất cả dialog (dùng rootNavigator để đảm bảo)
+      Navigator.of(context, rootNavigator: true).pop();
 
       _showSnack('🎉 Mua VIP thành công!', Colors.green);
     };
 
-    VipPurchaseService().onPurchaseFailed = () {
+    // ✅ Dùng cùng instance vipService, không tạo mới
+    vipService.onPurchaseFailed = () {
       if (!mounted) return;
       setState(() => _isLoading = false);
 
-      final reason = VipPurchaseService().lastErrorReason;
+      final reason = vipService.lastErrorReason; // ✅ cùng instance
       final msg = reason.isNotEmpty ? reason : 'Thanh toán thất bại, thử lại!';
 
-      // Phân biệt lỗi "chưa tạo sản phẩm" cho từng store
       final isStoreSetupError =
           reason.contains('Play Console') ||
           reason.contains('App Store') ||
@@ -106,31 +103,32 @@ class _VipDialogState extends State<VipDialog>
       if (isStoreSetupError) {
         _showDetailDialog(
           '⚠️ Chưa sẵn sàng',
-          'Tính năng VIP đang được thiết lập trên $_storeName.\nVui lòng thử lại sau hoặc liên hệ:\nthanhhai291120@gmail.com',
+          'Tính năng VIP đang được thiết lập trên $_storeName.\n'
+              'Vui lòng thử lại sau hoặc liên hệ:\nthanhhai291120@gmail.com',
         );
       } else {
         _showSnack('❌ $msg', Colors.red);
       }
     };
 
-    VipPurchaseService().onPurchasePending = () {
+    vipService.onPurchasePending = () {
+      // ✅ cùng instance
       if (!mounted) return;
       setState(() => _isLoading = false);
       _showSnack('⏳ Đang xử lý thanh toán...', Colors.orange);
     };
 
     try {
-      if (!VipPurchaseService().isAvailable) {
-        // Fallback: dùng flow cũ nếu IAP không khả dụng
+      if (!vipService.isAvailable) {
+        // ✅ cùng instance
         await _saveVipRequestToFirestore();
         if (!mounted) return;
         setState(() => _isLoading = false);
-        Navigator.pop(context);
+        Navigator.of(context, rootNavigator: true).pop();
         _showSnack('🎉 Đã gửi yêu cầu VIP!', Colors.green);
         return;
       }
-      await VipPurchaseService().buyVip();
-      // Không setState ở đây — callback sẽ xử lý
+      await vipService.buyVip(); // ✅ cùng instance
     } catch (e) {
       if (!mounted) return;
       setState(() => _isLoading = false);

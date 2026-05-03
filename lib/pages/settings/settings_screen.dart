@@ -74,82 +74,135 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void _confirmLogout() {
     showDialog(
       context: context,
-      builder: (_) => ConfirmActionDialog(
-        emoji: '👋',
-        emojiBg: Colors.orange.shade50,
-        title: 'Đăng xuất?',
-        message: 'Bạn có chắc muốn đăng xuất không?\nTiến trình của bạn sẽ được lưu lại.',
-        confirmText: 'Đăng xuất',
-        confirmColor: Colors.orange.shade600,
-        onConfirm: () async {
-          Navigator.pop(context);
-          final prefs = await SharedPreferences.getInstance();
-          await prefs.clear();
-          if (context.mounted) {
-            context.read<UserBloc>().add(LogoutUserEvent());
-            Navigator.pushAndRemoveUntil(
-              context,
-              MaterialPageRoute(builder: (_) => const LoginScreen()),
-              (route) => false,
-            );
-          }
-        },
-      ),
+      builder:
+          (_) => ConfirmActionDialog(
+            emoji: '👋',
+            emojiBg: Colors.orange.shade50,
+            title: 'Đăng xuất?',
+            message:
+                'Bạn có chắc muốn đăng xuất không?\nTiến trình của bạn sẽ được lưu lại.',
+            confirmText: 'Đăng xuất',
+            confirmColor: Colors.orange.shade600,
+            onConfirm: () async {
+              Navigator.pop(context);
+              final prefs = await SharedPreferences.getInstance();
+              await prefs.clear();
+              if (context.mounted) {
+                context.read<UserBloc>().add(LogoutUserEvent());
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(builder: (_) => const LoginScreen()),
+                  (route) => false,
+                );
+              }
+            },
+          ),
     );
   }
 
   void _confirmDeleteAccount() {
     showDialog(
       context: context,
-      builder: (_) => ConfirmActionDialog(
-        emoji: '🗑️',
-        emojiBg: Colors.red.shade50,
-        title: 'Xóa tài khoản?',
-        message: 'Toàn bộ dữ liệu của bạn, bao gồm điểm số và tiến trình, sẽ bị xóa vĩnh viễn. Hành động này không thể hoàn tác.',
-        confirmText: 'Xóa vĩnh viễn',
-        confirmColor: Colors.red.shade400,
-        onConfirm: () async {
-          Navigator.pop(context);
-          showDialog(
-            context: context,
-            barrierDismissible: false,
-            builder: (_) => const Center(child: CircularProgressIndicator()),
-          );
-
-          try {
-            final user = FirebaseAuth.instance.currentUser;
-            if (user != null) {
-              await FirebaseFirestore.instance.collection('users').doc(user.uid).delete();
-              await user.delete();
-            }
-            final prefs = await SharedPreferences.getInstance();
-            await prefs.clear();
-            if (context.mounted) Navigator.pop(context);
-            if (context.mounted) {
-              context.read<UserBloc>().add(LogoutUserEvent());
-              Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute(builder: (_) => const LoginScreen()),
-                (route) => false,
+      builder:
+          (_) => ConfirmActionDialog(
+            emoji: '🗑️',
+            emojiBg: Colors.red.shade50,
+            title: 'Xóa tài khoản?',
+            message:
+                'Toàn bộ dữ liệu của bạn, bao gồm điểm số và tiến trình, sẽ bị xóa vĩnh viễn. Hành động này không thể hoàn tác.',
+            confirmText: 'Xóa vĩnh viễn',
+            confirmColor: Colors.red.shade400,
+            onConfirm: () async {
+              Navigator.pop(context);
+              showDialog(
+                context: context,
+                barrierDismissible: false,
+                builder:
+                    (_) => const Center(child: CircularProgressIndicator()),
               );
-            }
-          } catch (e) {
-            debugPrint('Delete account error: $e');
-            if (context.mounted) Navigator.pop(context);
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Xóa tài khoản thất bại. Vui lòng đăng nhập lại.')),
-            );
-          }
-        },
-      ),
+
+              try {
+                final user = FirebaseAuth.instance.currentUser;
+                if (user != null) {
+                  await FirebaseFirestore.instance
+                      .collection('users')
+                      .doc(user.uid)
+                      .delete();
+                  await user.delete();
+                }
+                final prefs = await SharedPreferences.getInstance();
+                await prefs.clear();
+                if (context.mounted) Navigator.pop(context);
+                if (context.mounted) {
+                  context.read<UserBloc>().add(LogoutUserEvent());
+                  Navigator.pushAndRemoveUntil(
+                    context,
+                    MaterialPageRoute(builder: (_) => const LoginScreen()),
+                    (route) => false,
+                  );
+                }
+              } catch (e) {
+                debugPrint('Delete account error: $e');
+                if (context.mounted) Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text(
+                      'Xóa tài khoản thất bại. Vui lòng đăng nhập lại.',
+                    ),
+                  ),
+                );
+              }
+            },
+          ),
     );
   }
+
   void _openSupportDialog() {
-  showDialog(
-    context: context,
-    builder: (_) => const SupportDialog(),
-  );
-}
+    showDialog(context: context, builder: (_) => const SupportDialog());
+  }
+
+  Future<void> _openAdminPage() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    try {
+      final doc =
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(user.uid)
+              .get();
+
+      final isAdmin =
+          doc.data()?['isAdmin'] == true; // ✅ đúng tên field trong Firestore
+
+      if (!isAdmin) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('⛔ Bạn không có quyền truy cập'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        return;
+      }
+      final uri = Uri.parse(
+        'https://thanhhai2911.github.io/DoVui_Admin/home.html',
+      );
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('❌ Lỗi: $e'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -160,95 +213,159 @@ class _SettingsScreenState extends State<SettingsScreen> {
         elevation: 0,
         scrolledUnderElevation: 0.5,
         leading: IconButton(
-          icon: const Icon(Icons.close_rounded, size: 18, color: Color(0xFF1E1B4B)),
+          icon: const Icon(
+            Icons.close_rounded,
+            size: 18,
+            color: Color(0xFF1E1B4B),
+          ),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text('Cài đặt', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF1E1B4B))),
+        title: const Text(
+          'Cài đặt',
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF1E1B4B),
+          ),
+        ),
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : ListView(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-              children: [
-                const SectionLabel(label: 'ÂM THANH'),
-                const SizedBox(height: 8),
-                SettingsCard(children: [
-                  ToggleRow(
-                    emoji: _isMusicOn ? '🎵' : '🔕',
-                    title: 'Nhạc nền',
-                    subtitle: _isMusicOn ? 'Đang bật' : 'Đã tắt',
-                    value: _isMusicOn,
-                    activeColor: Colors.deepPurple,
-                    onChanged: _toggleMusic,
-                  ),
-                  const SettingsDivider(),
-                  ToggleRow(
-                    emoji: _isSfxOn ? '🔊' : '🔇',
-                    title: 'Âm thanh hiệu ứng',
-                    subtitle: _isSfxOn ? 'Đang bật' : 'Đã tắt',
-                    value: _isSfxOn,
-                    activeColor: const Color(0xFF43C6AC),
-                    onChanged: _toggleSfx,
-                  ),
-                ]),
-                const SizedBox(height: 24),
-                const SectionLabel(label: 'ỨNG DỤNG'),
-                const SizedBox(height: 8),
-                SettingsCard(children: [
-                  ChevronRow(
-                    emoji: '🛡️',
-                    emojiBg: const Color(0xFFEEEDFE),
-                    title: 'Chính sách ứng dụng',
-                    subtitle: 'Quyền riêng tư & điều khoản',
-                    onTap: _openPolicy,
-                  ),
-                ]),
-                const SizedBox(height: 24),
-                const SectionLabel(label: 'HỖ TRỢ'),
-                const SizedBox(height: 8),
-                SettingsCard(children: [
-                  ChevronRow(
-                    emoji: '📧',
-                    emojiBg: const Color(0xFFDEEBFF),
-                    title: 'Liên hệ hỗ trợ',
-                    subtitle: 'Gửi email cho chúng tôi',
-                    onTap: _openSupportDialog,
-                  ),
-                ]),
-                const SizedBox(height: 24),
-                const SectionLabel(label: 'TÀI KHOẢN'),
-                const SizedBox(height: 8),
-                SettingsCard(children: [
-                  ChevronRow(
-                    emoji: '👋',
-                    emojiBg: Colors.orange.shade50,
-                    title: 'Đăng xuất',
-                    titleColor: Colors.orange.shade700,
-                    subtitle: 'Tiến trình của bạn sẽ được lưu lại',
-                    chevronColor: Colors.orange.shade300,
-                    onTap: _confirmLogout,
-                  ),
-                  const SettingsDivider(),
-                  ChevronRow(
-                    emoji: '🗑️',
-                    emojiBg: Colors.red.shade50,
-                    title: 'Xóa tài khoản',
-                    titleColor: Colors.red.shade400,
-                    subtitle: 'Xóa vĩnh viễn dữ liệu của bạn',
-                    chevronColor: Colors.red.shade300,
-                    onTap: _confirmDeleteAccount,
-                  ),
-                ]),
-                const SizedBox(height: 50),
-                Center(
-                  child: Text(
-                    'Đố Vui - Quiz App · Phiên bản 1.0.7',
-                    style: TextStyle(fontSize: 12, color: Colors.grey.shade400),
-                  ),
+      body:
+          _isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : ListView(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 20,
                 ),
-                const SizedBox(height: 16),
-              ],
-            ),
+                children: [
+                  const SectionLabel(label: 'ÂM THANH'),
+                  const SizedBox(height: 8),
+                  SettingsCard(
+                    children: [
+                      ToggleRow(
+                        emoji: _isMusicOn ? '🎵' : '🔕',
+                        title: 'Nhạc nền',
+                        subtitle: _isMusicOn ? 'Đang bật' : 'Đã tắt',
+                        value: _isMusicOn,
+                        activeColor: Colors.deepPurple,
+                        onChanged: _toggleMusic,
+                      ),
+                      const SettingsDivider(),
+                      ToggleRow(
+                        emoji: _isSfxOn ? '🔊' : '🔇',
+                        title: 'Âm thanh hiệu ứng',
+                        subtitle: _isSfxOn ? 'Đang bật' : 'Đã tắt',
+                        value: _isSfxOn,
+                        activeColor: const Color(0xFF43C6AC),
+                        onChanged: _toggleSfx,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                  const SectionLabel(label: 'ỨNG DỤNG'),
+                  const SizedBox(height: 8),
+                  SettingsCard(
+                    children: [
+                      ChevronRow(
+                        emoji: '🛡️',
+                        emojiBg: const Color(0xFFEEEDFE),
+                        title: 'Chính sách ứng dụng',
+                        subtitle: 'Quyền riêng tư & điều khoản',
+                        onTap: _openPolicy,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                  const SectionLabel(label: 'HỖ TRỢ'),
+                  const SizedBox(height: 8),
+                  SettingsCard(
+                    children: [
+                      ChevronRow(
+                        emoji: '📧',
+                        emojiBg: const Color(0xFFDEEBFF),
+                        title: 'Liên hệ hỗ trợ',
+                        subtitle: 'Gửi email cho chúng tôi',
+                        onTap: _openSupportDialog,
+                      ),
+                    ],
+                  ),
+                  FutureBuilder<DocumentSnapshot>(
+                    future:
+                        FirebaseFirestore.instance
+                            .collection('users')
+                            .doc(FirebaseAuth.instance.currentUser?.uid)
+                            .get(),
+                    builder: (context, snapshot) {
+                      final isAdmin =
+                          snapshot.hasData &&
+                          (snapshot.data!.data()
+                                  as Map<String, dynamic>?)?['isAdmin'] ==
+                              true;
+
+                      if (!isAdmin)
+                        return const SizedBox.shrink(); // ✅ ẩn hoàn toàn
+
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const SizedBox(height: 24),
+                          const SectionLabel(label: 'QUẢN LÝ TÀI KHOẢN'),
+                          const SizedBox(height: 8),
+                          SettingsCard(
+                            children: [
+                              ChevronRow(
+                                emoji: '🛠️',
+                                emojiBg: const Color(0xFFDEEBFF),
+                                title: 'Quản lý tài khoản',
+                                subtitle:
+                                    'Quản trị thông tin và dữ liệu của người dùng',
+                                onTap: _openAdminPage,
+                              ),
+                            ],
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 24),
+                  const SectionLabel(label: 'TÀI KHOẢN'),
+                  const SizedBox(height: 8),
+                  SettingsCard(
+                    children: [
+                      ChevronRow(
+                        emoji: '👋',
+                        emojiBg: Colors.orange.shade50,
+                        title: 'Đăng xuất',
+                        titleColor: Colors.orange.shade700,
+                        subtitle: 'Tiến trình của bạn sẽ được lưu lại',
+                        chevronColor: Colors.orange.shade300,
+                        onTap: _confirmLogout,
+                      ),
+                      const SettingsDivider(),
+                      ChevronRow(
+                        emoji: '🗑️',
+                        emojiBg: Colors.red.shade50,
+                        title: 'Xóa tài khoản',
+                        titleColor: Colors.red.shade400,
+                        subtitle: 'Xóa vĩnh viễn dữ liệu của bạn',
+                        chevronColor: Colors.red.shade300,
+                        onTap: _confirmDeleteAccount,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 50),
+                  Center(
+                    child: Text(
+                      'Đố Vui - Quiz App · Phiên bản 1.0.8',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey.shade400,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+              ),
     );
   }
 }
