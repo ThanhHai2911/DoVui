@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:math';
+import 'package:dovui/data/models/question_model.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:dovui/services/quiz_service.dart';
 import 'quiz_event.dart';
@@ -8,8 +9,9 @@ import 'quiz_state.dart';
 class QuizBloc extends Bloc<QuizEvent, QuizState> {
   Timer? _timer;
   List<int> usedIndexes = [];
+  final QuizService quizService;
 
-  QuizBloc() : super(const QuizState()) {
+  QuizBloc({required this.quizService}) : super(const QuizState()) {
     on<LoadQuiz>(_onLoadQuiz);
     on<SelectAnswer>(_onSelectAnswer);
     on<NextQuestion>(_onNextQuestion);
@@ -25,31 +27,31 @@ class QuizBloc extends Bloc<QuizEvent, QuizState> {
   Future<void> _onLoadQuiz(LoadQuiz event, Emitter<QuizState> emit) async {
     emit(state.copyWith(isLoading: true));
 
-    await emit.forEach(
-      QuizService.getQuestions(
-        categoryId: event.categoryId,
-        levelId: event.levelId,
-        type: event.type,
-      ),
-      onData: (questions) {
-        if (questions.isEmpty) {
-          return state.copyWith(isLoading: false);
-        }
+    // ✅ Thêm explicit type cho emit.forEach
+await emit.forEach<List<QuestionModel>>(
+  quizService.getQuestions(
+    categoryId: event.categoryId,
+    levelId: event.levelId,
+    type: event.type,
+  ),
+  onData: (questions) {
+    if (questions.isEmpty) {
+      return state.copyWith(isLoading: false);
+    }
 
-        usedIndexes.clear();
-        final randomIndex = Random().nextInt(questions.length);
+    usedIndexes.clear();
+    final randomIndex = Random().nextInt(questions.length);
+    Future.microtask(() => _startTimer());
 
-        _startTimer();
-
-        return state.copyWith(
-          isLoading: false,
-          questions: questions,
-          currentQuestion: questions[randomIndex],
-          questionCount: 1,
-          eliminatedIndexes: [],
-        );
-      },
+    return state.copyWith(
+      isLoading: false,
+      questions: questions,
+      currentQuestion: questions[randomIndex],
+      questionCount: 1,
+      eliminatedIndexes: [],
     );
+  },
+);
   }
 
   void _startTimer() {
@@ -76,7 +78,7 @@ class QuizBloc extends Bloc<QuizEvent, QuizState> {
 
     if (newLives <= 0) {
       // ✅ Cộng điểm cuối game
-      await QuizService.addStarsToUser(state.score);
+      await quizService.addStarsToUser(state.score);
 
       emit(state.copyWith(lives: newLives, showResult: true, isGameOver: true));
       return;
@@ -110,7 +112,7 @@ class QuizBloc extends Bloc<QuizEvent, QuizState> {
 
     if (newLives <= 0) {
       // ✅ Cộng điểm cuối game
-      await QuizService.addStarsToUser(newScore);
+      await quizService.addStarsToUser(newScore);
 
       emit(
         state.copyWith(
@@ -148,7 +150,7 @@ class QuizBloc extends Bloc<QuizEvent, QuizState> {
 
     if (usedIndexes.length == state.questions.length) {
       // ✅ Cộng điểm cuối game
-      await QuizService.addStarsToUser(state.score);
+      await quizService.addStarsToUser(state.score);
 
       emit(state.copyWith(isGameOver: true, isWin: true));
       return;
@@ -191,7 +193,7 @@ class QuizBloc extends Bloc<QuizEvent, QuizState> {
     if (correct == null) return;
 
     // Kiểm tra + trừ sao trên Firestore
-    final success = await QuizService.deductStars(50);
+    final success = await quizService.deductStars(50);
     if (!success) {
       emit(state.copyWith(hintError: 'not_enough_stars'));
       emit(state.copyWith(hintError: null)); // reset ngay
@@ -221,7 +223,7 @@ class QuizBloc extends Bloc<QuizEvent, QuizState> {
     final correct = state.currentQuestion?.correctIndex;
     if (correct == null) return;
 
-    final success = await QuizService.deductStars(100);
+    final success = await quizService.deductStars(100);
     if (!success) {
       emit(state.copyWith(hintError: 'not_enough_stars'));
       emit(state.copyWith(hintError: null));

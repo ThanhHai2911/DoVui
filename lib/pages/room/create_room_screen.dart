@@ -239,61 +239,88 @@ class _CreateRoomScreenState extends State<CreateRoomScreen>
         childAspectRatio: 1.15,
       ),
       itemBuilder: (context, index) {
-        final cat = state.categories[index];
-        final isSelected = cat.id == state.selectedCategoryId;
+  final cat = state.categories[index];
+  final isSelected = cat.id == state.selectedCategoryId;
 
-        return GestureDetector(
-          onTap: () => context.read<RoomBloc>().add(
-                SelectCategory(
-                  categoryId: cat.id,
-                  categoryName: cat.name,
-                  categoryType: cat.type,
+  return GestureDetector(
+    onTap: () => context.read<RoomBloc>().add(
+          SelectCategory(
+            categoryId: cat.id,
+            categoryName: cat.name,
+            categoryType: cat.type,
+            categoryImage: cat.image,
+          ),
+        ),
+    child: AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      decoration: BoxDecoration(
+        color: isSelected ? const Color(0xFF6C63FF) : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isSelected ? const Color(0xFF6C63FF) : Colors.grey.shade200,
+          width: isSelected ? 2 : 1,
+        ),
+        boxShadow: isSelected
+            ? [
+                BoxShadow(
+                  color: const Color(0xFF6C63FF).withOpacity(0.25),
+                  blurRadius: 8,
+                  offset: const Offset(0, 4),
                 ),
-              ),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            decoration: BoxDecoration(
-              color: isSelected ? const Color(0xFF6C63FF) : Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: isSelected
-                    ? const Color(0xFF6C63FF)
-                    : Colors.grey.shade200,
-                width: isSelected ? 2 : 1,
-              ),
-              boxShadow: isSelected
-                  ? [
-                      BoxShadow(
-                        color: const Color(0xFF6C63FF).withOpacity(0.25),
-                        blurRadius: 8,
-                        offset: const Offset(0, 4),
-                      ),
-                    ]
-                  : [],
-            ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(cat.icon, style: const TextStyle(fontSize: 26)),
-                const SizedBox(height: 6),
-                Text(
-                  cat.name,
-                  textAlign: TextAlign.center,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: isSelected
-                        ? Colors.white
-                        : const Color(0xFF1E1B4B),
-                  ),
-                ),
-              ],
+              ]
+            : [],
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          // ── Ảnh thể loại ──
+          ClipRRect(
+            borderRadius: BorderRadius.circular(10),
+            child: cat.image.isNotEmpty 
+                ? Image.network(
+                    cat.image,
+                    width: 40,
+                    height: 40,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => Text(
+                      cat.icon,
+                      style: const TextStyle(fontSize: 26),
+                    ),
+                    loadingBuilder: (_, child, progress) {
+                      if (progress == null) return child;
+                      return SizedBox(
+                        width: 40,
+                        height: 40,
+                        child: Center(
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: isSelected
+                                ? Colors.white
+                                : const Color(0xFF6C63FF),
+                          ),
+                        ),
+                      );
+                    },
+                  )
+                : Text(cat.icon, style: const TextStyle(fontSize: 26)),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            cat.name,
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: isSelected ? Colors.white : const Color(0xFF1E1B4B),
             ),
           ),
-        );
-      },
+        ],
+      ),
+    ),
+  );
+},
     );
   }
 

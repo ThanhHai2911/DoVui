@@ -15,13 +15,16 @@ class CreateRoom extends RoomEvent {
   final String type;
   final int questionCount;
   final int timePerQuestion;
+  final String categoryImage;
 
   const CreateRoom({
     required this.categoryId,
     required this.categoryName,
     required this.password,
     required this.questionCount,
-    required this.timePerQuestion, required this.type,
+    required this.timePerQuestion, 
+    required this.type,
+    this.categoryImage = '',
   });
 
   @override
@@ -52,7 +55,8 @@ class SelectCategory extends RoomEvent {
   final String categoryId;
   final String categoryName;
   final String categoryType; 
-  const SelectCategory({required this.categoryId, required this.categoryName, required this.categoryType});
+  final String categoryImage;
+  const SelectCategory({required this.categoryId, required this.categoryName, required this.categoryType, this.categoryImage = ''});
   @override
   List<Object?> get props => [categoryId, categoryName];
 }

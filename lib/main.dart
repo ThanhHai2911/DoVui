@@ -1,9 +1,11 @@
+import 'package:dovui/data/repositories/firebase_quiz_repository.dart';
 import 'package:dovui/data/repositories/user_repository.dart';
 import 'package:dovui/pages/ads/ads_service.dart';
 import 'package:dovui/pages/ads/widgets/adsService.dart';
 import 'package:dovui/pages/profile/widgets/vip_purchase_service.dart';
 import 'package:dovui/pages/splash/splash_screen.dart';
 import 'package:dovui/pages/user/bloc/user_bloc.dart';
+import 'package:dovui/services/quiz_service.dart';
 import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -21,6 +23,7 @@ void main() async {
   await MobileAds.instance.initialize();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   await dotenv.load(fileName: ".env");
+  final quizService = QuizService(FirebaseQuizRepository());
 
   final analytics = FirebaseAnalytics.instance;
   await analytics.logAppOpen();
@@ -69,8 +72,6 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       ],
       child: const MaterialApp(
         debugShowCheckedModeBanner: false,
-        // Không cần UpgradeAlert ở đây nữa
-        // Dialog update được gọi từ HomeScreen qua UpdateChecker
         home: SplashScreen(),
       ),
     );

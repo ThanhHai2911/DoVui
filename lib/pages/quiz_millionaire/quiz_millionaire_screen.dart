@@ -1,8 +1,10 @@
 import 'package:dovui/data/audio/audio_manager.dart';
+import 'package:dovui/data/repositories/firebase_quiz_repository.dart';
 import 'package:dovui/data/repositories/user_level_repository.dart';
 import 'package:dovui/pages/ads/widgets/adsService.dart';
 import 'package:dovui/pages/quiz_millionaire/widgets/askcontinue_dialog.dart';
 import 'package:dovui/pages/quiz_millionaire/widgets/prizeladderoverlay.dart';
+import 'package:dovui/services/quiz_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:dovui/pages/gamecomplete/game_complete_screen.dart';
@@ -41,7 +43,7 @@ class _MillionaireScreenState extends State<MillionaireScreen> {
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (_) => MillionaireBloc(quizBloc: QuizBloc())
+      create: (_) => MillionaireBloc(quizBloc: QuizBloc(quizService: QuizService(FirebaseQuizRepository())))
         ..add(LoadMillionaire(
           categoryId: widget.categoryId,
           levelId: widget.levelId,

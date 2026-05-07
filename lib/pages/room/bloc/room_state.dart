@@ -8,7 +8,9 @@ class CategoryItem {
   final String name;
   final String icon;
   final String type;
-  const CategoryItem({required this.id, required this.name, required this.icon,required this.type,});
+  final String image;
+
+  const CategoryItem({required this.id, required this.name, required this.icon, required this.type,this.image = ''});
 }
 
 class RoomState extends Equatable {
@@ -22,6 +24,7 @@ class RoomState extends Equatable {
   final String? errorMessage;
   final bool isHost;
   final String selectedCategoryType;
+  final String selectedCategoryImage;
 
   const RoomState({
     this.status = RoomStatus.initial,
@@ -30,6 +33,7 @@ class RoomState extends Equatable {
     this.selectedCategoryId = '',
     this.selectedCategoryName = '',
     this.selectedCategoryType = 'soman',
+    this.selectedCategoryImage = '',
     this.questionCount = 10,
     this.timePerQuestion = 15,
     this.errorMessage,
@@ -46,6 +50,7 @@ class RoomState extends Equatable {
     int? questionCount,
     int? timePerQuestion,
     String? errorMessage,
+    String? selectedCategoryImage,
     bool? isHost,
     bool clearRoom = false,
     bool clearError = false,
@@ -57,6 +62,7 @@ class RoomState extends Equatable {
         selectedCategoryId: selectedCategoryId ?? this.selectedCategoryId,
         selectedCategoryName: selectedCategoryName ?? this.selectedCategoryName,
         selectedCategoryType: selectedCategoryType ?? this.selectedCategoryType,
+        selectedCategoryImage: selectedCategoryImage ?? this.selectedCategoryImage,
         questionCount: questionCount ?? this.questionCount,
         timePerQuestion: timePerQuestion ?? this.timePerQuestion,
         errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),

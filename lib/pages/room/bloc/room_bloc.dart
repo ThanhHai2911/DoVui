@@ -60,6 +60,7 @@ class RoomBloc extends Bloc<RoomEvent, RoomState> {
           name: data['name'] ?? doc.id,
           icon: data['icon'] ?? '📚',
           type: data['type'] ?? 'direct',
+          image: data['image'] ?? '',
         );
       }).toList();
 
@@ -70,6 +71,7 @@ class RoomBloc extends Bloc<RoomEvent, RoomState> {
         selectedCategoryId: first?.id ?? '',
         selectedCategoryName: first?.name ?? '',
         selectedCategoryType: first?.type ?? 'direct',
+        selectedCategoryImage: first?.image ?? '', 
       ));
     } catch (e) {
       debugPrint('[RoomBloc] loadCategories error: $e');
@@ -81,6 +83,7 @@ class RoomBloc extends Bloc<RoomEvent, RoomState> {
       selectedCategoryId: event.categoryId,
       selectedCategoryName: event.categoryName,
       selectedCategoryType: event.categoryType,
+      selectedCategoryImage: event.categoryImage,
     ));
   }
 

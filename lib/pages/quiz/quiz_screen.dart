@@ -1,4 +1,5 @@
 import 'package:dovui/data/audio/audio_manager.dart';
+import 'package:dovui/data/repositories/firebase_quiz_repository.dart';
 import 'package:dovui/data/repositories/user_level_repository.dart';
 import 'package:dovui/pages/ads/ads_service.dart';
 import 'package:dovui/pages/ads/widgets/adsService.dart';
@@ -12,6 +13,7 @@ import 'package:dovui/pages/quiz/widgets/quiz_header.dart';
 import 'package:dovui/pages/quiz/widgets/quiz_progress_bar.dart';
 import 'package:dovui/pages/quiz/widgets/quiz_question_card.dart';
 import 'package:dovui/pages/word_answer/widgets/hint_bar.dart';
+import 'package:dovui/services/quiz_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -174,7 +176,7 @@ class _QuizScreenState extends State<QuizScreen> with TickerProviderStateMixin {
       canPop: false,
       onPopInvokedWithResult: (_, __) {},
       child: BlocProvider(
-        create: (_) => QuizBloc()
+        create: (_) => QuizBloc( quizService: QuizService(FirebaseQuizRepository()))
           ..add(LoadQuiz(
             categoryId: widget.categoryId,
             levelId: widget.levelId,

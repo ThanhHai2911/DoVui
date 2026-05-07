@@ -10,8 +10,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 class LevelBloc extends Bloc<LevelEvent, LevelState> {
   final _repo = UserLevelRepository();
+  final QuizService quizService;
 
-  LevelBloc() : super(LevelLoading()) {
+  LevelBloc({required this.quizService}) : super(LevelLoading()) {
     on<LoadLevels>(_onLoadLevels);
     on<ResetLevelsFrom>(_onResetLevelsFrom);
   }
@@ -20,7 +21,7 @@ class LevelBloc extends Bloc<LevelEvent, LevelState> {
     emit(LevelLoading());
 
     try {
-      final levelsStream = QuizService.getLevels(event.categoryId);
+      final levelsStream = quizService.getLevels(event.categoryId);
       final statusStream = _repo.getLevelStatusesStream();
 
       await emit.forEach(

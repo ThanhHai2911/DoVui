@@ -51,7 +51,9 @@ class VipPurchaseService {
 
     try {
       _isAvailable = await _iap.isAvailable();
-      debugPrint('🛒 IAP available: $_isAvailable (${Platform.operatingSystem})');
+      debugPrint(
+        '🛒 IAP available: $_isAvailable (${Platform.operatingSystem})',
+      );
     } catch (e) {
       debugPrint('❌ IAP not available: $e');
       _isAvailable = false;
@@ -87,10 +89,12 @@ class VipPurchaseService {
       if (response.productDetails.isNotEmpty) {
         _vipProduct = response.productDetails.first;
         debugPrint(
-            '✅ Product loaded: ${_vipProduct?.title} - ${_vipProduct?.price}');
+          '✅ Product loaded: ${_vipProduct?.title} - ${_vipProduct?.price}',
+        );
       } else {
         debugPrint(
-            '⚠️ Product not found on $_storeName. Not found IDs: ${response.notFoundIDs}');
+          '⚠️ Product not found on $_storeName. Not found IDs: ${response.notFoundIDs}',
+        );
         _lastErrorReason =
             'Sản phẩm chưa được tạo trên $_storeName\n'
             'Not found: ${response.notFoundIDs}';
@@ -103,7 +107,8 @@ class VipPurchaseService {
 
   Future<void> buyVip() async {
     debugPrint(
-        '🛒 buyVip called. isAvailable=$_isAvailable, product=$_vipProduct, platform=${Platform.operatingSystem}');
+      '🛒 buyVip called. isAvailable=$_isAvailable, product=$_vipProduct, platform=${Platform.operatingSystem}',
+    );
 
     if (!_isAvailable) {
       _lastErrorReason = '$_storeName không khả dụng';
@@ -138,10 +143,11 @@ class VipPurchaseService {
     await _iap.restorePurchases();
   }
 
-  void _onPurchaseUpdate(List<PurchaseDetails> purchases) {
+  Future<void> _onPurchaseUpdate(List<PurchaseDetails> purchases) async {
     for (final purchase in purchases) {
       debugPrint(
-          '📦 Purchase update: ${purchase.productID} → ${purchase.status}');
+        '📦 Purchase update: ${purchase.productID} → ${purchase.status}',
+      );
       if (purchase.productID != kVipProductId) continue;
 
       switch (purchase.status) {
@@ -149,24 +155,42 @@ class VipPurchaseService {
         case PurchaseStatus.restored:
           _handleSuccess(purchase);
           break;
+
         case PurchaseStatus.pending:
           onPurchasePending?.call();
           break;
+
         case PurchaseStatus.error:
+          final errCode = purchase.error?.code ?? '';
           final errMsg = purchase.error?.message ?? 'Lỗi không xác định';
-          debugPrint('❌ IAP error: $errMsg');
+          debugPrint('❌ IAP error code=$errCode msg=$errMsg');
+
+          // ✅ Đã mua rồi → restore tự động, không báo lỗi
+          final isAlreadyOwned =
+              errCode == '7' ||
+              errMsg.toLowerCase().contains('item already owned') ||
+              errMsg.toLowerCase().contains('already purchased');
+
+          if (isAlreadyOwned) {
+            debugPrint('🔄 Already owned → calling restorePurchases()');
+            if (purchase.pendingCompletePurchase) {
+              _iap.completePurchase(purchase);
+            }
+            _iap.restorePurchases(); // sẽ trigger restored → _handleSuccess
+            return;
+          }
+
           if (Platform.isIOS) {
-            _lastErrorReason =
-                _mapIosError(purchase.error?.code ?? '', errMsg);
+            _lastErrorReason = _mapIosError(errCode, errMsg);
           } else {
-            _lastErrorReason =
-                _mapAndroidError(purchase.error?.code ?? '', errMsg);
+            _lastErrorReason = _mapAndroidError(errCode, errMsg);
           }
           onPurchaseFailed?.call();
           if (purchase.pendingCompletePurchase) {
             _iap.completePurchase(purchase);
           }
           break;
+
         case PurchaseStatus.canceled:
           _lastErrorReason = 'Bạn đã huỷ thanh toán';
           onPurchaseFailed?.call();
@@ -222,25 +246,25 @@ class VipPurchaseService {
   }
 
   Future<void> _handleSuccess(PurchaseDetails purchase) async {
-    if (purchase.pendingCompletePurchase) {
-      await _iap.completePurchase(purchase);
-    }
-
-    final firebaseUid = FirebaseAuth.instance.currentUser?.uid;
-    final prefs = await SharedPreferences.getInstance();
-    final userId = firebaseUid ?? prefs.getString('userId') ?? '';
-
-    if (userId.isNotEmpty) {
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(userId)
-          .update({'isVip': true});
-      debugPrint('✅ Firestore isVip updated for $userId');
-    }
-
-    AdsService().setVip(true);
-    onPurchaseSuccess?.call();
+  if (purchase.pendingCompletePurchase) {
+    await _iap.completePurchase(purchase);
   }
+
+  final firebaseUid = FirebaseAuth.instance.currentUser?.uid;
+  final prefs = await SharedPreferences.getInstance();
+  final userId = firebaseUid ?? prefs.getString('userId') ?? '';
+
+  if (userId.isNotEmpty) {
+    await FirebaseFirestore.instance
+        .collection('users')
+        .doc(userId)
+        .set({'isVip': true}, SetOptions(merge: true));
+    debugPrint('✅ Firestore isVip=true for $userId');
+  }
+
+  AdsService().setVip(true);
+  onPurchaseSuccess?.call();
+}
 
   void dispose() {
     // Xoá delegate iOS khi dispose để tránh memory leak
@@ -263,8 +287,7 @@ class _VipPaymentQueueDelegate implements SKPaymentQueueDelegateWrapper {
   bool shouldContinueTransaction(
     SKPaymentTransactionWrapper transaction,
     SKStorefrontWrapper storefront,
-  ) =>
-      true;
+  ) => true;
 
   /// Cho phép hiển thị popup xác nhận thay đổi giá subscription
   @override

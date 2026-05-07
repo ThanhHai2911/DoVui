@@ -7,7 +7,6 @@ import 'package:dovui/pages/word_answer/widgets/hint_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-/// Wraps [HintBar] with all hint/ad logic for WordAnswerScreen.
 class WordAnswerHintBarHandler extends StatelessWidget {
   const WordAnswerHintBarHandler({super.key});
 

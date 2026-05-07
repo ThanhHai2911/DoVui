@@ -4,6 +4,7 @@ import 'package:dovui/pages/category/categories_screen.dart';
 import 'package:dovui/pages/home/home_screen.dart';
 import 'package:dovui/pages/leaderboard/Leaderboard_screen.dart';
 import 'package:dovui/pages/profile/profile_screen.dart';
+import 'package:dovui/widgets/network_observer.dart';
 import 'package:flutter/material.dart';
 import 'dart:ui';
 import 'package:dovui/data/audio/audio_manager.dart';
@@ -40,43 +41,45 @@ class _HomeBottomNavState extends State<HomeBottomNav> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      extendBody: true,
-      body: Stack(
-        children: [
-          /// Nội dung chính
-          _pages[_currentIndex],
-          /// Bottom nổi blur thật
-          Positioned(
-            left: 20,
-            right: 20,
-            bottom: 25,
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(40),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 35, sigmaY: 35),
-                child: Container(
-                  height: 75,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.08),
-                    borderRadius: BorderRadius.circular(40),
-                    border: Border.all(
-                      color: Colors.white.withOpacity(0.25),
+    return NetworkObserver(
+      child: Scaffold(
+        extendBody: true,
+        body: Stack(
+          children: [
+            /// Nội dung chính
+            _pages[_currentIndex],
+            /// Bottom nổi blur thật
+            Positioned(
+              left: 20,
+              right: 20,
+              bottom: 25,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(40),
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 35, sigmaY: 35),
+                  child: Container(
+                    height: 75,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.08),
+                      borderRadius: BorderRadius.circular(40),
+                      border: Border.all(
+                        color: Colors.white.withOpacity(0.25),
+                      ),
                     ),
-                  ),
-                  child: Row(
-                    children: [
-                      _navItem(Icons.home, 0),
-                      _navItem(Icons.grid_view, 1),
-                      _navItem(Icons.bar_chart, 2),
-                      _navItem(Icons.person, 3),
-                    ],
+                    child: Row(
+                      children: [
+                        _navItem(Icons.home, 0),
+                        _navItem(Icons.grid_view, 1),
+                        _navItem(Icons.bar_chart, 2),
+                        _navItem(Icons.person, 3),
+                      ],
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

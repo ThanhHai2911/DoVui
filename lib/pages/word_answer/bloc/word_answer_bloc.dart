@@ -14,6 +14,7 @@ class WordAnswerBloc extends Bloc<WordAnswerEvent, WordAnswerState> {
   final String? levelId;
   final String type;
   final UserRepository userRepository = UserRepository();
+  final QuizService quizService;
   String? _userId;
   bool _isInitialized = false;
 
@@ -35,6 +36,7 @@ class WordAnswerBloc extends Bloc<WordAnswerEvent, WordAnswerState> {
     required this.categoryId,
     required this.levelId,
     required this.type,
+    required this.quizService,
   }) : super(WordAnswerLoading()) {
     on<LoadQuestions>(_onLoadQuestions);
     on<_QuestionsLoaded>(_onQuestionsLoaded);
@@ -79,7 +81,7 @@ class WordAnswerBloc extends Bloc<WordAnswerEvent, WordAnswerState> {
       }
     }
 
-    final questions = await QuizService.getQuestionsOnce(
+    final questions = await quizService.getQuestionsOnce(
       categoryId: categoryId,
       levelId: levelId,
       type: type,

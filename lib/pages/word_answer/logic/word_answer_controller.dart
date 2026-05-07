@@ -178,6 +178,7 @@ class WordAnswerController {
     return null;
   }
 
+
   void handleWrong() {
     lives--;
 

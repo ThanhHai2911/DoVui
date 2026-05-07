@@ -5,12 +5,13 @@ import 'package:dovui/data/models/category_model.dart';
 import 'categories_item.dart';
 
 class CategoriesSection extends StatelessWidget {
-  const CategoriesSection({super.key});
+  final QuizService quizService;
+  const CategoriesSection({super.key, required this.quizService});
 
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<List<CategoryModel>>(
-      stream: QuizService.getCategories(),
+      stream: quizService.getCategories(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting ||
             !snapshot.hasData ||

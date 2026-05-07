@@ -1,4 +1,6 @@
 import 'package:dovui/data/audio/audio_manager.dart';
+import 'package:dovui/data/repositories/firebase_quiz_repository.dart';
+import 'package:dovui/pages/category/bloc/category_state.dart';
 import 'package:dovui/pages/category/widgets/animated_category_item.dart';
 import 'package:dovui/resources/color_manager.dart';
 import 'package:dovui/data/models/category_model.dart';
@@ -76,7 +78,10 @@ class _CategoriesscreenState extends State<Categoriesscreen>
       canPop: false,
       onPopInvokedWithResult: (didPop, result) {},
       child: BlocProvider(
-        create: (_) => CategoryBloc()..add(LoadCategories()),
+        create:
+            (_) =>
+                CategoryBloc(quizService: QuizService(FirebaseQuizRepository()))
+                  ..add(LoadCategories()),
         child: Scaffold(
           backgroundColor: ColorManager.scaffoldBackground,
           body: Stack(
@@ -107,16 +112,15 @@ class _CategoriesscreenState extends State<Categoriesscreen>
                 child: SlideTransition(
                   position: _slide,
                   child: SafeArea(
-                    child: StreamBuilder<List<CategoryModel>>(
-                      stream: QuizService.getCategories(),
-                      builder: (context, snapshot) {
+                    child: BlocBuilder<CategoryBloc, CategoryState>(
+                      builder: (context, state) {
                         final bool isLoading =
-                            snapshot.connectionState ==
-                                ConnectionState.waiting ||
-                            !snapshot.hasData ||
-                            snapshot.data!.isEmpty;
-
-                        final categories = snapshot.data ?? [];
+                            state is CategoryLoading ||
+                            state is CategoryInitial;
+                        final categories =
+                            state is CategoryLoaded
+                                ? state.categories
+                                : <CategoryModel>[];
 
                         return Column(
                           children: [
@@ -205,4 +209,3 @@ class _CategoriesscreenState extends State<Categoriesscreen>
     );
   }
 }
-

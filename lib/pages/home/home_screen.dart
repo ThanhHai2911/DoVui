@@ -1,4 +1,5 @@
 import 'package:dovui/data/audio/audio_manager.dart';
+import 'package:dovui/data/repositories/firebase_quiz_repository.dart';
 import 'package:dovui/pages/ads/ads_service.dart';
 import 'package:dovui/pages/ads/widgets/adsService.dart';
 import 'package:dovui/pages/home/widgets/animated_section.dart';
@@ -6,6 +7,7 @@ import 'package:dovui/resources/color_manager.dart';
 import 'package:dovui/pages/home/bloc/home_bloc.dart';
 import 'package:dovui/pages/home/bloc/home_event.dart';
 import 'package:dovui/pages/home/bloc/home_state.dart';
+import 'package:dovui/services/quiz_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'widgets/home_header.dart';
@@ -142,9 +144,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                   child: QuizOfWeek(),
                                 ),
                                 const SizedBox(height: 30),
-                                const AnimatedSection(
+                                AnimatedSection(
                                   delay: 240,
-                                  child: CategoriesSection(),
+                                  child: CategoriesSection(
+                                    quizService: QuizService(FirebaseQuizRepository()),
+                                  ),
                                 ),
                                 const SizedBox(height: 30),
 

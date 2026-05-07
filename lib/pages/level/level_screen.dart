@@ -1,3 +1,4 @@
+import 'package:dovui/data/repositories/firebase_quiz_repository.dart';
 import 'package:dovui/pages/category/widgets/category_shimmer.dart';
 import 'package:dovui/pages/home/widgets/game_dialog.dart';
 import 'package:dovui/pages/level/bloc/level_bloc.dart';
@@ -10,6 +11,7 @@ import 'package:dovui/pages/quiz/quiz_screen.dart';
 import 'package:dovui/pages/quiz_image/quiz_image_screen.dart';
 import 'package:dovui/pages/quiz_millionaire/quiz_millionaire_screen.dart';
 import 'package:dovui/pages/word_answer/word_answer_screen.dart';
+import 'package:dovui/services/quiz_service.dart';
 import 'package:dovui/widgets/blob_background.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -164,7 +166,7 @@ class _LevelScreenState extends State<LevelScreen> {
       canPop: false,
       onPopInvokedWithResult: (_, __) {},
       child: BlocProvider(
-        create: (_) => LevelBloc()..add(LoadLevels(widget.categoryId)),
+        create: (_) => LevelBloc(quizService: QuizService(FirebaseQuizRepository()))..add(LoadLevels(widget.categoryId)),
         child: Scaffold(
           backgroundColor: const Color(0xFFF4F6FF),
           body: Stack(

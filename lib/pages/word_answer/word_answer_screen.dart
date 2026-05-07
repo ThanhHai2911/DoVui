@@ -1,3 +1,4 @@
+import 'package:dovui/data/repositories/firebase_quiz_repository.dart';
 import 'package:dovui/data/repositories/user_level_repository.dart';
 import 'package:dovui/pages/ads/widgets/adsService.dart';
 import 'package:dovui/pages/gamecomplete/game_complete_screen.dart';
@@ -11,6 +12,7 @@ import 'package:dovui/pages/word_answer/widgets/word_answer_background.dart';
 import 'package:dovui/pages/word_answer/widgets/word_answer_hint_bar_handler.dart';
 import 'package:dovui/pages/word_answer/widgets/word_answer_question_card.dart';
 import 'package:dovui/pages/word_answer/widgets/word_answer_shimmer.dart';
+import 'package:dovui/services/quiz_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -157,6 +159,7 @@ class _WordAnswerScreenState extends State<WordAnswerScreen>
           categoryId: widget.categoryId,
           levelId: widget.levelId,
           type: widget.type,
+          quizService: QuizService(FirebaseQuizRepository())
         )..add(LoadQuestions()),
         child: BlocConsumer<WordAnswerBloc, WordAnswerState>(
           listener: (context, state) async {

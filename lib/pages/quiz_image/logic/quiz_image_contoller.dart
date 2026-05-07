@@ -163,7 +163,7 @@ class QuizImageController {
 
       if (index >= offset && index < offset + wordLength) {
         final letter = correctAnswer[index];
-        return index == offset ? letter.toUpperCase() : letter.toLowerCase();
+        return letter.toUpperCase();
       }
 
       offset += wordLength;
