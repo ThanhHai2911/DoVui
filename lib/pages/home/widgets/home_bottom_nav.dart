@@ -37,6 +37,7 @@ class _HomeBottomNavState extends State<HomeBottomNav> {
     _currentIndex = widget.initialIndex.clamp(0, _pages.length - 1); // ✅ QUAN TRỌNG
     //CultureRiddleSetup.setup();
     //FoodDataSetup.setup();
+    //MillionaireDataSetup.run();
   }
 
   @override
