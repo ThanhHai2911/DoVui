@@ -12,8 +12,10 @@ import 'package:dovui/pages/quiz/widgets/answer_card.dart';
 import 'package:dovui/pages/quiz/widgets/quiz_header.dart';
 import 'package:dovui/pages/quiz/widgets/quiz_progress_bar.dart';
 import 'package:dovui/pages/quiz/widgets/quiz_question_card.dart';
+import 'package:dovui/pages/room/widgets/chat_overlay.dart';
 import 'package:dovui/pages/word_answer/widgets/hint_bar.dart';
 import 'package:dovui/services/quiz_service.dart';
+import 'package:dovui/services/voice_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -28,6 +30,8 @@ class QuizScreen extends StatefulWidget {
   final String? roomId;
   final VoidCallback? onFinished;
   final void Function(int delta)? onScoreUpdate;
+  final String? displayName;
+  final VoiceService? voiceService;
 
   const QuizScreen({
     super.key,
@@ -37,6 +41,8 @@ class QuizScreen extends StatefulWidget {
     this.roomId,
     this.onFinished,
     this.onScoreUpdate,
+    this.displayName,
+    this.voiceService,
   });
 
   @override
@@ -58,11 +64,9 @@ class _QuizScreenState extends State<QuizScreen> with TickerProviderStateMixin {
   late final Animation<double> _pulseAnim;
   late final Animation<double> _floatAnim;
   late final Animation<double> _shakeAnim;
-  
 
   final _userLevelRepo = UserLevelRepository();
   String _lastQuestion = '';
-
   bool get _isRoomMode => widget.onFinished != null;
 
   // ── Lifecycle ─────────────────────────────────────────────────────────────────
@@ -75,31 +79,57 @@ class _QuizScreenState extends State<QuizScreen> with TickerProviderStateMixin {
   }
 
   void _initAnimations() {
-    _entryCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 600));
+    _entryCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
     _entryFade = CurvedAnimation(parent: _entryCtrl, curve: Curves.easeOut);
-    _entrySlide = Tween<Offset>(begin: const Offset(0, 0.08), end: Offset.zero)
-        .animate(CurvedAnimation(parent: _entryCtrl, curve: Curves.easeOutCubic));
+    _entrySlide = Tween<Offset>(
+      begin: const Offset(0, 0.08),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: _entryCtrl, curve: Curves.easeOutCubic));
 
-    _questionCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 450));
-    _questionScale = Tween<double>(begin: 0.88, end: 1.0)
-        .animate(CurvedAnimation(parent: _questionCtrl, curve: Curves.elasticOut));
+    _questionCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 450),
+    );
+    _questionScale = Tween<double>(
+      begin: 0.88,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _questionCtrl, curve: Curves.elasticOut));
     _questionFade = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _questionCtrl, curve: const Interval(0.0, 0.5, curve: Curves.easeIn)),
+      CurvedAnimation(
+        parent: _questionCtrl,
+        curve: const Interval(0.0, 0.5, curve: Curves.easeIn),
+      ),
     );
 
-    _pulseCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 1200))
-      ..repeat(reverse: true);
-    _pulseAnim = Tween<double>(begin: 1.0, end: 1.05)
-        .animate(CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut));
+    _pulseCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    )..repeat(reverse: true);
+    _pulseAnim = Tween<double>(
+      begin: 1.0,
+      end: 1.05,
+    ).animate(CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut));
 
-    _floatCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 2200))
-      ..repeat(reverse: true);
-    _floatAnim = Tween<double>(begin: -8.0, end: 8.0)
-        .animate(CurvedAnimation(parent: _floatCtrl, curve: Curves.easeInOut));
+    _floatCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2200),
+    )..repeat(reverse: true);
+    _floatAnim = Tween<double>(
+      begin: -8.0,
+      end: 8.0,
+    ).animate(CurvedAnimation(parent: _floatCtrl, curve: Curves.easeInOut));
 
-    _shakeCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 400));
-    _shakeAnim = Tween<double>(begin: -4.0, end: 4.0)
-        .animate(CurvedAnimation(parent: _shakeCtrl, curve: Curves.elasticIn));
+    _shakeCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 400),
+    );
+    _shakeAnim = Tween<double>(
+      begin: -4.0,
+      end: 4.0,
+    ).animate(CurvedAnimation(parent: _shakeCtrl, curve: Curves.elasticIn));
   }
 
   @override
@@ -154,15 +184,16 @@ class _QuizScreenState extends State<QuizScreen> with TickerProviderStateMixin {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (_) => GameCompleteScreen(
-            score: state.score,
-            totalQuestions: state.questions.length,
-            isWin: state.score >= 60,
-            categoryId: widget.categoryId,
-            levelId: widget.levelId,
-            type: widget.type,
-            isVip: AdsService().isVip,
-          ),
+          builder:
+              (_) => GameCompleteScreen(
+                score: state.score,
+                totalQuestions: state.questions.length,
+                isWin: state.score >= 60,
+                categoryId: widget.categoryId,
+                levelId: widget.levelId,
+                type: widget.type,
+                isVip: AdsService().isVip,
+              ),
         ),
       );
     });
@@ -176,12 +207,16 @@ class _QuizScreenState extends State<QuizScreen> with TickerProviderStateMixin {
       canPop: false,
       onPopInvokedWithResult: (_, __) {},
       child: BlocProvider(
-        create: (_) => QuizBloc( quizService: QuizService(FirebaseQuizRepository()))
-          ..add(LoadQuiz(
-            categoryId: widget.categoryId,
-            levelId: widget.levelId,
-            type: widget.type,
-          )),
+        create:
+            (_) =>
+                QuizBloc(quizService: QuizService(FirebaseQuizRepository()))
+                  ..add(
+                    LoadQuiz(
+                      categoryId: widget.categoryId,
+                      levelId: widget.levelId,
+                      type: widget.type,
+                    ),
+                  ),
         child: BlocConsumer<QuizBloc, QuizState>(
           listener: (context, state) async {
             if (state.showResult) {
@@ -209,7 +244,12 @@ class _QuizScreenState extends State<QuizScreen> with TickerProviderStateMixin {
             if (state.questions.isEmpty) {
               return const Scaffold(
                 backgroundColor: Color(0xFFF4F6FF),
-                body: Center(child: Text('Chưa có câu hỏi cho chuyên đề này', style: TextStyle(fontSize: 18))),
+                body: Center(
+                  child: Text(
+                    'Chưa có câu hỏi cho chuyên đề này',
+                    style: TextStyle(fontSize: 18),
+                  ),
+                ),
               );
             }
             if (state.currentQuestion == null) {
@@ -254,6 +294,19 @@ class _QuizScreenState extends State<QuizScreen> with TickerProviderStateMixin {
                               Expanded(child: _buildAnswers(context, state)),
                               const SizedBox(height: 5),
                               if (!_isRoomMode) _buildHintBar(context, state),
+                              if (_isRoomMode && widget.roomId != null)
+                                Positioned(
+                                  right: 16,
+                                  bottom: 16,
+                                  width: 300,
+                                  child: ChatOverlay(
+                                    roomId: widget.roomId!,
+                                    currentUserId: '',
+                                    displayName: widget.displayName ?? 'Bạn',
+                                    voiceService: widget.voiceService,
+                                    collapsible: true,
+                                  ),
+                                ),
                             ],
                           ),
                         ),
@@ -292,15 +345,22 @@ class _QuizScreenState extends State<QuizScreen> with TickerProviderStateMixin {
         ),
         itemBuilder: (context, index) {
           final isEliminated = eliminated.contains(index);
-          final isCorrect = state.showResult && index == state.currentQuestion!.correctIndex;
-          final isWrong = state.showResult &&
+          final isCorrect =
+              state.showResult && index == state.currentQuestion!.correctIndex;
+          final isWrong =
+              state.showResult &&
               index == state.selectedIndex &&
               index != state.currentQuestion!.correctIndex;
 
-          List<Color> gradient = List<Color>.from(gradients[index % gradients.length]);
-          if (isCorrect) gradient = [const Color(0xFF43C6AC), const Color(0xFF77E8D2)];
-          else if (isWrong) gradient = [const Color(0xFFFF6584), const Color(0xFFFF99AA)];
-          else if (isEliminated) gradient = [Colors.grey.shade300, Colors.grey.shade400];
+          List<Color> gradient = List<Color>.from(
+            gradients[index % gradients.length],
+          );
+          if (isCorrect)
+            gradient = [const Color(0xFF43C6AC), const Color(0xFF77E8D2)];
+          else if (isWrong)
+            gradient = [const Color(0xFFFF6584), const Color(0xFFFF99AA)];
+          else if (isEliminated)
+            gradient = [Colors.grey.shade300, Colors.grey.shade400];
 
           return AnswerCard(
             key: ValueKey('${state.questionCount}-$index'),
@@ -311,12 +371,13 @@ class _QuizScreenState extends State<QuizScreen> with TickerProviderStateMixin {
             isDisabled: state.showResult || isEliminated,
             isEliminated: isEliminated,
             index: index,
-            onTap: (state.showResult || isEliminated)
-                ? null
-                : () {
-                    AudioManager().playClick();
-                    context.read<QuizBloc>().add(SelectAnswer(index));
-                  },
+            onTap:
+                (state.showResult || isEliminated)
+                    ? null
+                    : () {
+                      AudioManager().playClick();
+                      context.read<QuizBloc>().add(SelectAnswer(index));
+                    },
           );
         },
       ),
@@ -325,32 +386,34 @@ class _QuizScreenState extends State<QuizScreen> with TickerProviderStateMixin {
 
   Widget _buildHintBar(BuildContext context, QuizState state) {
     return HintBar(
-      onMagnifier: () => showGameDialog(
-        context: context,
-        icon: '✂️',
-        iconColor: Colors.amber,
-        title: 'Loại 50/50',
-        description: 'Ẩn 2 đáp án sai bất kỳ\nchỉ còn 2 lựa chọn!',
-        costIcon: '⭐',
-        costText: '50',
-        confirmText: 'Dùng ngay!',
-        confirmColor: Colors.amber,
-        showCancel: true,
-        onConfirm: () => context.read<QuizBloc>().add(UseHint5050()),
-      ),
-      onKey: () => showGameDialog(
-        context: context,
-        icon: '🗝️',
-        iconColor: Colors.deepPurple,
-        title: 'Lộ đáp án',
-        description: 'Ẩn toàn bộ đáp án sai\nchỉ còn đúng 1 lựa chọn!',
-        costIcon: '⭐',
-        costText: '100',
-        confirmText: 'Mở thôi!',
-        confirmColor: Colors.deepPurple,
-        showCancel: true,
-        onConfirm: () => context.read<QuizBloc>().add(UseHintEliminate()),
-      ),
+      onMagnifier:
+          () => showGameDialog(
+            context: context,
+            icon: '✂️',
+            iconColor: Colors.amber,
+            title: 'Loại 50/50',
+            description: 'Ẩn 2 đáp án sai bất kỳ\nchỉ còn 2 lựa chọn!',
+            costIcon: '⭐',
+            costText: '50',
+            confirmText: 'Dùng ngay!',
+            confirmColor: Colors.amber,
+            showCancel: true,
+            onConfirm: () => context.read<QuizBloc>().add(UseHint5050()),
+          ),
+      onKey:
+          () => showGameDialog(
+            context: context,
+            icon: '🗝️',
+            iconColor: Colors.deepPurple,
+            title: 'Lộ đáp án',
+            description: 'Ẩn toàn bộ đáp án sai\nchỉ còn đúng 1 lựa chọn!',
+            costIcon: '⭐',
+            costText: '100',
+            confirmText: 'Mở thôi!',
+            confirmColor: Colors.deepPurple,
+            showCancel: true,
+            onConfirm: () => context.read<QuizBloc>().add(UseHintEliminate()),
+          ),
       onVideo: () => _onVideoHint(context),
     );
   }
@@ -358,7 +421,10 @@ class _QuizScreenState extends State<QuizScreen> with TickerProviderStateMixin {
   Future<void> _onVideoHint(BuildContext context) async {
     if (!RewardedAdManager().isAdLoaded) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('⏳ Quảng cáo chưa sẵn sàng, thử lại sau!'), backgroundColor: Colors.orange),
+        const SnackBar(
+          content: Text('⏳ Quảng cáo chưa sẵn sàng, thử lại sau!'),
+          backgroundColor: Colors.orange,
+        ),
       );
       return;
     }
@@ -386,14 +452,20 @@ class _QuizScreenState extends State<QuizScreen> with TickerProviderStateMixin {
           ..add(UseHintFree())
           ..add(ResumeTimer());
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('🎉 Đã ẩn 3 đáp án sai!'), backgroundColor: Color(0xFF43C6AC)),
+          const SnackBar(
+            content: Text('🎉 Đã ẩn 3 đáp án sai!'),
+            backgroundColor: Color(0xFF43C6AC),
+          ),
         );
       },
       onFailed: () {
         if (!mounted) return;
         context.read<QuizBloc>().add(ResumeTimer());
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('❌ Không tải được quảng cáo!'), backgroundColor: Colors.red),
+          const SnackBar(
+            content: Text('❌ Không tải được quảng cáo!'),
+            backgroundColor: Colors.red,
+          ),
         );
       },
     );

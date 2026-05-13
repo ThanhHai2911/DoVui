@@ -112,8 +112,10 @@
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
 	<key>NSCameraUsageDescription</key>
-<string>Chụp ảnh để gửi hỗ trợ</string>
-<key>NSPhotoLibraryUsageDescription</key>
-<string>Chọn ảnh để gửi hỗ trợ</string>
+		<string>Chụp ảnh để gửi hỗ trợ</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+		<string>Chọn ảnh để gửi hỗ trợ</string>
+	<key>NSMicrophoneUsageDescription</key>
+		<string>Ứng dụng cần microphone để voice chat</string>
 </dict>
 </plist>

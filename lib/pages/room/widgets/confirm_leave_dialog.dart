@@ -157,7 +157,7 @@ class _ConfirmLeaveDialogState extends State<ConfirmLeaveDialog>
             Expanded(
               child: Text(
                 widget.isHost
-                    ? 'Bạn là chủ phòng. Thoát sẽ xóa phòng và dữ liệu tất cả người chơi!'
+                    ? 'Bạn là chủ phòng. Rời sẽ xóa phòng và dữ liệu tất cả người chơi!'
                     : 'Bạn sẽ mất toàn bộ điểm số và thông tin trong phòng này.',
                 style: TextStyle(
                   fontSize: 13,
@@ -204,7 +204,7 @@ class _ConfirmLeaveDialogState extends State<ConfirmLeaveDialog>
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                 ),
                 child: Text(
-                  widget.isHost ? 'Thoát phòng' : 'Rời khỏi',
+                  widget.isHost ? 'Rời phòng' : 'Rời khỏi',
                   style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Colors.white, letterSpacing: 0.3),
                 ),
               ),
