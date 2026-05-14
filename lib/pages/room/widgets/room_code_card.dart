@@ -1,106 +1,112 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-/// Gradient card displaying the room code with a copy button.
-class RoomCodeCard extends StatefulWidget {
+class RoomCodeCard extends StatelessWidget {
   final String roomId;
-  final String password;
+  final String? password;
   final Animation<double> pulseAnim;
 
   const RoomCodeCard({
     super.key,
     required this.roomId,
-    required this.password,
+    this.password,
     required this.pulseAnim,
   });
 
-  @override
-  State<RoomCodeCard> createState() => _RoomCodeCardState();
-}
-
-class _RoomCodeCardState extends State<RoomCodeCard> {
-  bool _codeCopied = false;
+  String _formatCode(String id) {
+    final clean = id.replaceAll('-', '').toUpperCase();
+    if (clean.length >= 6) {
+      return '${clean.substring(0, 3)}${clean.substring(3, 6)}';
+    }
+    return id.toUpperCase();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF6C63FF), Color(0xFF9B8FFF)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF6C63FF).withOpacity(0.35),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          const Text(
-            'Mã phòng',
-            style: TextStyle(fontSize: 13, color: Colors.white70, fontWeight: FontWeight.w500),
-          ),
-          const SizedBox(height: 8),
-          ScaleTransition(
-            scale: widget.pulseAnim,
-            child: Text(
-              widget.roomId,
-              style: const TextStyle(
-                fontSize: 38,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-                letterSpacing: 8,
-              ),
-            ),
-          ),
-          const SizedBox(height: 12),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              _actionBtn(
-                icon: _codeCopied ? Icons.check_rounded : Icons.copy_rounded,
-                label: _codeCopied ? 'Đã sao chép' : 'Sao chép',
-                onTap: () {
-                  Clipboard.setData(ClipboardData(text: widget.roomId));
-                  setState(() => _codeCopied = true);
-                  Future.delayed(const Duration(seconds: 2), () {
-                    if (mounted) setState(() => _codeCopied = false);
-                  });
-                },
-              ),
-              if (widget.password.isNotEmpty) ...[
-                const SizedBox(width: 12),
-                _actionBtn(icon: Icons.lock_rounded, label: '🔒 Có mật khẩu', onTap: null),
-              ],
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _actionBtn({required IconData icon, required String label, VoidCallback? onTap}) {
-    return GestureDetector(
-      onTap: onTap,
+    return ScaleTransition(
+      scale: pulseAnim,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+        width: double.infinity,
+        padding: const EdgeInsets.fromLTRB(20, 14, 14, 14),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.2),
-          borderRadius: BorderRadius.circular(12),
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: Colors.grey.shade100),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 12,
+              offset: const Offset(0, 3),
+            ),
+          ],
         ),
         child: Row(
-          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Icon(icon, size: 14, color: Colors.white),
-            const SizedBox(width: 6),
-            Text(label, style: const TextStyle(fontSize: 12, color: Colors.white, fontWeight: FontWeight.w500)),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'MÃ PHÒNG',
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 1.8,
+                      color: Colors.grey.shade400,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    _formatCode(roomId),
+                    style: const TextStyle(
+                      fontSize: 30,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 6,
+                      color: Color(0xFF7B6EF6),
+                      height: 1.1,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            GestureDetector(
+              onTap: () {
+                Clipboard.setData(ClipboardData(text: roomId));
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Đã sao chép mã phòng!'),
+                    duration: Duration(seconds: 1),
+                    backgroundColor: Color(0xFF7B6EF6),
+                  ),
+                );
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 11,
+                ),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1A1A2E),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.copy_outlined, color: Colors.white, size: 15),
+                    SizedBox(width: 6),
+                    Text(
+                      'Sao chép',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ],
         ),
       ),

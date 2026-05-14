@@ -44,12 +44,24 @@ class VoiceService extends ChangeNotifier {
   bool get isSpeakerOn => _isSpeakerOn;
   List<VoiceParticipant> get participants => _participants.values.toList();
 
+  // ── Force Speaker (gọi nhiều lần để chống Android override) ──────────────
+
+  Future<void> _forceSpeaker() async {
+    try {
+      await Hardware.instance.setSpeakerphoneOn(true);
+      debugPrint('[Voice] forceSpeaker called');
+    } catch (e) {
+      debugPrint('[Voice] forceSpeaker error: $e');
+    }
+  }
+
   // ── Connect ───────────────────────────────────────────────────────────────
 
   Future<void> connect({
     required String roomId,
     required String userId,
     required String displayName,
+    bool enableMic = false,
   }) async {
     if (_isConnected) return;
     try {
@@ -74,13 +86,14 @@ class VoiceService extends ChangeNotifier {
       await _room!.connect(_livekitUrl, token);
 
       _isConnected = true;
-      await Hardware.instance.setSpeakerphoneOn(true);
 
+      // Lần 1: set speaker trước khi bật mic
+      await _forceSpeaker();
       await Future.delayed(const Duration(milliseconds: 200));
 
-      /// MICROPHONE
+      // Set mic theo yêu cầu (mặc định tắt)
       await _room!.localParticipant?.setMicrophoneEnabled(
-        true,
+        enableMic,
         audioCaptureOptions: const AudioCaptureOptions(
           echoCancellation: true,
           noiseSuppression: true,
@@ -88,8 +101,11 @@ class VoiceService extends ChangeNotifier {
           typingNoiseDetection: true,
         ),
       );
+      _isMicOn = enableMic;
 
-      _isMicOn = true;
+      // Lần 2: Android thường reset speaker sau khi audio session thay đổi
+      await Future.delayed(const Duration(milliseconds: 300));
+      await _forceSpeaker();
 
       _syncExistingParticipants();
       notifyListeners();
@@ -118,9 +134,9 @@ class VoiceService extends ChangeNotifier {
     _isSpeakerOn = false;
 
     _participants.clear();
+    _remoteAudioTracks.clear();
 
     notifyListeners();
-
     debugPrint('[Voice] Disconnected');
   }
 
@@ -129,12 +145,9 @@ class VoiceService extends ChangeNotifier {
   Future<void> toggleMic() async {
     try {
       if (_isMicOn) {
-        /// TẮT MIC
         await _room?.localParticipant?.setMicrophoneEnabled(false);
-
         _isMicOn = false;
       } else {
-        /// BẬT MIC LẠI
         await _room?.localParticipant?.setMicrophoneEnabled(
           true,
           audioCaptureOptions: const AudioCaptureOptions(
@@ -144,12 +157,16 @@ class VoiceService extends ChangeNotifier {
             typingNoiseDetection: true,
           ),
         );
-
         _isMicOn = true;
+
+        // Android reset speaker sau khi bật mic → force lại
+        if (_isSpeakerOn) {
+          await Future.delayed(const Duration(milliseconds: 200));
+          await _forceSpeaker();
+        }
       }
 
       notifyListeners();
-
       debugPrint('MIC STATE: $_isMicOn');
     } catch (e) {
       debugPrint('TOGGLE MIC ERROR: $e');
@@ -159,32 +176,31 @@ class VoiceService extends ChangeNotifier {
   // ── Speaker ───────────────────────────────────────────────────────────────
 
   Future<void> toggleSpeaker() async {
-  try {
-    _isSpeakerOn = !_isSpeakerOn;
+    try {
+      _isSpeakerOn = !_isSpeakerOn;
 
-    if (_isSpeakerOn) {
-      /// BẬT LOA NGOÀI
-      await Hardware.instance.setSpeakerphoneOn(true);
+      if (_isSpeakerOn) {
+        await Hardware.instance.setSpeakerphoneOn(true);
+        await Future.delayed(const Duration(milliseconds: 100));
+        await _forceSpeaker();
+        for (final track in _remoteAudioTracks) {
+          track.enable();
+        }
+      } else {
+        await Hardware.instance.setSpeakerphoneOn(false);
+        for (final track in _remoteAudioTracks) {
+          track.disable();
+        }
+      }
 
-      for (final track in _remoteAudioTracks) {
-        track.enable();
-      }
-    } else {
-      /// TẮT TOÀN BỘ ÂM THANH
-      for (final track in _remoteAudioTracks) {
-        track.disable();
-      }
+      notifyListeners();
+      debugPrint('SPEAKER: $_isSpeakerOn');
+    } catch (e) {
+      debugPrint('TOGGLE SPEAKER ERROR: $e');
     }
-
-    notifyListeners();
-
-    debugPrint('SPEAKER: $_isSpeakerOn');
-  } catch (e) {
-    debugPrint('TOGGLE SPEAKER ERROR: $e');
   }
-}
 
-  // ── Token (dart_jsonwebtoken ^3.x) ───────────────────────────────────────
+  // ── Token ─────────────────────────────────────────────────────────────────
 
   String _generateToken({
     required String roomId,
@@ -194,7 +210,6 @@ class VoiceService extends ChangeNotifier {
     final now = DateTime.now();
     final exp = now.add(const Duration(hours: 2));
 
-    // ^3.x: JWT constructor nhận payload trực tiếp, sign dùng JWTKey
     final jwt = JWT(
       {
         'iss': _apiKey,
@@ -215,7 +230,6 @@ class VoiceService extends ChangeNotifier {
       subject: userId,
     );
 
-    // ^3.x dùng SecretKey (HMAC-SHA256) — API không đổi so với ^2.x
     return jwt.sign(
       SecretKey(_apiSecret),
       algorithm: JWTAlgorithm.HS256,
@@ -230,17 +244,24 @@ class VoiceService extends ChangeNotifier {
       ..on<TrackSubscribedEvent>((e) {
         if (e.track is RemoteAudioTrack) {
           final track = e.track as RemoteAudioTrack;
-
           _remoteAudioTracks.add(track);
 
           if (_isSpeakerOn) {
             track.enable();
+            // Force speaker mỗi khi nhận track mới (Android hay reset ở đây)
+            _forceSpeaker();
           } else {
             track.disable();
           }
         }
 
         _upsertRemote(e.participant);
+        notifyListeners();
+      })
+      ..on<TrackUnsubscribedEvent>((e) {
+        if (e.track is RemoteAudioTrack) {
+          _remoteAudioTracks.remove(e.track);
+        }
         notifyListeners();
       })
       ..on<ParticipantConnectedEvent>((e) {
@@ -254,18 +275,16 @@ class VoiceService extends ChangeNotifier {
       ..on<TrackMutedEvent>((e) {
         final existing = _participants[e.participant.identity];
         if (existing != null) {
-          _participants[e.participant.identity] = existing.copyWith(
-            isMuted: true,
-          );
+          _participants[e.participant.identity] =
+              existing.copyWith(isMuted: true);
         }
         notifyListeners();
       })
       ..on<TrackUnmutedEvent>((e) {
         final existing = _participants[e.participant.identity];
         if (existing != null) {
-          _participants[e.participant.identity] = existing.copyWith(
-            isMuted: false,
-          );
+          _participants[e.participant.identity] =
+              existing.copyWith(isMuted: false);
         }
         notifyListeners();
       })
@@ -285,19 +304,20 @@ class VoiceService extends ChangeNotifier {
         _isConnected = false;
         _isMicOn = false;
         _isSpeakerOn = true;
-
         _participants.clear();
-
+        _remoteAudioTracks.clear();
         notifyListeners();
       });
   }
+
+  // ── Participants ──────────────────────────────────────────────────────────
 
   void _syncExistingParticipants() {
     final local = _room?.localParticipant;
     if (local != null) {
       _participants[local.identity] = VoiceParticipant(
         userId: local.identity,
-        name: local.name, // ignore: dead_null_aware_expression
+        name: local.name,
         isSpeaking: false,
         isMuted: false,
       );
@@ -311,7 +331,7 @@ class VoiceService extends ChangeNotifier {
     );
     _participants[p.identity] = VoiceParticipant(
       userId: p.identity,
-      name: p.name, // ignore: dead_null_aware_expression
+      name: p.name,
       isSpeaking: p.isSpeaking,
       isMuted: isMuted,
     );

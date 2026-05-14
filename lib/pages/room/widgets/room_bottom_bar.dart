@@ -1,181 +1,144 @@
 import 'package:flutter/material.dart';
 
-// ─── Bottom Bar ───────────────────────────────────────────────────────────────
-
 class RoomBottomBar extends StatelessWidget {
   final bool isMicOn;
   final bool isSpeakerOn;
-  final bool isChatOpen;
+  final bool isHost;
+  final bool canStart;
+  final bool isReady;
   final VoidCallback onMicToggle;
   final VoidCallback onSpeakerToggle;
-  final VoidCallback onChatToggle;
-  final VoidCallback onLeave;
+  final VoidCallback onMainAction;
 
   const RoomBottomBar({
     super.key,
     required this.isMicOn,
     required this.isSpeakerOn,
-    required this.isChatOpen,
+    required this.isHost,
+    required this.canStart,
+    required this.isReady,
     required this.onMicToggle,
     required this.onSpeakerToggle,
-    required this.onChatToggle,
-    required this.onLeave,
+    required this.onMainAction,
   });
 
   @override
   Widget build(BuildContext context) {
+    final String label;
+    final List<Color> gradientColors;
+    final IconData actionIcon;
+    final bool isDisabled;
+
+    if (isHost) {
+      isDisabled = !canStart;
+      label = canStart ? 'BẮT ĐẦU' : 'Chờ mọi người...';
+      gradientColors = canStart
+          ? [const Color(0xFF9B6BFF), const Color(0xFFFF6FA3)]
+          : [Colors.grey.shade300, Colors.grey.shade300];
+      actionIcon = Icons.sports_esports_rounded;
+    } else {
+      isDisabled = false;
+      label = isReady ? 'Đã sẵn sàng' : 'SẴN SÀNG';
+      gradientColors = isReady
+          ? [const Color(0xFF2ECC71), const Color(0xFF1ABC9C)]
+          : [const Color(0xFF7B6EF6), const Color(0xFFFF6FA3)];
+      actionIcon =
+          isReady ? Icons.check_circle_rounded : Icons.thumb_up_rounded;
+    }
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.90),
-        borderRadius: BorderRadius.circular(40),
-        border: Border.all(color: Colors.white.withOpacity(0.25)),
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
       child: Row(
-  children: [
-    Expanded(
-      child: RoomBottomBarItem(
-        child: isMicOn
-            ? const Text('🎤', style: TextStyle(fontSize: 26))
-            : Stack(
-                alignment: Alignment.center,
-                children: [
-                  const Text('🎤', style: TextStyle(fontSize: 26)),
-                  Transform.rotate(
-                    angle: 0.8,
-                    child: Container(
-                      width: 32,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: Colors.red,
-                        borderRadius: BorderRadius.circular(10),
+        children: [
+          _IconBtn(
+            icon: isMicOn ? Icons.mic_rounded : Icons.mic_off_rounded,
+            isActive: isMicOn,
+            onTap: onMicToggle,
+          ),
+          const SizedBox(width: 4),
+          _IconBtn(
+            icon: isSpeakerOn
+                ? Icons.volume_up_rounded
+                : Icons.volume_off_rounded,
+            isActive: isSpeakerOn,
+            onTap: onSpeakerToggle,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: GestureDetector(
+              onTap: isDisabled ? null : onMainAction,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 250),
+                height: 52,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: gradientColors,
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight,
+                  ),
+                  borderRadius: BorderRadius.circular(18),
+                  boxShadow: isDisabled
+                      ? null
+                      : [
+                          BoxShadow(
+                            color: gradientColors.first.withOpacity(0.4),
+                            blurRadius: 16,
+                            offset: const Offset(0, 6),
+                          ),
+                        ],
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(actionIcon, color: Colors.white, size: 20),
+                    const SizedBox(width: 8),
+                    Text(
+                      label,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w900,
+                        fontSize: isHost && !canStart ? 13 : 16,
+                        letterSpacing: 1.0,
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-        title: 'Mic',
-        color: isMicOn ? Colors.green : Colors.grey,
-        onTap: onMicToggle,
+            ),
+          ),
+        ],
       ),
-    ),
-    const SizedBox(width: 6),
-    Expanded(
-      child: RoomBottomBarItem(
-        child: Text(
-          isSpeakerOn ? '🔊' : '🔇',
-          style: const TextStyle(fontSize: 24),
-        ),
-        title: 'Loa',
-        color: isSpeakerOn ? Colors.blue : Colors.grey,
-        onTap: onSpeakerToggle,
-      ),
-    ),
-    const SizedBox(width: 6),
-    Expanded(
-      child: RoomBottomBarItem(
-        child: const Text('💬', style: TextStyle(fontSize: 24)),
-        title: 'Chat',
-        color: Colors.deepPurple,
-        onTap: onChatToggle,
-      ),
-    ),
-    const SizedBox(width: 6),
-    Expanded(
-      child: RoomBottomBarItem(
-        child: const Text('🚪', style: TextStyle(fontSize: 24)),
-        title: 'Rời phòng',
-        color: Colors.red,
-        onTap: onLeave,
-      ),
-    ),
-  ],
-),
     );
   }
 }
 
-// ─── Bottom Bar Item ──────────────────────────────────────────────────────────
+class _IconBtn extends StatelessWidget {
+  final IconData icon;
+  final bool isActive;
+  final VoidCallback onTap;
 
-class RoomBottomBarItem extends StatelessWidget {
-  final Widget? child;
-  final IconData? icon;
-  final String title;
-  final String? subTitle;
-  final int? badge;
-  final Color color;
-  final VoidCallback? onTap;
-
-  const RoomBottomBarItem({
-    super.key,
-    this.child,
-    this.icon,
-    required this.title,
-    this.subTitle,
-    this.badge,
-    required this.color,
-    this.onTap,
+  const _IconBtn({
+    required this.icon,
+    required this.isActive,
+    required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 12),
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.08),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                child ?? Icon(icon, color: color, size: 28),
-                const SizedBox(height: 6),
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 15,
-                  ),
-                ),
-                if (subTitle != null)
-                  Text(
-                    subTitle!,
-                    style: TextStyle(
-                      color: color,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 13,
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          if (badge != null)
-            Positioned(
-              right: -2,
-              top: -2,
-              child: Container(
-                padding: const EdgeInsets.all(5),
-                decoration: const BoxDecoration(
-                  color: Colors.red,
-                  shape: BoxShape.circle,
-                ),
-                child: Text(
-                  badge.toString(),
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ),
-        ],
+      child: Container(
+        width: 48,
+        height: 52,
+        decoration: BoxDecoration(
+          color: isActive ? const Color(0xFFEFEBFF) : Colors.grey.shade100,
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Icon(
+          icon,
+          color: isActive ? const Color(0xFF7B6EF6) : Colors.grey.shade400,
+          size: 22,
+        ),
       ),
     );
   }

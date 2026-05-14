@@ -127,61 +127,96 @@ class _JoinRoomSheetState extends State<JoinRoomSheet> {
   }
 
   Widget _buildContent(RoomState state) {
-    final isLoading = state.status == RoomStatus.loading;
+  final isLoading = state.status == RoomStatus.loading;
 
-    return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-      ),
-      padding: EdgeInsets.only(
-        left: 24,
-        right: 24,
-        top: 20,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 32,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Center(
-            child: Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.grey.shade300,
-                borderRadius: BorderRadius.circular(2),
+  final screenWidth = MediaQuery.of(context).size.width;
+  final isSmall = screenWidth < 360;
+
+  double responsive(double value) {
+    if (screenWidth >= 430) return value * 1.1;
+    if (screenWidth <= 320) return value * 0.85;
+    return value;
+  }
+
+  return SafeArea(
+    child: SingleChildScrollView(
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+      child: Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(
+            top: Radius.circular(28),
+          ),
+        ),
+        padding: EdgeInsets.only(
+          left: responsive(20),
+          right: responsive(20),
+          top: responsive(18),
+          bottom:
+              MediaQuery.of(context).viewInsets.bottom +
+              responsive(24),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: responsive(40),
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2),
+                ),
               ),
             ),
-          ),
-          const SizedBox(height: 20),
-          const Text(
-            'Vào phòng bạn bè',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF1E1B4B),
+
+            SizedBox(height: responsive(18)),
+
+            Text(
+              'Vào phòng bạn bè',
+              style: TextStyle(
+                fontSize: responsive(isSmall ? 18 : 20),
+                fontWeight: FontWeight.bold,
+                color: const Color(0xFF1E1B4B),
+              ),
             ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            'Nhập mã phòng 6 ký tự do bạn bè chia sẻ',
-            style: TextStyle(fontSize: 13, color: Colors.grey.shade500),
-          ),
-          const SizedBox(height: 24),
-          _buildCodeInput(),
-          const SizedBox(height: 14),
-          _buildPassInput(),
-          if (_generalError != null) ...[
-            const SizedBox(height: 10),
-            _buildInlineError(_generalError!, icon: Icons.wifi_off_rounded),
+
+            SizedBox(height: responsive(6)),
+
+            Text(
+              'Nhập mã phòng 6 ký tự do bạn bè chia sẻ',
+              style: TextStyle(
+                fontSize: responsive(12),
+                color: Colors.grey.shade500,
+              ),
+            ),
+
+            SizedBox(height: responsive(22)),
+
+            _buildCodeInput(),
+
+            SizedBox(height: responsive(14)),
+
+            _buildPassInput(),
+
+            if (_generalError != null) ...[
+              SizedBox(height: responsive(10)),
+              _buildInlineError(
+                _generalError!,
+                icon: Icons.wifi_off_rounded,
+              ),
+            ],
+
+            SizedBox(height: responsive(22)),
+
+            _buildJoinButton(isLoading),
           ],
-          const SizedBox(height: 24),
-          _buildJoinButton(isLoading),
-        ],
+        ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildCodeInput() {
     final hasError = _codeError != null;

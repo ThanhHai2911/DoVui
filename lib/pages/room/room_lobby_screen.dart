@@ -16,12 +16,9 @@ import 'package:permission_handler/permission_handler.dart';
 import 'bloc/room_bloc.dart';
 import 'bloc/room_event.dart';
 import 'bloc/room_state.dart';
-import 'widgets/room_avatar_palettes.dart';
 import 'widgets/room_top_bar.dart';
 import 'widgets/room_players_row.dart';
 import 'widgets/room_bottom_bar.dart';
-import 'widgets/room_start_button.dart';
-import 'widgets/room_waiting_message.dart';
 
 class RoomLobbyScreen extends StatefulWidget {
   final String currentUserId;
@@ -45,6 +42,7 @@ class _RoomLobbyScreenState extends State<RoomLobbyScreen>
   late Animation<double> _pulseAnim;
   late VoiceService _voiceService;
   final AudioPlayer _audioPlayer = AudioPlayer();
+  final ScrollController _scrollController = ScrollController();
 
   Timer? _heartbeatTimer;
   StreamSubscription? _presenceSub;
@@ -57,6 +55,7 @@ class _RoomLobbyScreenState extends State<RoomLobbyScreen>
   bool _completionDialogOpen = false;
   bool _isChatOpen = true;
   List<String> _knownPlayerIds = [];
+  bool _micWasOn = false;
 
   @override
   void initState() {
@@ -123,6 +122,7 @@ class _RoomLobbyScreenState extends State<RoomLobbyScreen>
         roomId: room.roomId,
         userId: widget.currentUserId,
         displayName: myPlayer.displayName,
+        enableMic: _micWasOn,
       );
       if (!mounted) return;
 
@@ -130,6 +130,19 @@ class _RoomLobbyScreenState extends State<RoomLobbyScreen>
     } catch (e) {
       debugPrint('VOICE ERROR: $e');
     }
+  }
+
+  // Thêm method này vào _RoomLobbyScreenState
+  Future<void> _toggleReady(RoomModel room) async {
+    final myPlayer = room.players.firstWhere(
+      (p) => p.userId == widget.currentUserId,
+      orElse: () => room.players.first,
+    );
+    await RoomService.setPlayerReady(
+      room.roomId,
+      widget.currentUserId,
+      !myPlayer.isReady,
+    );
   }
 
   void _startPresenceStream(String roomId) {
@@ -147,8 +160,23 @@ class _RoomLobbyScreenState extends State<RoomLobbyScreen>
     _voiceService.disconnect();
     _voiceService.dispose();
     _audioPlayer.dispose();
+    _scrollController.dispose();
 
     super.dispose();
+  }
+
+  void _scrollToBottom() {
+    Future.delayed(const Duration(milliseconds: 200), () {
+      if (!_scrollController.hasClients) return;
+
+      final current = _scrollController.offset;
+
+      _scrollController.animateTo(
+        current + 100,
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeOut,
+      );
+    });
   }
 
   bool _playersChanged(List<RoomPlayer>? prev, List<RoomPlayer>? curr) {
@@ -166,7 +194,8 @@ class _RoomLobbyScreenState extends State<RoomLobbyScreen>
       if (p.userId != c.userId ||
           p.score != c.score ||
           p.isFinished != c.isFinished ||
-          p.isHost != c.isHost) {
+          p.isHost != c.isHost ||
+          p.isReady != c.isReady) {
         _prevPlayers = curr;
         return true;
       }
@@ -293,6 +322,16 @@ class _RoomLobbyScreenState extends State<RoomLobbyScreen>
             _closeCompletionDialogIfOpen();
             _myFinishedShowing = false;
             _shouldStayInRoom = false;
+            final room = state.room;
+            if (room != null) {
+              final isHost = room.players.any(
+                (p) => p.userId == widget.currentUserId && p.isHost,
+              );
+              if (isHost) {
+                // Host reset tất cả non-host về chưa sẵn sàng (1 lần duy nhất)
+                RoomService.resetAllPlayersReady(room.roomId);
+              }
+            }
           }
           _prevStatus = state.status;
         },
@@ -335,8 +374,10 @@ class _RoomLobbyScreenState extends State<RoomLobbyScreen>
 
           if (state.status == RoomStatus.playing) {
             if (myFinished || _myFinishedShowing) {
+              _restoreMicState();
               return _buildWaitingLobby(context, room, isHost);
             }
+            _micWasOn = _voiceService.isMicOn;
             return _buildPlayingView(context, room);
           }
 
@@ -344,6 +385,17 @@ class _RoomLobbyScreenState extends State<RoomLobbyScreen>
         },
       ),
     );
+  }
+
+  Future<void> _restoreMicState() async {
+    // Chỉ xử lý nếu trạng thái hiện tại khác với trạng thái đã lưu
+    if (_voiceService.isMicOn == _micWasOn) return;
+
+    if (_micWasOn) {
+      await _voiceService.toggleMic(); // bật lại nếu trước đó đang bật
+    } else {
+      await _voiceService.toggleMic(); // tắt nếu trước đó đang tắt
+    }
   }
 
   // ─── Waiting Lobby ────────────────────────────────────────────────────────
@@ -354,6 +406,11 @@ class _RoomLobbyScreenState extends State<RoomLobbyScreen>
       orElse: () => room.players.first,
     );
 
+    final readyCount = room.players.where((p) => p.isHost || p.isReady).length;
+    final canStart =
+        readyCount == room.players.length && room.players.length >= 2;
+    final isKeyboardOpen = MediaQuery.of(context).viewInsets.bottom > 0;
+
     return Scaffold(
       backgroundColor: const Color(0xFFF5F6FA),
       body: SafeArea(
@@ -361,10 +418,17 @@ class _RoomLobbyScreenState extends State<RoomLobbyScreen>
           children: [
             Column(
               children: [
-                RoomTopBar(room: room, isHost: isHost),
+                RoomTopBar(
+                  room: room,
+                  isHost: isHost,
+                  onLeave: () => _confirmLeave(context, room),
+                ),
                 Expanded(
                   child: SingleChildScrollView(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 120),
+                    controller: _scrollController,
+                    keyboardDismissBehavior:
+                        ScrollViewKeyboardDismissBehavior.onDrag,
+                    padding: EdgeInsets.fromLTRB(16, 0, 16, 120),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -380,7 +444,7 @@ class _RoomLobbyScreenState extends State<RoomLobbyScreen>
                           currentUserId: widget.currentUserId,
                           presenceMap: _presenceMap,
                         ),
-                        const SizedBox(height: 20),
+                        const SizedBox(height: 10),
                         if (_isChatOpen) ...[
                           ChatOverlay(
                             roomId: room.roomId,
@@ -388,54 +452,51 @@ class _RoomLobbyScreenState extends State<RoomLobbyScreen>
                             displayName: myPlayer.displayName,
                             voiceService: _voiceService,
                             collapsible: false,
+                            onInputTap: _scrollToBottom,
                           ),
-                          const SizedBox(height: 16),
+                          const SizedBox(height: 10),
                         ],
-                        if (isHost)
-                          RoomStartButton(
-                            room: room,
-                            onStart: () {
-                              final bloc = context.read<RoomBloc>();
-                              if (bloc.isClosed) return;
-                              _myFinishedShowing = false;
-                              _shouldStayInRoom = false;
-                              bloc.add(StartGame());
-                            },
-                          ),
-                        const SizedBox(height: 30),
-                        if (!isHost) const RoomWaitingMessage(),
                       ],
                     ),
                   ),
                 ),
               ],
             ),
-            Positioned(
-              left: 16,
-              right: 16,
-              bottom: 16,
-              child: RoomBottomBar(
-                isMicOn: _voiceService.isMicOn,
-                isSpeakerOn: _voiceService.isSpeakerOn,
-                isChatOpen: _isChatOpen,
+            if (!isKeyboardOpen)
+              Positioned(
+                left: 16,
+                right: 16,
+                bottom: 16,
+                child: AnimatedSlide(
+                  duration: const Duration(milliseconds: 200),
+                  offset: isKeyboardOpen ? const Offset(0, 1) : Offset.zero,
+                  child: AnimatedOpacity(
+                    duration: const Duration(milliseconds: 200),
+                    opacity: isKeyboardOpen ? 0 : 1,
+                    child: RoomBottomBar(
+                      isMicOn: _voiceService.isMicOn,
+                      isSpeakerOn: _voiceService.isSpeakerOn,
+                      isHost: isHost,
+                      canStart: canStart,
+                      isReady: myPlayer.isReady,
+                      onMicToggle: () async => await _voiceService.toggleMic(),
+                      onSpeakerToggle: () => _voiceService.toggleSpeaker(),
+                      onMainAction:
+                          isHost
+                              ? () {
+                                final bloc = context.read<RoomBloc>();
+                                if (bloc.isClosed) return;
 
-                onMicToggle: () async {
-                  await _voiceService.toggleMic();
-                },
+                                _myFinishedShowing = false;
+                                _shouldStayInRoom = false;
 
-                onSpeakerToggle: () {
-                  _voiceService.toggleSpeaker();
-                },
-
-                onChatToggle: () {
-                  setState(() {
-                    _isChatOpen = !_isChatOpen;
-                  });
-                },
-
-                onLeave: () => _confirmLeave(context, room),
+                                bloc.add(StartGame());
+                              }
+                              : () => _toggleReady(room),
+                    ),
+                  ),
+                ),
               ),
-            ),
           ],
         ),
       ),

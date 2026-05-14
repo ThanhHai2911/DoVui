@@ -17,14 +17,16 @@ class ChatOverlay extends StatefulWidget {
   final String displayName;
   final bool collapsible;
   final dynamic voiceService;
+  final VoidCallback? onInputTap;
 
   const ChatOverlay({
     super.key,
     required this.roomId,
     required this.currentUserId,
     required this.displayName,
-    this.collapsible = false, 
+    this.collapsible = false,
     required this.voiceService,
+    this.onInputTap,
   });
 
   @override
@@ -40,7 +42,7 @@ class _ChatOverlayState extends State<ChatOverlay>
 
   bool _isOpen = true;
   // Mic mặc định TẮT khi vào phòng
-  bool _isMuted = false;
+  bool get _isMuted => !(widget.voiceService?.isSpeakerOn ?? true);
   bool get _isMicOff => !(widget.voiceService?.isMicOn ?? false);
   int _unread = 0;
   late AnimationController _slideCtrl;
@@ -93,13 +95,14 @@ class _ChatOverlayState extends State<ChatOverlay>
       }
     });
   }
-  Future<void> _toggleMic() async {
-  await widget.voiceService?.toggleMic();
 
-  if (mounted) {
-    setState(() {});
+  Future<void> _toggleMic() async {
+    await widget.voiceService?.toggleMic();
+
+    if (mounted) {
+      setState(() {});
+    }
   }
-}
 
   void _toggleChat() {
     setState(() {
@@ -114,8 +117,13 @@ class _ChatOverlayState extends State<ChatOverlay>
     });
   }
 
-  void _toggleMute() => setState(() => _isMuted = !_isMuted);
+  Future<void> _toggleMute() async {
+    await widget.voiceService?.toggleSpeaker();
 
+    if (!mounted) return;
+
+    setState(() {});
+  }
 
   Future<void> _send() async {
     final text = _ctrl.text.trim();
@@ -135,106 +143,142 @@ class _ChatOverlayState extends State<ChatOverlay>
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
-        if (widget.collapsible)
-          Padding(
-  padding: const EdgeInsets.only(bottom: 8),
-  child: Row(
-    mainAxisSize: MainAxisSize.min,
-    children: [
-      /// MIC
-      _ControlBtn(
-        child: _isMicOff
-            ? Stack(
-                alignment: Alignment.center,
-                children: [
-                  const Text(
-                    '🎤',
-                    style: TextStyle(fontSize: 24),
-                  ),
-
-                  Transform.rotate(
-                    angle: 0.8,
-                    child: Container(
-                      width: 30,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: Colors.red,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                    ),
-                  ),
-                ],
-              )
-            : const Text(
-                '🎤',
-                style: TextStyle(fontSize: 24),
-              ),
-
-        color:
-            _isMicOff ? Colors.grey : const Color(0xFF6C63FF),
-
-        onTap: _toggleMic,
-
-        tooltip: _isMicOff
-            ? 'Bật micro'
-            : 'Tắt micro',
-      ),
-
-      const SizedBox(width: 8),
-
-      /// SPEAKER
-      _ControlBtn(
-        child: Text(
-          _isMuted ? '🔇' : '🔊',
-          style: const TextStyle(fontSize: 24),
-        ),
-
-        color:
-            _isMuted ? Colors.grey : const Color(0xFF6C63FF),
-
-        onTap: _toggleMute,
-
-        tooltip:
-            _isMuted ? 'Bật âm thanh' : 'Tắt âm thanh',
-      ),
-
-      const SizedBox(width: 8),
-
-      /// CHAT
-      _ControlBtn(
-        child: Text(
-          _isOpen ? '💬' : '💬',
-          style: const TextStyle(fontSize: 24),
-        ),
-
-        color: const Color(0xFF6C63FF),
-
-        badge: (!_isOpen && _unread > 0)
-            ? _unread
-            : null,
-
-        onTap: _toggleChat,
-
-        tooltip: _isOpen ? 'Ẩn chat' : 'Mở chat',
-      ),
-    ],
-  ),
-),
-
         if (!widget.collapsible || _isOpen)
           SlideTransition(
             position: _slideAnim,
-            child: _ChatBox(
-              messages: _messages,
-              currentUserId: widget.currentUserId,
-              scrollCtrl: _scrollCtrl,
-              ctrl: _ctrl,
-              onSend: _send,
-              showMuteInHeader: !widget.collapsible,
-              isMuted: _isMuted,
-              isMicOff: _isMicOff,
-              onToggleMute: _toggleMute,
-              onMic: _toggleMic,
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 16,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+                border: Border.all(color: Colors.grey.shade100),
+              ),
+              child: Column(
+                children: [
+                  // ── Header ────────────────────────────────────────────────────
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
+                    child: Row(
+                      children: [
+                        const Text(
+                          'Trò chuyện',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w800,
+                            color: Color(0xFF1A1A2E),
+                          ),
+                        ),
+                        const Spacer(),
+                        if (_unread > 0)
+                          Text(
+                            '$_unread tin mới',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.grey.shade400,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+
+                  Divider(height: 1, color: Colors.grey.shade100),
+
+                  // ── Message list ──────────────────────────────────────────────
+                  SizedBox(
+                    height: 220,
+                    child:
+                        _messages
+                                .isEmpty // ← đổi messages → _messages
+                            ? Center(
+                              child: Text(
+                                'Chưa có tin nhắn nào 👋',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey.shade400,
+                                ),
+                              ),
+                            )
+                            : ListView.builder(
+                              controller: _scrollCtrl,
+                              padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                              itemCount:
+                                  _messages
+                                      .length, // ← đổi messages → _messages
+                              itemBuilder: (_, i) {
+                                final msg =
+                                    _messages[i]; // ← đổi messages → _messages
+                                final isMe = msg.userId == widget.currentUserId;
+                                return _MessageBubble(
+                                  msg: msg,
+                                  isMe: isMe,
+                                  paletteIndex: i % _kAvatarPalettes.length,
+                                );
+                              },
+                            ),
+                  ),
+
+                  Divider(height: 1, color: Colors.grey.shade100),
+
+                  // ── Input ─────────────────────────────────────────────────────
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.sentiment_satisfied_alt_outlined,
+                          color: Colors.grey.shade400,
+                          size: 22,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: TextField(
+                            onTap: widget.onInputTap,
+                            onTapAlwaysCalled: true,
+                            controller: _ctrl,
+                            style: const TextStyle(fontSize: 13),
+                            decoration: InputDecoration(
+                              hintText: 'Nhắn cho cả phòng...',
+                              hintStyle: TextStyle(
+                                fontSize: 13,
+                                color: Colors.grey.shade400,
+                              ),
+                              border: InputBorder.none,
+                              isDense: true,
+                              contentPadding: EdgeInsets.zero,
+                            ),
+                            onSubmitted: (_) => _send(),
+                            textInputAction: TextInputAction.send,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        GestureDetector(
+                          onTap: _send,
+                          child: Container(
+                            width: 38,
+                            height: 38,
+                            decoration: const BoxDecoration(
+                              color: Color(0xFF7B6EF6),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.send_rounded,
+                              size: 18,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
       ],
@@ -285,20 +329,12 @@ class _ControlBtn extends StatelessWidget {
                     offset: const Offset(0, 4),
                   ),
                 ],
-                border: Border.all(
-                  color: color.withOpacity(0.3),
-                ),
+                border: Border.all(color: color.withOpacity(0.3)),
               ),
 
               alignment: Alignment.center,
 
-              child:
-                  child ??
-                  Icon(
-                    icon,
-                    size: 20,
-                    color: color,
-                  ),
+              child: child ?? Icon(icon, size: 20, color: color),
             ),
 
             if (badge != null && badge! > 0)
@@ -358,74 +394,21 @@ class _ChatBox extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 340,
+      height: 300,
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF6C63FF).withOpacity(0.08),
-            blurRadius: 20,
-            offset: const Offset(0, 6),
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
           ),
         ],
         border: Border.all(color: Colors.grey.shade100),
       ),
       child: Column(
         children: [
-          // Header
-          Container(
-            padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
-            decoration: const BoxDecoration(
-              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-            ),
-            child: Row(
-              children: [
-                Text('💬', style: TextStyle(fontSize: 24)),
-                const SizedBox(width: 8),
-                const Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'CHAT',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w800,
-                          color: Color(0xFF1E1B4B),
-                          letterSpacing: 0.3,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                // Online indicator
-                Row(
-                  children: [
-                    Container(
-                      width: 7,
-                      height: 7,
-                      decoration: const BoxDecoration(
-                        color: Color(0xFF4CAF50),
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      'online',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: Colors.grey.shade500,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-
-          Divider(height: 1, color: Colors.grey.shade100),
-
           // Danh sách tin nhắn
           Expanded(
             child:
@@ -452,7 +435,7 @@ class _ChatBox extends StatelessWidget {
                     )
                     : ListView.builder(
                       controller: scrollCtrl,
-                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                      padding: const EdgeInsets.fromLTRB(16, 14, 16, 4),
                       itemCount: messages.length,
                       itemBuilder: (_, i) {
                         final msg = messages[i];
@@ -475,51 +458,40 @@ class _ChatBox extends StatelessWidget {
             child: Row(
               children: [
                 Expanded(
-                  child: Container(
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF4F6FF),
-                      borderRadius: BorderRadius.circular(14),
+                  child: TextField(
+                    controller: ctrl,
+                    style: const TextStyle(fontSize: 13),
+                    decoration: InputDecoration(
+                      hintText: 'Nhắn cho cả phòng...',
+                      hintStyle: TextStyle(
+                        fontSize: 13,
+                        color: Colors.grey.shade400,
+                      ),
+                      border: InputBorder.none,
+                      isDense: true,
+                      contentPadding: EdgeInsets.zero,
                     ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: ctrl,
-                            style: const TextStyle(fontSize: 13),
-                            decoration: const InputDecoration(
-                              hintText: 'Nhập tin nhắn...',
-                              hintStyle: TextStyle(
-                                fontSize: 13,
-                                color: Colors.grey,
-                              ),
-                              border: InputBorder.none,
-                              contentPadding: EdgeInsets.symmetric(
-                                horizontal: 14,
-                                vertical: 11,
-                              ),
-                            ),
-                            onSubmitted: (_) => onSend(),
-                            textInputAction: TextInputAction.send,
-                          ),
-                        ),
-                      ],
-                    ),
+                    onSubmitted: (_) => onSend(),
+                    textInputAction: TextInputAction.send,
                   ),
                 ),
                 const SizedBox(width: 8),
                 GestureDetector(
                   onTap: onSend,
                   child: Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF6C63FF),
-                      borderRadius: BorderRadius.circular(14),
+                    width: 38,
+                    height: 38,
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [Color(0xFF9B6BFF), Color(0xFFFF6FA3)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      shape: BoxShape.circle,
                     ),
                     child: const Icon(
-                      Icons.play_arrow_rounded,
-                      size: 22,
+                      Icons.send_rounded,
+                      size: 18,
                       color: Colors.white,
                     ),
                   ),
@@ -564,42 +536,6 @@ class _MessageBubble extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (!isMe) ...[
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: bgColor,
-                border:
-                    isMe
-                        ? Border.all(color: const Color(0xFF6C63FF), width: 2.5)
-                        : Border.all(color: Colors.white, width: 2),
-                boxShadow: [
-                  BoxShadow(
-                    color:
-                        isMe
-                            ? const Color(0xFF6C63FF).withOpacity(0.25)
-                            : Colors.black.withOpacity(0.07),
-                    blurRadius: 10,
-                    offset: const Offset(0, 3),
-                  ),
-                ],
-              ),
-              child: Center(
-                child: Text(
-                  _initials,
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w800,
-                    color: textColor,
-                    letterSpacing: -0.5,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(width: 10),
-          ],
           Expanded(
             child: Column(
               crossAxisAlignment:

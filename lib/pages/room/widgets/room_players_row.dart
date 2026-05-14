@@ -1,8 +1,5 @@
 import 'package:dovui/data/models/room_model.dart';
 import 'package:flutter/material.dart';
-import 'room_avatar_palettes.dart';
-
-// ─── Players Row ──────────────────────────────────────────────────────────────
 
 class RoomPlayersRow extends StatelessWidget {
   final RoomModel room;
@@ -16,255 +13,304 @@ class RoomPlayersRow extends StatelessWidget {
     required this.presenceMap,
   });
 
+  static const List<List<Color>> _palettes = [
+    [Color(0xFF9B6BFF), Color(0xFFD4AAFF)],
+    [Color(0xFF22C8F0), Color(0xFF80E8FF)],
+    [Color(0xFFFF6FA3), Color(0xFFFFB3CC)],
+    [Color(0xFF4CD97B), Color(0xFFA8F0C2)],
+    [Color(0xFFFF9F43), Color(0xFFFFD4A0)],
+    [Color(0xFF5BC8FF), Color(0xFFB3E8FF)],
+    [Color(0xFFFF8C69), Color(0xFFFFBFA0)],
+    [Color(0xFFB06EFF), Color(0xFFDDB3FF)],
+  ];
+
+  static const List<String> _avatarEmojis = [
+    '🦊',
+    '🐉',
+    '🐱',
+    '🤖',
+    '🐼',
+    '🦁',
+    '🐸',
+    '🦋',
+  ];
+
   @override
   Widget build(BuildContext context) {
+    final players = room.players;
+    const maxSlots = 8;
+
+    final screenWidth = MediaQuery.of(context).size.width;
+
+    double childAspectRatio = 0.72;
+
+    if (screenWidth < 360) {
+      childAspectRatio = 0.70;
+    } else if (screenWidth > 600) {
+      childAspectRatio = 0.95;
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           children: [
-            Text(
-              'NGƯỜI CHƠI',
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w800,
-                color: Colors.grey.shade500,
-                letterSpacing: 1.2,
+            Expanded(
+              child: Text(
+                'Người chơi ${players.length}/$maxSlots',
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFF1A1A2E),
+                ),
+                overflow: TextOverflow.ellipsis,
               ),
             ),
             const SizedBox(width: 8),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 10,
+                vertical: 5,
+              ),
               decoration: BoxDecoration(
-                color: const Color(0xFF6C63FF),
+                color: const Color(0xFFEFEBFF),
                 borderRadius: BorderRadius.circular(20),
               ),
-              child: Text(
-                '${room.players.length}/8',
-                style: const TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
+              child: const Text(
+                'CHƠI CÙNG BẠN BÈ',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 0.5,
+                  color: Color(0xFF7B6EF6),
                 ),
-              ),
-            ),
-            const Spacer(),
-            GestureDetector(
-              onTap: () {},
-              child: const Row(
-                children: [
-                  Text(
-                    'Xem tất cả',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF6C63FF),
-                    ),
-                  ),
-                  Icon(
-                    Icons.chevron_right_rounded,
-                    size: 16,
-                    color: Color(0xFF6C63FF),
-                  ),
-                ],
               ),
             ),
           ],
         ),
-        const SizedBox(height: 14),
-        SizedBox(
-          height: 110,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            itemCount: room.players.length < 8
-                ? room.players.length + 1
-                : room.players.length,
-            itemBuilder: (context, index) {
-              if (index == room.players.length && room.players.length < 8) {
-                return const RoomInviteSlot();
-              }
-              final player = room.players[index];
-              final isMe = player.userId == currentUserId;
-              final isOnline = presenceMap[player.userId] != null;
-              return RoomPlayerAvatar(
-                player: player,
-                isMe: isMe,
-                isOnline: isOnline,
-                paletteIndex: index % kAvatarPalettes.length,
-              );
-            },
-          ),
+
+        const SizedBox(height: 12),
+
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final itemWidth = (constraints.maxWidth - 24) / 4;
+
+            double avatarSize = itemWidth * 0.68;
+
+            avatarSize = avatarSize.clamp(52, 70);
+
+            return GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: maxSlots,
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 4,
+                mainAxisSpacing: 10,
+                crossAxisSpacing: 8,
+                childAspectRatio: childAspectRatio,
+              ),
+              itemBuilder: (context, index) {
+                if (index < players.length) {
+                  return _PlayerCard(
+                    player: players[index],
+                    isMe: players[index].userId == currentUserId,
+                    palette: _palettes[index % _palettes.length],
+                    emoji: _avatarEmojis[index % _avatarEmojis.length],
+                    isOnline:
+                        (presenceMap[players[index].userId] ?? 0) > 0,
+                    avatarSize: avatarSize,
+                  );
+                }
+
+                return _EmptySlot(
+                  avatarSize: avatarSize,
+                );
+              },
+            );
+          },
         ),
       ],
     );
   }
 }
 
-// ─── Player Avatar ────────────────────────────────────────────────────────────
+// ───────────────── Player Card ─────────────────
 
-class RoomPlayerAvatar extends StatelessWidget {
+class _PlayerCard extends StatelessWidget {
   final RoomPlayer player;
   final bool isMe;
+  final List<Color> palette;
+  final String emoji;
   final bool isOnline;
-  final int paletteIndex;
+  final double avatarSize;
 
-  const RoomPlayerAvatar({
-    super.key,
+  const _PlayerCard({
     required this.player,
     required this.isMe,
+    required this.palette,
+    required this.emoji,
     required this.isOnline,
-    required this.paletteIndex,
+    required this.avatarSize,
   });
-
-  String get _initials {
-    final name = player.displayName.trim();
-    if (name.isEmpty) return '?';
-    final parts = name.split(' ').where((w) => w.isNotEmpty).toList();
-    if (parts.length == 1) return parts[0][0].toUpperCase();
-    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-  }
 
   @override
   Widget build(BuildContext context) {
-    final palette = kAvatarPalettes[paletteIndex];
-    final bgColor = palette[0];
-    final textColor = palette[1];
+    final innerSize = avatarSize - 8;
 
-    return Padding(
-      padding: const EdgeInsets.only(right: 12),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Stack(
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(top: 8),
+          child: Stack(
+            clipBehavior: Clip.none,
+            alignment: Alignment.center,
             children: [
               Container(
-                width: 64,
-                height: 64,
+                width: avatarSize,
+                height: avatarSize,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: bgColor,
-                  border: isMe
-                      ? Border.all(color: const Color(0xFF6C63FF), width: 2.5)
-                      : Border.all(color: Colors.white, width: 2),
-                  boxShadow: [
-                    BoxShadow(
-                      color: isMe
-                          ? const Color(0xFF6C63FF).withOpacity(0.25)
-                          : Colors.black.withOpacity(0.07),
-                      blurRadius: 10,
-                      offset: const Offset(0, 3),
-                    ),
-                  ],
-                ),
-                child: Center(
-                  child: Text(
-                    _initials,
-                    style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w800,
-                      color: textColor,
-                      letterSpacing: -0.5,
-                    ),
+                  gradient: LinearGradient(
+                    colors: palette,
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
                   ),
                 ),
               ),
-              if (isOnline)
-                Positioned(
-                  bottom: 2,
-                  right: 2,
-                  child: Container(
-                    width: 14,
-                    height: 14,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF4CAF50),
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 2),
-                    ),
-                  ),
-                ),
-            ],
-          ),
-          const SizedBox(height: 7),
-          SizedBox(
-            width: 68,
-            child: Text(
-              player.displayName,
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: isMe ? FontWeight.w700 : FontWeight.w500,
-                color: const Color(0xFF1E1B4B),
-              ),
-              textAlign: TextAlign.center,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-          const SizedBox(height: 3),
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text('⭐', style: TextStyle(fontSize: 10)),
-              const SizedBox(width: 2),
+
               Text(
-                '${player.score}',
-                style: const TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                  color: Color(0xFF1E1B4B),
+                emoji,
+                style: TextStyle(
+                  fontSize: avatarSize * 0.42,
                 ),
               ),
+
+              if (player.isHost)
+                Positioned(
+                  top: -6,
+                  right: -2,
+                  child: Container(
+                    padding: const EdgeInsets.all(3),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFFFB300),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Text(
+                      '👑',
+                      style: TextStyle(fontSize: 8),
+                    ),
+                  ),
+                ),
             ],
           ),
-        ],
-      ),
+        ),
+
+        const SizedBox(height: 6),
+
+        Text(
+          isMe ? 'Bạn' : player.displayName,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
+            color: Color(0xFF1A1A2E),
+          ),
+        ),
+
+        const SizedBox(height: 2),
+
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Text(
+              '🏆',
+              style: TextStyle(fontSize: 9),
+            ),
+            const SizedBox(width: 2),
+            Flexible(
+              child: Text(
+                _formatScore(player.score),
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFFFF9F43),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
     );
+  }
+
+  String _formatScore(int score) {
+    if (score >= 1000) {
+      return '${(score / 1000).toStringAsFixed(score % 1000 == 0 ? 0 : 1)}K';
+    }
+    return score.toString();
   }
 }
 
-// ─── Invite Slot ──────────────────────────────────────────────────────────────
+// ───────────────── Empty Slot ─────────────────
 
-class RoomInviteSlot extends StatelessWidget {
-  const RoomInviteSlot({super.key});
+class _EmptySlot extends StatelessWidget {
+  final double avatarSize;
+
+  const _EmptySlot({
+    required this.avatarSize,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(right: 12),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 64,
-            height: 64,
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(top: 8),
+          child: Container(
+            width: avatarSize,
+            height: avatarSize,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: Colors.white,
               border: Border.all(
-                color: Colors.grey.shade300,
-                width: 1.5,
+                color: Colors.grey.shade200,
+                width: 2,
               ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.04),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
             ),
             child: Icon(
               Icons.add_rounded,
-              size: 26,
               color: Colors.grey.shade400,
+              size: avatarSize * 0.35,
             ),
           ),
-          const SizedBox(height: 7),
-          Text(
-            'Mời bạn',
-            style: TextStyle(fontSize: 11, color: Colors.grey.shade400),
+        ),
+
+        const SizedBox(height: 6),
+
+        Text(
+          'Mời bạn',
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+            color: Colors.grey.shade500,
           ),
-          const SizedBox(height: 16),
-        ],
-      ),
+        ),
+
+        Text(
+          '+ Trống',
+          style: TextStyle(
+            fontSize: 10,
+            color: Colors.grey.shade400,
+          ),
+        ),
+      ],
     );
   }
 }
