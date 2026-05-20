@@ -21,13 +21,20 @@ class QuizImageInput extends StatelessWidget {
         return LayoutBuilder(
           builder: (context, constraints) {
             double maxWidth = constraints.maxWidth;
-            const double spacing = 10;
-            int maxPerRow = maxWidth > 600 ? 10 : 7;
+            const double spacing = 8;
+            const double minSize = 24.0;
+            const double maxSize = 42.0;
+
+            // Tính số ô tối đa mỗi hàng dựa trên minSize
+            int maxPerRow =
+                (maxWidth / (minSize + spacing)).floor().clamp(1, 10);
             int itemPerRow =
                 userInput.length < maxPerRow ? userInput.length : maxPerRow;
+
+            // Tính size thực tế để vừa đủ width
             double itemSize =
                 (maxWidth - (spacing * (itemPerRow - 1))) / itemPerRow;
-            itemSize = itemSize.clamp(28.0, 42.0);
+            itemSize = itemSize.clamp(minSize, maxSize);
 
             return Wrap(
               spacing: spacing,

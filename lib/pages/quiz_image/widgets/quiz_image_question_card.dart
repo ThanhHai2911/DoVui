@@ -29,7 +29,7 @@ class QuizImageQuestionCard extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                '🖼️ Đoán tên qua hình ảnh 🖼️',
+                '👀 Nhìn Là Biết? ✨',
                 style: TextStyle(fontSize: titleFont, color: ColorManager.text, fontWeight: FontWeight.w500),
               ),
               SizedBox(height: w * 0.05),

@@ -356,7 +356,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   const SizedBox(height: 50),
                   Center(
                     child: Text(
-                      'Đố Vui - Quiz App · Phiên bản 1.0.9',
+                      'Đố Vui - Quiz App · Phiên bản 1.1.0',
                       style: TextStyle(
                         fontSize: 12,
                         color: Colors.grey.shade400,

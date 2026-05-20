@@ -351,8 +351,6 @@ Future<void> _recordRoomCreation(String userId) async {
                   const SizedBox(height: 30),
                   _buildStatsRow(context, userId, score, rank),
                   const SizedBox(height: 28),
-                  _buildAchievementBanner(context, userId, score),
-                  const SizedBox(height: 28),
                   _buildVipBanner(context, isVip: isVip),
                   const SizedBox(height: 28),
                 ],
@@ -496,68 +494,6 @@ Future<void> _recordRoomCreation(String userId) async {
                 )
               else
                 const Icon(Icons.verified, color: Colors.white),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildAchievementBanner(BuildContext context, String userId, int score) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: GestureDetector(
-        onTap: () => _onTapCreateRoom(context, userId, score),
-        child: Container(
-          padding: const EdgeInsets.all(18),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                const Color(0xFF6C63FF).withOpacity(0.15),
-                const Color(0xFF43C6AC).withOpacity(0.15),
-              ],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: const Color(0xFF6C63FF).withOpacity(0.2)),
-          ),
-          child: Row(
-            children: [
-              const Text("🎮", style: TextStyle(fontSize: 32)),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // ✅ Label thay đổi theo VIP
-                    Text(
-                      AdsService().isVip ? "Tạo phòng chơi" : "Tạo phòng chơi",
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 15,
-                        color: Color(0xFF1E1B4B),
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      AdsService().isVip
-                          ? "Tạo phòng ngay, không cần xem quảng cáo!"
-                          : "Xem quảng cáo để tạo phòng cùng bạn bè!",
-                      style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-                    ),
-                  ],
-                ),
-              ),
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(borderRadius: BorderRadius.circular(12)),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(10),
-                  child: Image.asset('assets/images/join.gif', fit: BoxFit.cover),
-                ),
-              ),
             ],
           ),
         ),

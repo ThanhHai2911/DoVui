@@ -1,8 +1,14 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:dovui/data/audio/audio_manager.dart';
 import 'package:dovui/data/repositories/firebase_quiz_repository.dart';
 import 'package:dovui/pages/ads/ads_service.dart';
 import 'package:dovui/pages/ads/widgets/adsService.dart';
 import 'package:dovui/pages/home/widgets/animated_section.dart';
+import 'package:dovui/pages/home/widgets/game_dialog.dart';
+import 'package:dovui/pages/profile/widgets/vip_dialog.dart';
+import 'package:dovui/pages/room/bloc/room_bloc.dart';
+import 'package:dovui/pages/room/bloc/room_event.dart';
+import 'package:dovui/pages/room/create_room_screen.dart';
 import 'package:dovui/resources/color_manager.dart';
 import 'package:dovui/pages/home/bloc/home_bloc.dart';
 import 'package:dovui/pages/home/bloc/home_event.dart';
@@ -30,6 +36,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   late AnimationController _floatCtrl;
   late Animation<double> _float;
+
+  static const int _maxRoomsPerPeriod = 3;
+  static const int _periodDays = 7;
 
   @override
   void initState() {
@@ -70,6 +79,158 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     super.dispose();
   }
 
+  // ── Room Creation Logic ───────────────────────────────────────────────────
+
+  void _showSnackBar(BuildContext context, String message, Color color) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: color),
+    );
+  }
+
+  void _navigateToCreateRoom(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => BlocProvider(
+          create: (_) => RoomBloc()..add(LoadCategories()),
+          child: const CreateRoomScreen(),
+        ),
+      ),
+    );
+  }
+
+  Future<int> _getRoomCreationCount(String userId) async {
+    if (userId.isEmpty) return 0;
+    final doc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(userId)
+        .get();
+    final raw = List<String>.from(doc.data()?['roomCreationDates'] ?? []);
+    final cutoff = DateTime.now().subtract(const Duration(days: _periodDays));
+    final recent = raw
+        .map((s) => DateTime.tryParse(s))
+        .whereType<DateTime>()
+        .where((d) => d.isAfter(cutoff))
+        .toList();
+    if (recent.length != raw.length) {
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId)
+          .update({
+        'roomCreationDates': recent.map((d) => d.toIso8601String()).toList(),
+      });
+    }
+    return recent.length;
+  }
+
+  Future<void> _recordRoomCreation(String userId) async {
+    if (userId.isEmpty) return;
+    await FirebaseFirestore.instance
+        .collection('users')
+        .doc(userId)
+        .update({
+      'roomCreationDates': FieldValue.arrayUnion([
+        DateTime.now().toIso8601String(),
+      ]),
+    });
+  }
+
+  void _onTapBuyVip(BuildContext context) {
+    AudioManager().playClick();
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      barrierColor: Colors.black.withOpacity(0.7),
+      builder: (_) => const VipDialog(),
+    );
+  }
+
+  void _showRewardedAdForRoom(BuildContext context, String userId) {
+    if (!RewardedAdManager().isAdLoaded) {
+      _showSnackBar(
+          context, '⏳ Quảng cáo chưa sẵn sàng, thử lại sau!', Colors.orange);
+      return;
+    }
+    RewardedAdManager().showAd(
+      onRewarded: () async {
+        await _recordRoomCreation(userId);
+        if (!mounted) return;
+        _navigateToCreateRoom(context);
+      },
+      onFailed: () {
+        if (!mounted) return;
+        _showSnackBar(
+            context, '❌ Không tải được quảng cáo, thử lại sau!', Colors.red);
+      },
+    );
+  }
+
+  void _onTapCreateRoom(BuildContext context, String userId) async {
+    AudioManager().playClick();
+
+    if (AdsService().isVip) {
+      _navigateToCreateRoom(context);
+      return;
+    }
+
+    final count = await _getRoomCreationCount(userId);
+    if (!mounted) return;
+
+    if (count >= _maxRoomsPerPeriod) {
+      showGameDialog(
+        context: context,
+        icon: '🔒',
+        iconColor: Colors.red,
+        title: 'Hết lượt tạo phòng',
+        description:
+            'Bạn đã tạo $_maxRoomsPerPeriod phòng trong $_periodDays ngày qua.\n'
+            'Nâng VIP để tạo phòng không giới hạn!',
+        costIcon: '👑',
+        costText: 'Nâng cấp VIP ngay!',
+        confirmText: 'Mua VIP',
+        confirmColor: Colors.amber.shade600,
+        showCancel: true,
+        onConfirm: () => _onTapBuyVip(context),
+      );
+      return;
+    }
+
+    showGameDialog(
+      context: context,
+      icon: '🎮',
+      iconColor: Colors.amber,
+      title: 'Tạo phòng chơi',
+      description:
+          'Xem 1 quảng cáo ngắn để tạo phòng\nchơi cùng bạn bè!\n'
+          '(${_maxRoomsPerPeriod - count} lượt còn lại trong $_periodDays ngày)',
+      costIcon: '🕹️',
+      costText: 'Hãy tạo phòng ngay!',
+      confirmText: 'Xem ngay',
+      confirmColor: Colors.amber.shade600,
+      showCancel: true,
+      onConfirm: () {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _showRewardedAdForRoom(context, userId);
+        });
+      },
+    );
+  }
+
+  // ── Helpers ───────────────────────────────────────────────────────────────
+
+  Widget _blob(double size, Color color, double opacity) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: color.withOpacity(opacity),
+      ),
+    );
+  }
+
+  // ── Build ─────────────────────────────────────────────────────────────────
+
   @override
   Widget build(BuildContext context) {
     return PopScope(
@@ -105,7 +266,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   );
                 },
               ),
-
               SafeArea(
                 child: BlocBuilder<HomeBloc, HomeState>(
                   builder: (context, state) {
@@ -130,6 +290,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                 const SizedBox(height: 20),
                                 const HomeHeader(),
                                 const SizedBox(height: 25),
+
+                                // ── Streak Card ──
                                 AnimatedSection(
                                   delay: 0,
                                   child: StreakCard(
@@ -139,15 +301,26 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                   ),
                                 ),
                                 const SizedBox(height: 30),
-                                const AnimatedSection(
+
+                                // ── Tạo phòng chơi ──
+                                AnimatedSection(
                                   delay: 120,
-                                  child: QuizOfWeek(),
+                                  child: QuizOfWeek(
+                                    userId: state.userId,
+                                    onTapCreateRoom: () => _onTapCreateRoom(
+                                      context,
+                                      state.userId,
+                                    ),
+                                  ),
                                 ),
                                 const SizedBox(height: 30),
+
+                                // ── Categories ──
                                 AnimatedSection(
                                   delay: 240,
                                   child: CategoriesSection(
-                                    quizService: QuizService(FirebaseQuizRepository()),
+                                    quizService: QuizService(
+                                        FirebaseQuizRepository()),
                                   ),
                                 ),
                                 const SizedBox(height: 30),
@@ -195,17 +368,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _blob(double size, Color color, double opacity) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: color.withOpacity(opacity),
       ),
     );
   }

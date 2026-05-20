@@ -11,15 +11,20 @@ class HomeLoading extends HomeState {}
 class HomeError extends HomeState {}
 
 class HomeLoaded extends HomeState {
-  final int days;   
+  final int days;
   final String name;
-  final int score; 
-  final bool isVip; 
+  final int score;
+  final bool isVip;
+  final String userId; 
 
   HomeLoaded({
-    required this.days, required this.name, required this.score,
+    required this.days,
+    required this.name,
+    required this.score,
     required this.isVip,
+    required this.userId, 
   });
+
   @override
-  List<Object?> get props => [days, name, score];
+  List<Object?> get props => [days, name, score, isVip, userId];
 }

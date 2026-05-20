@@ -1,11 +1,16 @@
-import 'package:dovui/pages/home/widgets/home_bottom_nav.dart';
+import 'package:dovui/pages/ads/widgets/adsService.dart';
 import 'package:dovui/resources/color_manager.dart';
-import 'package:dovui/data/repositories/user_repository.dart';
-import 'package:dovui/pages/category/categories_screen.dart';
 import 'package:flutter/material.dart';
 
 class QuizOfWeek extends StatefulWidget {
-  const QuizOfWeek({super.key});
+  final String userId;
+  final VoidCallback onTapCreateRoom;
+
+  const QuizOfWeek({
+    super.key,
+    required this.userId,
+    required this.onTapCreateRoom,
+  });
 
   @override
   State<QuizOfWeek> createState() => _QuizOfWeekState();
@@ -13,9 +18,6 @@ class QuizOfWeek extends StatefulWidget {
 
 class _QuizOfWeekState extends State<QuizOfWeek>
     with SingleTickerProviderStateMixin {
-
-  final userRepository = UserRepository();
-
   late AnimationController _floatCtrl;
   late Animation<double> _floatAnim;
 
@@ -28,9 +30,10 @@ class _QuizOfWeekState extends State<QuizOfWeek>
       duration: const Duration(milliseconds: 2000),
     )..repeat(reverse: true);
 
-    _floatAnim = Tween<double>(begin: -6, end: 6).animate(
-      CurvedAnimation(parent: _floatCtrl, curve: Curves.easeInOut),
-    );
+    _floatAnim = Tween<double>(
+      begin: -6,
+      end: 6,
+    ).animate(CurvedAnimation(parent: _floatCtrl, curve: Curves.easeInOut));
   }
 
   @override
@@ -46,21 +49,35 @@ class _QuizOfWeekState extends State<QuizOfWeek>
       duration: const Duration(milliseconds: 500),
       curve: Curves.easeOutBack,
       builder: (context, value, child) {
-        return Transform.scale(
-          scale: value,
-          child: child,
-        );
+        return Transform.scale(scale: value, child: child);
       },
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            "Thử thách trong tuần",
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-          ),
-
-          const SizedBox(height: 15),
-
+          Row(
+              children: [
+                Container(
+                  width: 4,
+                  height: 22,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF6C63FF),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                const Text(
+                  "Chơi cùng bạn bè",
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF1E1B4B),
+                    letterSpacing: 0.3,
+                  ),
+                ),
+                const Spacer(),
+              ],
+            ),
+          const SizedBox(height: 20),
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
@@ -81,12 +98,11 @@ class _QuizOfWeekState extends State<QuizOfWeek>
                   color: const Color(0xFF6C63FF).withOpacity(0.15),
                   blurRadius: 15,
                   offset: const Offset(0, 6),
-                )
+                ),
               ],
             ),
             child: Stack(
               children: [
-
                 /// background blob
                 Positioned(
                   top: -20,
@@ -103,59 +119,31 @@ class _QuizOfWeekState extends State<QuizOfWeek>
 
                 Row(
                   children: [
-
                     /// LEFT CONTENT
                     Expanded(
                       flex: 3,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-
                           const Text(
-                            "Thử thách",
+                            "🎮 Chơi ngay cùng bạn bè",
                             style: TextStyle(
-                              fontSize: 20,
+                              fontSize: 19,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
-
                           const SizedBox(height: 8),
-
-                          StreamBuilder<int>(
-                            stream: userRepository.getTotalUsersStream(),
-                            builder: (context, snapshot) {
-
-                              if (snapshot.connectionState ==
-                                  ConnectionState.waiting) {
-                                return const Text(
-                                  "Đang tải...",
-                                  style: TextStyle(
-                                      color: ColorManager.primaryText),
-                                );
-                              }
-
-                              final totalUsers = snapshot.data ?? 0;
-
-                              return Text(
-                                "$totalUsers người đang tranh tài – bạn có nằm trong top?",
-                                style: const TextStyle(
-                                  color: ColorManager.primaryText,
-                                ),
-                              );
-                            },
+                          Text(
+                            AdsService().isVip
+                                ? "🕹️ Tạo phòng nhanh chóng, kết nối bạn bè ngay!"
+                                : "🕹️ Sẵn sàng chưa? Hoàn tất để tạo phòng ngay!",
+                            style: const TextStyle(
+                              color: ColorManager.primaryText,
+                            ),
                           ),
-
                           const SizedBox(height: 15),
-
                           ElevatedButton(
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => const HomeBottomNav(initialIndex: 1),
-                                ),
-                              );
-                            },
+                            onPressed: widget.onTapCreateRoom,
                             style: ElevatedButton.styleFrom(
                               backgroundColor: ColorManager.gamecomplete,
                               shape: RoundedRectangleBorder(
@@ -164,17 +152,15 @@ class _QuizOfWeekState extends State<QuizOfWeek>
                               elevation: 0,
                             ),
                             child: const Text(
-                              "Bắt đầu thử thách!",
-                              style: TextStyle(
-                                color: ColorManager.cardColor,
-                              ),
+                              "Tạo phòng ngay!",
+                              style: TextStyle(color: ColorManager.cardColor),
                             ),
                           ),
                         ],
                       ),
                     ),
 
-                    const SizedBox(width: 10),
+                    const SizedBox(width: 5),
 
                     /// RIGHT IMAGE
                     Expanded(
@@ -188,8 +174,8 @@ class _QuizOfWeekState extends State<QuizOfWeek>
                           );
                         },
                         child: Image.asset(
-                          "assets/images/win.png",
-                          height: 80,
+                          "assets/images/join.gif",
+                          height: 150,
                           fit: BoxFit.contain,
                         ),
                       ),
@@ -204,4 +190,3 @@ class _QuizOfWeekState extends State<QuizOfWeek>
     );
   }
 }
-

@@ -9,13 +9,14 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
   final UserRepository _userRepo = UserRepository();
 
   StreamSubscription<AppUser?>? _sub;
-  Timer? _midnightTimer; // ← thêm
-  AppUser? _cachedUser; // ← cache lại user hiện tại
+  Timer? _midnightTimer;
+  AppUser? _cachedUser;
+  String? _cachedUserId; // ✅ cache userId
 
   HomeBloc() : super(HomeLoading()) {
     on<LoadHome>(_onLoadHome);
     on<UpdateHome>(_onUpdateHome);
-    on<RefreshExpDays>(_onRefreshExpDays); // ← thêm event mới
+    on<RefreshExpDays>(_onRefreshExpDays);
   }
 
   Future<void> _onLoadHome(LoadHome event, Emitter<HomeState> emit) async {
@@ -28,6 +29,8 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
       return;
     }
 
+    _cachedUserId = userId; // ✅ lưu lại
+
     await _sub?.cancel();
 
     _sub = _userRepo.streamUserById(userId).listen((user) {
@@ -36,7 +39,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
       }
     });
 
-    _scheduleMidnightRefresh(); // ← thêm
+    _scheduleMidnightRefresh();
   }
 
   void _onUpdateHome(UpdateHome event, Emitter<HomeState> emit) {
@@ -47,10 +50,15 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
   void _emitLoaded(Emitter<HomeState> emit, AppUser user) {
     final days = DateTime.now().difference(user.createdAt).inDays;
 
-    emit(HomeLoaded(days: days, name: user.name, score: user.score,isVip: user.isVip,));
+    emit(HomeLoaded(
+      days: days,
+      name: user.name,
+      score: user.score,
+      isVip: user.isVip,
+      userId: _cachedUserId ?? '', // ✅ thêm userId
+    ));
   }
 
-  /// Tính thời gian còn lại đến 00:00 ngày hôm sau rồi set timer
   void _scheduleMidnightRefresh() {
     _midnightTimer?.cancel();
 
@@ -60,17 +68,22 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
 
     _midnightTimer = Timer(durationUntilMidnight, () {
       if (!isClosed) {
-        // ← thêm !isClosed
         add(RefreshExpDays());
       }
     });
   }
 
   void _onRefreshExpDays(RefreshExpDays event, Emitter<HomeState> emit) {
-    print('✅ RefreshExpDays received, cachedUser: $_cachedUser');
     if (_cachedUser != null) {
       _emitLoaded(emit, _cachedUser!);
     }
     _scheduleMidnightRefresh();
+  }
+
+  @override
+  Future<void> close() {
+    _sub?.cancel();
+    _midnightTimer?.cancel();
+    return super.close();
   }
 }
